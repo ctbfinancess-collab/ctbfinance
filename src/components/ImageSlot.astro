@@ -1,0 +1,45 @@
+---
+/**
+ * Espaço reservado para imagem exclusiva.
+ * Quando a imagem chegar, basta passar `src` (e `alt`) — o enquadramento continua igual.
+ */
+interface Props {
+  label: string;
+  ratio?: string; // ex.: '4 / 5', '21 / 9'
+  src?: string;      // versão grande (ex.: /brand/x.jpg)
+  srcSmall?: string; // versão para celular (ex.: /brand/x-900.jpg)
+  alt?: string;
+  position?: string; // enquadramento, ex.: '20% 50%'
+  natural?: boolean; // true = cores originais, sem o tratamento de tom
+  class?: string;
+}
+const { label, ratio = '4 / 5', src, srcSmall, alt = '', position = '50% 50%', natural = false, class: cls } = Astro.props;
+---
+<figure class:list={['slot', cls, { 'slot--empty': !src, 'slot--natural': natural }]} style={`aspect-ratio: ${ratio}`}>
+  {src ? (
+    <img src={src} srcset={srcSmall ? `${srcSmall} 900w, ${src} 1600w` : undefined}
+      sizes="(max-width: 900px) 100vw, 60vw" alt={alt} loading="lazy" decoding="async"
+      style={`object-position: ${position}`} />
+  ) : (
+    <figcaption>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.09-3.09a2 2 0 0 0-2.82 0L6 21"/></svg>
+      <span>{label}</span>
+    </figcaption>
+  )}
+</figure>
+
+<style>
+  .slot { position: relative; margin: 0; overflow: hidden; }
+  .slot img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.94) saturate(0.86) contrast(1.06); } /* mesmo tratamento de cor do hero */
+  .slot--natural img { filter: none; }
+  .slot--empty {
+    display: grid; place-items: center;
+    background:
+      radial-gradient(ellipse at 30% 20%, rgba(181, 139, 77, 0.22), transparent 60%),
+      linear-gradient(135deg, var(--color-cafe) 0%, var(--color-espresso) 100%);
+    border: 1px solid var(--color-line);
+  }
+  .slot--empty::after { content: ''; position: absolute; inset: 14px; border: 1px solid rgba(232, 214, 183, 0.18); pointer-events: none; }
+  figcaption { display: flex; flex-direction: column; align-items: center; gap: 0.8rem; color: var(--color-champagne); font-size: 0.7rem; letter-spacing: 0.28em; text-transform: uppercase; text-align: center; padding: 1rem; opacity: 0.8; }
+  figcaption svg { width: 28px; height: 28px; fill: none; stroke: var(--color-gold); stroke-width: 1.2; }
+</style>

@@ -1,0 +1,162 @@
+---
+import { getLangFromUrl, useTranslations, localizePath, routes, getRouteKey } from '../i18n/utils';
+import { company } from '../i18n/company';
+
+interface Props { overlay?: boolean }
+const { overlay = false } = Astro.props;
+
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const home = localizePath('/', lang);
+const current = getRouteKey(Astro.url);
+
+const links = [
+  { href: home, label: t('nav.home') },
+  { href: routes.about[lang], label: t('nav.about') },
+  { href: routes.solutions[lang], label: t('nav.solutions') },
+  { href: routes.investments[lang], label: t('nav.investments') },
+  { href: routes.governance[lang], label: t('nav.governance') },
+  { href: routes.contact[lang], label: t('nav.contact') },
+];
+// Endereços do aplicativo em src/i18n/company.ts
+const loginUrl = company.appLoginUrl;
+const signupUrl = company.appSignupUrl || routes.contact[lang];
+---
+<header class:list={['header', { 'header--overlay': overlay }]}>
+  <div class="header__inner">
+    <a href={home} class="brand" aria-label="CTB Finances Dubai">
+      <img src="/brand/ctb-eagle.png" alt="" width="480" height="225" class="brand__mark" />
+      <span class="brand__text">
+        <span class="brand__name">CTB Finances</span>
+        <span class="brand__sub">Dubai</span>
+      </span>
+    </a>
+
+    <nav class="nav" aria-label="Principal">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+
+    <div class="tools">
+      <div class="lang">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+        <a href={routes[current].pt} aria-current={lang === 'pt' ? 'page' : undefined} hreflang="pt">PT</a>
+        <span class="lang__sep" aria-hidden="true"></span>
+        <a href={routes[current].en} aria-current={lang === 'en' ? 'page' : undefined} hreflang="en">EN</a>
+      </div>
+      <div class="account">
+        <a href={signupUrl} class="btn btn--secondary btn--sm account__signup">{t('nav.signup')}</a>
+        {loginUrl
+          ? <a href={loginUrl} class="btn btn--primary btn--sm">{t('nav.account')}</a>
+          : <span class="btn btn--primary btn--sm is-disabled" aria-disabled="true" title={t('nav.soon')}>{t('nav.account')}</span>}
+      </div>
+      <button type="button" class="burger" aria-expanded="false" aria-controls="mobile-menu" aria-label={lang === 'pt' ? 'Abrir menu' : 'Open menu'} data-menu-toggle>
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Menu do celular -->
+  <nav id="mobile-menu" class="mobile-menu" aria-label="Menu" hidden data-menu>
+    {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    <div class="mobile-menu__account">
+      <a href={signupUrl} class="btn btn--secondary">{t('nav.signup')}</a>
+      {loginUrl
+        ? <a href={loginUrl} class="btn btn--primary">{t('nav.account')}</a>
+        : <span class="btn btn--primary is-disabled" aria-disabled="true">{t('nav.account')} · {t('nav.soon')}</span>}
+    </div>
+  </nav>
+</header>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-menu-toggle]');
+  const menu = document.querySelector<HTMLElement>('[data-menu]');
+  if (btn && menu) {
+    const set = (open: boolean) => {
+      btn.setAttribute('aria-expanded', String(open));
+      btn.classList.toggle('is-open', open);
+      menu.hidden = !open;
+      document.body.style.overflow = open ? 'hidden' : '';
+    };
+    btn.addEventListener('click', () => set(menu.hidden));
+    menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => set(false)));
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { set(false); btn.focus(); } });
+    window.matchMedia('(min-width: 1281px)').addEventListener('change', (e) => { if (e.matches) set(false); });
+  }
+</script>
+
+<style>
+  .header {
+    position: relative; z-index: 10;
+    background: var(--color-espresso);
+    border-bottom: 1px solid var(--color-line);
+  }
+  .header--overlay {
+    position: absolute; inset: 0 0 auto 0;
+    background: linear-gradient(to bottom, rgba(35, 13, 8, 0.85), rgba(35, 13, 8, 0.35));
+    backdrop-filter: blur(2px);
+  }
+  .header__inner {
+    display: flex; align-items: center; gap: var(--space-4);
+    padding: 1rem clamp(1rem, 3vw, 3rem);
+  }
+
+  .brand { display: flex; align-items: center; gap: 0.9rem; color: var(--color-champagne); }
+  .brand__mark { height: 52px; width: auto; }
+  .brand__text { display: flex; flex-direction: column; align-items: center; padding-left: 1rem; border-left: 1px solid var(--color-line); line-height: 1; }
+  .brand__name { font-family: var(--font-display); font-size: 1.65rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-gold); background: linear-gradient(180deg, #e8d6b7 0%, #b58b4d 70%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+  .brand__sub { margin-top: 0.35rem; font-size: 0.62rem; letter-spacing: 0.5em; text-transform: uppercase; color: var(--color-champagne); display: flex; align-items: center; gap: 0.6rem; }
+  .brand__sub::before, .brand__sub::after { content: ''; width: 2.2rem; height: 1px; background: var(--color-line); }
+
+  .nav { display: flex; gap: clamp(1rem, 2.2vw, 2.25rem); margin-left: auto; font-size: 0.95rem; font-weight: 400; }
+  .nav a { color: var(--color-ivory); opacity: 0.92; }
+  .nav a:hover { color: var(--color-gold); opacity: 1; }
+
+  .tools { display: flex; align-items: center; gap: var(--space-3); }
+  .lang { display: flex; align-items: center; gap: 0.6rem; font-size: 0.85rem; letter-spacing: 0.08em; }
+  .lang svg { width: 18px; height: 18px; fill: none; stroke: var(--color-champagne); stroke-width: 1.4; }
+  .lang a { color: var(--color-champagne); opacity: 0.6; }
+  .lang a[aria-current='page'] { opacity: 1; color: var(--color-ivory); }
+  .lang__sep { width: 1px; height: 14px; background: var(--color-line); }
+
+  .account { display: flex; align-items: center; gap: 0.6rem; }
+  .brand { flex: none; }
+  .brand__name { white-space: nowrap; }
+  .nav { gap: clamp(0.9rem, 1.6vw, 2.25rem) !important; }
+  /* telas entre 1281 e 1520 px: só a águia, para caber menu + botões */
+  @media (min-width: 1281px) and (max-width: 1520px) {
+    .brand__text { display: none; }
+  }
+  .account__signup { color: var(--color-ivory); }
+  .is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; }
+  .mobile-menu__account { display: grid; gap: 0.8rem; margin-top: 2rem; }
+  .mobile-menu__account .btn { justify-content: center; }
+  /* Botão do menu (celular/tablet) */
+  .burger { display: none; position: relative; width: 44px; height: 44px; padding: 0; border: 1px solid var(--color-line); border-radius: 50%; background: rgba(53, 36, 29, 0.4); cursor: pointer; }
+  .burger span { position: absolute; left: 12px; right: 12px; height: 1.5px; background: var(--color-champagne); transition: transform 0.3s ease, opacity 0.3s ease; }
+  .burger span:nth-child(1) { top: 15px; } .burger span:nth-child(2) { top: 21px; } .burger span:nth-child(3) { top: 27px; }
+  .burger.is-open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+  .burger.is-open span:nth-child(2) { opacity: 0; }
+  .burger.is-open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+  .burger:focus-visible { outline: 2px solid var(--color-champagne); outline-offset: 3px; }
+
+  .mobile-menu { position: absolute; top: 100%; left: 0; right: 0; height: calc(100svh - 100%); overflow-y: auto; display: flex; flex-direction: column; padding: 1.5rem clamp(1.25rem, 5vw, 3rem) 3rem; background: var(--color-espresso); border-top: 1px solid var(--color-line); }
+  .mobile-menu[hidden] { display: none; }
+  .mobile-menu > a { padding: 1.1rem 0; border-bottom: 1px solid var(--color-line); font-family: var(--font-display); font-size: 1.6rem; color: var(--color-champagne); }
+  .mobile-menu > a:hover { color: var(--color-gold); }
+
+  @media (max-width: 1280px) {
+    .nav { display: none; }
+    .tools { margin-left: auto; }
+    .burger { display: block; }
+  }
+  @media (max-width: 640px) {
+    .account { display: none; }
+    .header__inner { gap: 0.75rem; }
+    .brand { flex: none; }
+    .tools { gap: 0.6rem; }
+    .lang svg { display: none; }
+    .brand__text { display: none; }
+    .brand__mark { height: 40px; }
+    .tools .btn--sm { --btn-pad-x: 1rem; font-size: 0.8rem; }
+  }
+</style>

@@ -1,0 +1,184 @@
+---
+import { useTranslations, localizePath } from '../i18n/utils';
+import type { Lang, UiKey } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const t = useTranslations(lang);
+const home = localizePath('/', lang);
+
+// Ordem das imagens do carrossel (arquivos em public/brand/hero-<nome>.jpg)
+const slides = ['dubai', 'crescimento', 'investimentos', 'comercio', 'escritorio'];
+
+const pillars: { key: UiKey; icon: string }[] = [
+  { key: 'pillar.security', icon: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>' },
+  { key: 'pillar.wealth', icon: '<path d="M3 21h18"/><path d="M4 10h16"/><path d="M12 3 3 8v2h18V8z"/><path d="M6 10v8M10 10v8M14 10v8M18 10v8"/><path d="M4 18h16"/>' },
+  { key: 'pillar.investments', icon: '<path d="M3 21h18"/><path d="M6 21v-5"/><path d="M10 21v-8"/><path d="M14 21v-11"/><path d="M18 21V6"/>' },
+  { key: 'pillar.connection', icon: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>' },
+  { key: 'pillar.business', icon: '<path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="m21 3 1 11h-2"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/>' },
+];
+---
+<section class="hero">
+  <div class="hero__slides" aria-hidden="true" data-hero-slides>
+    {slides.map((name, i) => (
+      <picture class:list={['hero__slide', { 'is-active': i === 0 }]}>
+        <source media="(max-width: 900px)" srcset={`/brand/hero-${name}-900.jpg`} />
+        <img src={`/brand/hero-${name}.jpg`} alt="" width="1671" height="941"
+          fetchpriority={i === 0 ? 'high' : 'low'} decoding="async" />
+      </picture>
+    ))}
+  </div>
+  <div class="hero__shade" aria-hidden="true"></div>
+
+  <div class="hero__content">
+    <p class="eyebrow hero__eyebrow">{t('hero.eyebrow')}</p>
+    <span class="hero__rule" aria-hidden="true"></span>
+    <h1><span>{t('hero.title.1')}</span><br /><span>{t('hero.title.2')}</span></h1>
+    <p class="hero__lead">{t('hero.lead')}</p>
+    <div class="hero__ctas">
+      <a href={`${home}#solucoes`} class="btn btn--primary btn--block-mobile">
+        {t('hero.cta.primary')}
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      </a>
+      <a href={`${home}#contato`} class="btn btn--secondary btn--block-mobile">{t('hero.cta.secondary')}</a>
+    </div>
+  </div>
+
+  <ul class="pillars">
+    {pillars.map((p) => {
+      const [a, b] = t(p.key).split('|');
+      return (
+        <li>
+          <svg viewBox="0 0 24 24" aria-hidden="true" set:html={p.icon} />
+          <span>{a}<br />{b}</span>
+        </li>
+      );
+    })}
+  </ul>
+
+  <div class="hero__dots" data-hero-dots>
+    {slides.map((_, i) => (
+      <button type="button" class:list={{ 'is-active': i === 0 }} aria-label={`${i + 1} / ${slides.length}`}></button>
+    ))}
+  </div>
+</section>
+
+<script>
+  const INTERVAL = 7000;
+  const root = document.querySelector<HTMLElement>('[data-hero-slides]');
+  const dotsRoot = document.querySelector<HTMLElement>('[data-hero-dots]');
+  if (root && dotsRoot) {
+    const slides = Array.from(root.children) as HTMLElement[];
+    const dots = Array.from(dotsRoot.children) as HTMLButtonElement[];
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let current = 0;
+    let timer: number | undefined;
+
+    const show = (n: number) => {
+      const next = (n + slides.length) % slides.length;
+      const img = slides[next].querySelector('img');
+      // se a próxima imagem ainda não carregou, espera o próximo ciclo (nunca mostra quadro vazio)
+      if (img && !img.complete) return;
+      if (next === current) return;
+      slides[current].classList.remove('is-active');
+      dots[current].classList.remove('is-active');
+      current = next;
+      slides[current].classList.add('is-active');
+      dots[current].classList.add('is-active');
+    };
+    const start = () => {
+      if (reduced) return;
+      window.clearInterval(timer);
+      timer = window.setInterval(() => show(current + 1), INTERVAL);
+    };
+    dots.forEach((d, i) => d.addEventListener('click', () => { show(i); start(); }));
+    document.addEventListener('visibilitychange', () => (document.hidden ? window.clearInterval(timer) : start()));
+    start();
+  }
+</script>
+
+<style>
+  .hero {
+    position: relative; isolation: isolate; overflow: hidden;
+    min-height: 100svh; display: grid; grid-template-rows: 1fr auto; grid-template-columns: minmax(0, 1fr);
+    background: var(--color-logo-bg); color: var(--color-ivory);
+  }
+  .hero__slides { position: absolute; inset: 0; z-index: -2; }
+  .hero__slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.8s ease-in-out; }
+  .hero__slide.is-active { opacity: 1; }
+  .hero__slide img { width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; transform: scale(1.06);
+    filter: brightness(0.93) saturate(0.86) contrast(1.1);
+  }
+  /* zoom lento enquanto a imagem está ativa */
+  .hero__slide.is-active img { animation: kenburns 9s ease-out forwards; }
+  @keyframes kenburns { from { transform: scale(1.06); } to { transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero__slide { transition: none; }
+    .hero__slide.is-active img { animation: none; transform: none; }
+  }
+
+  .hero__dots { position: absolute; right: clamp(1.25rem, 6vw, 6rem); bottom: calc(var(--space-5) + 5.5rem); display: flex; gap: 0.6rem; }
+  .hero__dots button { width: 28px; height: 2px; padding: 0; border: 0; background: rgba(232, 214, 183, 0.35); cursor: pointer; transition: background 0.3s ease, width 0.3s ease; }
+  .hero__dots button::before { content: ''; display: block; margin: -10px 0; height: 22px; } /* área de toque maior */
+  .hero__dots button:hover { background: var(--color-champagne); }
+  .hero__dots button.is-active { width: 48px; background: var(--color-gold); }
+  /* Tratamento de cor das imagens — tudo via CSS, arquivos originais intactos.
+     Espresso #35241D = rgb(53, 36, 29) */
+  .hero__shade {
+    position: absolute; inset: 0; z-index: -1;
+    background:
+      /* faixa inferior: base para os ícones */
+      linear-gradient(0deg, rgba(53, 36, 29, 0.96) 0%, rgba(53, 36, 29, 0.75) 15%, rgba(53, 36, 29, 0) 38%),
+      /* esquerda escura → centro translúcido → direita levemente velada */
+      linear-gradient(90deg,
+        rgba(53, 36, 29, 0.94) 0%,
+        rgba(53, 36, 29, 0.86) 26%,
+        rgba(53, 36, 29, 0.6) 42%,
+        rgba(53, 36, 29, 0.32) 58%,
+        rgba(53, 36, 29, 0.18) 76%,
+        rgba(53, 36, 29, 0.12) 100%),
+      /* topo: segura o brilho do céu */
+      linear-gradient(180deg, rgba(53, 36, 29, 0.35) 0%, rgba(53, 36, 29, 0) 28%);
+  }
+  /* "multiply" em tom espresso claro: apaga o dourado estourado sem achatar os detalhes */
+  .hero__shade::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 60% 70% at 72% 42%, rgba(200, 168, 142, 0.4) 0%, rgba(200, 168, 142, 0) 100%);
+    mix-blend-mode: multiply;
+  }
+
+  .hero__content {
+    align-self: center; min-width: 0;
+    padding: calc(96px + var(--space-5)) clamp(1.25rem, 6vw, 6rem) var(--space-5);
+    max-width: 60rem;
+  }
+  .hero__eyebrow { margin: 0; color: var(--color-champagne); font-weight: 500; letter-spacing: 0.34em; }
+  .hero__rule { display: block; width: 7rem; height: 1px; background: var(--color-gold); margin: 1.4rem 0 1.8rem; }
+  h1 {
+    margin: 0; font-size: clamp(2.4rem, 4.6vw, 4.6rem); font-weight: 400; line-height: 1.05;
+    color: var(--color-ivory); text-shadow: 0 2px 30px rgba(35, 13, 8, 0.5);
+  }
+  h1 span { white-space: nowrap; }
+  @media (max-width: 560px) { h1 span { white-space: normal; } }
+  .hero__lead { margin: 1.6rem 0 2.4rem; max-width: 34rem; font-size: clamp(1rem, 1.3vw, 1.2rem); font-weight: 300; color: var(--color-ivory); opacity: 0.92; }
+  .hero__ctas { display: flex; flex-wrap: wrap; gap: 1.2rem; }
+
+  .pillars {
+    list-style: none; margin: 0; padding: var(--space-4) clamp(1.25rem, 6vw, 6rem) var(--space-5);
+    display: grid; grid-template-columns: repeat(5, 1fr);
+  }
+  .pillars li { display: flex; align-items: center; justify-content: center; gap: 1.1rem; padding: 0 1rem; font-size: 0.95rem; line-height: 1.35; color: var(--color-ivory); }
+  .pillars li + li { border-left: 1px solid var(--color-line); }
+  .pillars svg { flex: none; width: 44px; height: 44px; fill: none; stroke: var(--color-gold); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+
+  @media (max-width: 1000px) {
+    .pillars { grid-template-columns: repeat(2, 1fr); row-gap: var(--space-3); }
+    .pillars li { justify-content: flex-start; border-left: 0 !important; }
+  }
+  @media (max-width: 700px) {
+    .hero__slide img { object-position: 62% 30%; }
+    .hero__dots { bottom: auto; top: 100px; right: 1.25rem; }
+    .hero__shade { background: linear-gradient(0deg, rgba(53, 36, 29, 0.96) 0%, rgba(53, 36, 29, 0.72) 55%, rgba(53, 36, 29, 0.5) 100%); }
+    .pillars { grid-template-columns: 1fr; }
+  }
+</style>

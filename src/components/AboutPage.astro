@@ -1,0 +1,264 @@
+---
+import PageBanner from './PageBanner.astro';
+import Button from './Button.astro';
+import ImageSlot from './ImageSlot.astro';
+import { about } from '../i18n/about';
+import { routes, useTranslations } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = about[lang];
+const t = useTranslations(lang);
+---
+<PageBanner
+  image="/brand/banner-sobre.jpg" imageSmall="/brand/banner-sobre-1100.jpg" position="72% 50%"
+  eyebrow={c.banner.eyebrow} title={c.banner.title} lead={c.banner.lead}
+  crumbs={[{ label: t('nav.home'), href: routes.home[lang] }, { label: c.banner.crumb }]}
+/>
+
+<!-- Quem somos (marfim) -->
+<section class="sec sec--ivory on-light">
+  <div class="container intro">
+    <p class="eyebrow reveal">{c.intro.eyebrow}</p>
+    <div class="intro__text">
+      {c.intro.paragraphs.map((p, i) => <p class:list={['reveal', { lead: i === 0 }]} style={`--d:${i * 80}ms`}>{p}</p>)}
+    </div>
+  </div>
+</section>
+
+<!-- Nossa essência (champanhe) -->
+<section class="sec sec--champagne on-light">
+  <div class="container essence">
+    <div class="essence__text reveal">
+      <p class="eyebrow">{c.essence.eyebrow}</p>
+      <h2>{c.essence.title}</h2>
+      <span class="gold-rule"></span>
+      {c.essence.paragraphs.map((p) => <p>{p}</p>)}
+    </div>
+    <div class="essence__media reveal" style="--d:120ms">
+      <span class="essence__frame" aria-hidden="true"></span>
+      <ImageSlot label={c.essence.image} alt={c.essence.image} ratio="1774 / 887" natural
+        src="/brand/sec-essencia.jpg" srcSmall="/brand/sec-essencia-900.jpg" />
+    </div>
+  </div>
+</section>
+
+<!-- Missão, Visão e Valores (espresso) -->
+<section class="sec sec--dark">
+  <div class="container">
+    <header class="sec__head reveal">
+      <p class="eyebrow">{c.mission.eyebrow}</p>
+      <h2>{c.mission.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <div class="reveal">
+      <ImageSlot label={c.mission.image} alt={c.mission.image} ratio="2172 / 724" natural class="mvv__image"
+        src="/brand/sec-mvv.jpg" srcSmall="/brand/sec-mvv-1100.jpg" />
+    </div>
+    <!-- Cada coluna fica abaixo do objeto correspondente: alvo, luneta, balança -->
+    <div class="mvv">
+      {c.mission.items.map((item, i) => (
+        <article class="mvv__col reveal" style={`--d:${i * 100}ms`}>
+          <span class="mvv__num">{String(i + 1).padStart(2, '0')}</span>
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </article>
+      ))}
+      <article class="mvv__col reveal" style="--d:200ms">
+        <span class="mvv__num">03</span>
+        <h3>{c.mission.valuesTitle}</h3>
+        <p>{c.mission.valuesText}</p>
+        <Button href="#valores" variant="link" arrow>{c.mission.valuesLink}</Button>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- Valores (marfim) -->
+<section id="valores" class="sec sec--ivory on-light">
+  <div class="container">
+    <header class="sec__head reveal">
+      <p class="eyebrow">{c.values.eyebrow}</p>
+      <h2>{c.values.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <ul class="values">
+      {c.values.items.map((v, i) => (
+        <li class="reveal" style={`--d:${(i % 3) * 90}ms`}>
+          <img class="medal" src={`/icons/${v.icon}.jpg`} alt="" width="76" height="76" loading="lazy" />
+          <div>
+            <h3>{v.title}</h3>
+            <p>{v.text}</p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- Nossa forma de trabalhar (café → espresso) -->
+<section class="sec sec--cafe">
+  <div class="container">
+    <div class="approach">
+      <div class="approach__media reveal">
+        <ImageSlot label={c.approach.image} alt={c.approach.image} ratio="2172 / 724" natural
+          src="/brand/sec-trabalho.jpg" srcSmall="/brand/sec-trabalho-900.jpg" />
+      </div>
+      <div class="reveal" style="--d:120ms">
+        <p class="eyebrow">{c.approach.eyebrow}</p>
+        <h2>{c.approach.title}</h2>
+        <span class="gold-rule"></span>
+        <p class="approach__lead">{c.approach.lead}</p>
+      </div>
+    </div>
+    <div class="approach__principles reveal">
+      <p class="approach__intro">{c.approach.principlesIntro}</p>
+      <ol class="principles">
+        {c.approach.principles.map((p, i) => (
+          <li><span>{String(i + 1).padStart(2, '0')}</span>{p}</li>
+        ))}
+      </ol>
+      <p class="approach__closing">{c.approach.closing}</p>
+    </div>
+  </div>
+</section>
+
+<!-- Governança (imagem em largura total, texto no espaço escuro à esquerda) -->
+<section class="gov">
+  <picture class="gov__media">
+    <source media="(max-width: 1100px)" srcset="/brand/sec-governanca-1100.jpg" />
+    <img src="/brand/sec-governanca.jpg" alt={c.governance.image} width="2172" height="724" loading="lazy" decoding="async" />
+  </picture>
+  <!-- Título na área escura da foto; o parágrafo fica logo abaixo, para não cruzar as curvas douradas -->
+  <div class="gov__text reveal">
+    <p class="eyebrow">{c.governance.eyebrow}</p>
+    <h2>{c.governance.title}</h2>
+  </div>
+  <div class="gov__body reveal" style="--d:120ms">
+    <span class="gold-rule"></span>
+    <p>{c.governance.text}</p>
+  </div>
+</section>
+
+<!-- Assinatura + contato (marfim) -->
+<section class="sec sec--ivory on-light signature">
+  <div class="container signature__inner reveal">
+    <p class="eyebrow">{c.signature.name}</p>
+    <h2>{c.signature.tagline}</h2>
+    <span class="gold-rule gold-rule--center"></span>
+    <Button href={routes.contact[lang]} variant="secondary" arrow blockMobile>{c.signature.button}</Button>
+  </div>
+</section>
+
+<script>
+  const els = document.querySelectorAll<HTMLElement>('.reveal');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach((el) => el.classList.add('is-visible'));
+  } else {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+    }), { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+    els.forEach((el) => io.observe(el));
+  }
+</script>
+
+<style>
+  .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
+  html { scroll-behavior: smooth; }
+  .sec--ivory { background: var(--color-ivory); color: var(--color-espresso); }
+  .sec--champagne { background: linear-gradient(180deg, #efe3cf 0%, var(--color-champagne) 100%); color: var(--color-espresso); }
+  .sec--dark { background: var(--color-espresso); color: var(--color-ivory); }
+  .sec--cafe { background: linear-gradient(160deg, var(--color-cafe) 0%, var(--color-espresso) 70%); color: var(--color-ivory); }
+
+  .on-light .eyebrow { color: var(--color-cafe); }
+  .sec--dark .eyebrow, .sec--cafe .eyebrow { color: var(--color-gold); }
+  h2 { font-size: clamp(2.1rem, 4vw, 3.3rem); font-weight: 400; line-height: 1.1; margin: 0.9rem 0 0; text-wrap: balance; }
+  .sec--dark h2, .sec--cafe h2 { color: var(--color-champagne); }
+  h3 { font-size: 1.45rem; font-weight: 500; margin: 0 0 0.5rem; }
+  p { margin: 0 0 1.1rem; }
+  .on-light p { color: var(--color-cafe); }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.6rem 0; }
+  .gold-rule--center { margin-inline: auto; }
+  .sec__head { text-align: center; max-width: 44rem; margin: 0 auto clamp(3rem, 6vw, 4.5rem); }
+
+  /* Quem somos */
+  .intro { display: grid; grid-template-columns: 0.35fr 1fr; gap: clamp(2rem, 6vw, 6rem); }
+  .intro__text { max-width: 46rem; }
+  .intro__text .lead { font-family: var(--font-display); font-size: clamp(1.45rem, 2.2vw, 1.9rem); line-height: 1.4; color: var(--color-espresso); margin-bottom: 1.8rem; }
+
+  /* Essência */
+  .essence { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(3rem, 7vw, 7rem); align-items: center; }
+  .essence__text { max-width: 34rem; }
+  .essence__text h2 { color: var(--color-espresso); }
+  .essence__media { position: relative; }
+  .essence__frame { position: absolute; inset: 1.5rem -1.5rem -1.5rem 1.5rem; border: 1px solid var(--color-gold); opacity: 0.6; }
+
+  /* Missão, Visão e Valores */
+  .mvv__image { border: 1px solid var(--color-line); }
+  .mvv { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.5rem, 3vw, 3rem); margin-top: clamp(2rem, 4vw, 3rem); }
+  .mvv__col { text-align: center; padding: 2rem clamp(0.5rem, 1.5vw, 1.5rem) 0; border-top: 1px solid var(--color-line); position: relative; }
+  .mvv__col::before { content: ''; position: absolute; top: -1px; left: 50%; width: 48px; height: 2px; margin-left: -24px; background: var(--color-gold); }
+  .mvv__num { display: block; font-family: var(--font-display); color: var(--color-gold); letter-spacing: 0.2em; margin-bottom: 1rem; }
+  .mvv__col h3 { font-size: clamp(1.9rem, 2.8vw, 2.4rem); font-weight: 400; color: var(--color-champagne); margin-bottom: 1rem; }
+  .mvv__col p { color: var(--color-ivory); opacity: 0.85; font-size: 0.98rem; }
+
+  /* Valores */
+  .values { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(2rem, 4vw, 3.5rem) clamp(1.5rem, 3vw, 3rem); }
+  .values li { display: flex; gap: 1.3rem; align-items: flex-start; padding-top: 1.8rem; border-top: 1px solid rgba(98, 72, 58, 0.18); }
+  .values h3 { color: var(--color-espresso); }
+  .values p { margin: 0; font-size: 0.95rem; }
+  .medal { flex: none; width: 76px; height: 76px; border-radius: 50%; clip-path: circle(47% at 50% 50%); box-shadow: 0 10px 22px rgba(53, 36, 29, 0.25); transition: transform 0.5s cubic-bezier(.2,.7,.2,1); }
+  .values li:hover .medal { transform: translateY(-3px) scale(1.04); }
+
+  /* Forma de trabalhar */
+  .approach { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: clamp(2.5rem, 5vw, 5rem); align-items: center; }
+  .approach__media .slot { border: 1px solid var(--color-line); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.3); }
+  .approach h2 { font-size: clamp(1.9rem, 3vw, 2.6rem); }
+  .approach__lead, .approach__closing { color: var(--color-ivory); opacity: 0.85; }
+  .approach__principles { margin-top: clamp(3rem, 6vw, 4.5rem); text-align: center; }
+  .approach__intro { color: var(--color-champagne); font-size: 0.95rem; letter-spacing: 0.02em; }
+  .principles { list-style: none; margin: 1.5rem 0 2rem; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--color-line); border-bottom: 1px solid var(--color-line); }
+  .principles li { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; padding: 1.8rem 1rem; font-family: var(--font-display); font-size: clamp(1.8rem, 3vw, 2.4rem); color: var(--color-champagne); }
+  .principles li + li { border-left: 1px solid var(--color-line); }
+  .principles span { font-size: 0.9rem; color: var(--color-gold); letter-spacing: 0.2em; }
+  .approach__closing { max-width: 40rem; margin-inline: auto; }
+
+  /* Governança — a imagem não recebe filtro nem véu; o texto ocupa a área escura da própria foto */
+  .gov { position: relative; background: #1f120c; color: var(--color-ivory); border-top: 1px solid var(--color-line); border-bottom: 1px solid var(--color-line); }
+  .gov__media img { display: block; width: 100%; height: auto; aspect-ratio: 2172 / 724; }
+  /* a área escura da foto é a faixa superior esquerda: o bloco fica largo e baixo para caber nela */
+  .gov__text { position: absolute; top: 6%; left: clamp(1.25rem, 6vw, 6rem); width: min(42%, 36rem); text-shadow: 0 2px 18px rgba(31, 18, 12, 0.9); }
+  .gov .eyebrow { color: var(--color-gold); white-space: nowrap; }
+  .gov h2 { color: var(--color-champagne); font-size: clamp(2rem, 3vw, 3rem); margin-top: 0.6rem; }
+  .gov p { color: var(--color-ivory); opacity: 0.9; font-size: 0.93rem; margin: 0; }
+  .gov .gold-rule { margin: 0 0 1.4rem; }
+  .gov__body { padding: clamp(2rem, 4vw, 3rem) clamp(1.25rem, 6vw, 6rem) clamp(2.5rem, 5vw, 3.5rem); max-width: 52rem; }
+  .gov__body p { font-size: 1.02rem; }
+
+  /* Assinatura */
+  .signature__inner { text-align: center; max-width: 46rem; }
+  .signature h2 { color: var(--color-espresso); font-size: clamp(2rem, 3.8vw, 3rem); }
+
+  /* Entrada discreta */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.9s ease, transform 0.9s ease; transition-delay: var(--d, 0ms); }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  @media (max-width: 1000px) {
+    .intro, .essence, .approach, .mvv { grid-template-columns: 1fr; }
+    .principles { grid-template-columns: 1fr; }
+    .principles li + li { border-left: 0; border-top: 1px solid var(--color-line); }
+    .values { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 1280px) {
+    /* telas menores: texto abaixo da imagem, para não apertar sobre a foto */
+    .gov__text { position: static; width: auto; text-shadow: none; padding: clamp(2.5rem, 7vw, 4rem) clamp(1.25rem, 6vw, 6rem) 0; }
+    .gov__body { padding-top: 1.4rem; }
+    .gov__text.reveal { transform: translateY(24px); }
+    .gov__text.reveal.is-visible { transform: none; }
+  }
+  @media (max-width: 640px) {
+    .values { grid-template-columns: 1fr; }
+    .essence__frame { inset: 1rem -0.5rem -1rem 1rem; }
+  }
+</style>

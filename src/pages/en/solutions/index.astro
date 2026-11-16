@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import SolutionsPage from '../../../components/SolutionsPage.astro';
+import { solutions } from '../../../i18n/solutions';
+---
+<BaseLayout overlayHeader title={solutions.en.meta.title} description={solutions.en.meta.description}>
+  <SolutionsPage lang="en" />
+</BaseLayout>

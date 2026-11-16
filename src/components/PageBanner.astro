@@ -1,0 +1,107 @@
+---
+/** Banner das páginas internas: imagem de fundo + véu espresso + título. */
+interface Props {
+  image?: string;      // /brand/x.jpg (versão grande) — sem imagem, usa fundo espresso provisório
+  imageSmall?: string; // versão para celular
+  position?: string;   // enquadramento da imagem
+  eyebrow?: string;
+  title: string;
+  lead?: string;
+  crumbs?: { label: string; href?: string }[];
+  /** Altura acompanha a proporção da imagem (mostra a imagem inteira) e título mais compacto */
+  fit?: string; // ex.: '2172 / 724'
+  /** Imagem inteira no topo, sem véu, e o título numa faixa abaixo (para imagens com o emblema à esquerda) */
+  stacked?: boolean;
+  /** Imagem ocupa só o lado direito (ex.: '62%'), fundindo-se ao espresso à esquerda */
+  side?: string;
+  /** Vídeo de fundo em loop, sem som (ex.: '/video/x' → x.webm + x.mp4 + x-poster.jpg) */
+  video?: string;
+}
+const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = [], fit, stacked = false, side, video } = Astro.props;
+---
+<section class:list={['pb', { 'pb--fit': fit, 'pb--stacked': stacked, 'pb--side': side }]} style={[fit && `--pb-ratio: ${fit}`, side && `--pb-side: ${side}`].filter(Boolean).join(';') || undefined}>
+  {video ? (
+    <video class="pb__video" autoplay muted loop playsinline preload="metadata" poster={`${video}-poster.jpg`} aria-hidden="true">
+      <source src={`${video}.webm`} type="video/webm" />
+      <source src={`${video}.mp4`} type="video/mp4" />
+    </video>
+  ) : image ? (
+    <picture class="pb__bg" aria-hidden="true">
+      {imageSmall && <source media="(max-width: 900px)" srcset={imageSmall} />}
+      <img src={image} alt="" fetchpriority="high" style={`object-position: ${position}`} />
+    </picture>
+  ) : (
+    <div class="pb__placeholder" aria-hidden="true"></div>
+  )}
+  <div class="pb__shade" aria-hidden="true"></div>
+  <div class="pb__content">
+    {crumbs.length > 0 && (
+      <nav class="pb__crumbs" aria-label="Breadcrumb">
+        {crumbs.map((c, i) => (
+          <>
+            {i > 0 && <span aria-hidden="true">/</span>}
+            {c.href ? <a href={c.href}>{c.label}</a> : <span aria-current="page">{c.label}</span>}
+          </>
+        ))}
+      </nav>
+    )}
+    {eyebrow && <p class="eyebrow pb__eyebrow">{eyebrow}</p>}
+    <span class="pb__rule" aria-hidden="true"></span>
+    <h1>{title}</h1>
+    {lead && <p class="pb__lead">{lead}</p>}
+  </div>
+</section>
+
+<style>
+  .pb { position: relative; isolation: isolate; overflow: hidden; min-height: clamp(460px, 68vh, 680px); display: flex; align-items: flex-end; background: var(--color-espresso); color: var(--color-ivory); }
+  .pb__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; z-index: -2; }
+  @media (prefers-reduced-motion: reduce) { .pb__video { display: none; } }
+  .pb__placeholder { position: absolute; inset: 0; z-index: -2; background: radial-gradient(ellipse 60% 80% at 78% 40%, rgba(181, 139, 77, 0.35), transparent 70%), linear-gradient(135deg, var(--color-cafe) 0%, var(--color-espresso) 60%); }
+  .pb__bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; filter: brightness(0.92) saturate(0.86) contrast(1.06); }
+  /* Espresso #35241D: esquerda escura para o texto, direita preservando a arquitetura */
+  .pb__shade { position: absolute; inset: 0; z-index: -1; background:
+    linear-gradient(90deg, rgba(53, 36, 29, 0.9) 0%, rgba(53, 36, 29, 0.7) 35%, rgba(53, 36, 29, 0.25) 62%, rgba(53, 36, 29, 0.12) 100%),
+    linear-gradient(0deg, rgba(53, 36, 29, 0.85) 0%, rgba(53, 36, 29, 0) 40%),
+    linear-gradient(180deg, rgba(53, 36, 29, 0.6) 0%, rgba(53, 36, 29, 0) 30%); }
+  .pb__content { width: 100%; max-width: 62rem; padding: calc(96px + 3rem) clamp(1.25rem, 6vw, 6rem) clamp(3rem, 7vw, 5.5rem); }
+  .pb__crumbs { display: flex; gap: 0.6rem; font-size: 0.78rem; letter-spacing: 0.08em; margin-bottom: 2rem; color: var(--color-champagne); }
+  .pb__crumbs a { color: var(--color-champagne); opacity: 0.7; }
+  .pb__crumbs a:hover { color: var(--color-gold); opacity: 1; }
+  .pb__crumbs span[aria-hidden] { opacity: 0.4; }
+  .pb__eyebrow { margin: 0; color: var(--color-champagne); font-weight: 500; letter-spacing: 0.34em; }
+  .pb__rule { display: block; width: 7rem; height: 1px; background: var(--color-gold); margin: 1.4rem 0 1.6rem; }
+  h1 { margin: 0; font-size: clamp(2.6rem, 5vw, 4.6rem); font-weight: 400; line-height: 1.05; text-wrap: balance; color: var(--color-ivory); }
+  .pb__lead { margin: 1.5rem 0 0; max-width: 36rem; font-size: clamp(1rem, 1.3vw, 1.2rem); font-weight: 300; opacity: 0.9; text-wrap: balance; }
+  /* Modo "side": imagem só à direita, com a borda esquerda dissolvida no espresso */
+  .pb--side .pb__bg img { left: auto; right: 0; width: var(--pb-side); -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%); mask-image: linear-gradient(to right, transparent 0%, #000 30%); }
+  @media (max-width: 700px) { .pb--side .pb__bg img { width: 100%; -webkit-mask-image: none; mask-image: none; } }
+  /* Modo "fit": a seção tem a mesma proporção da imagem, então ela aparece inteira */
+  .pb--fit { min-height: 0; aspect-ratio: var(--pb-ratio); align-items: center; }
+  .pb--fit .pb__content { padding-top: calc(80px + 1.5rem); padding-bottom: clamp(1.5rem, 3vw, 2.5rem); max-width: 44rem; }
+  .pb--fit .pb__crumbs { margin-bottom: 1.2rem; }
+  .pb--fit .pb__rule { margin: 1rem 0 1.1rem; width: 5rem; }
+  .pb--fit h1 { font-size: clamp(2rem, 3.3vw, 3.3rem); }
+  .pb--fit .pb__lead { margin-top: 1rem; }
+  /* Modo "stacked": imagem inteira, sem filtro nem véu lateral; texto numa faixa espresso abaixo */
+  /* imagem começa abaixo do cabeçalho, para o emblema não ficar escondido */
+  .pb.pb--stacked { display: block; min-height: 0; aspect-ratio: auto; padding-top: 84px; }
+  .pb--stacked .pb__bg img { position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--pb-ratio, 3 / 1); filter: none; }
+  .pb--stacked .pb__shade { display: none; }
+  .pb--stacked .pb__content { max-width: none; padding-top: clamp(2rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 3.5rem); background: var(--color-espresso); border-top: 1px solid var(--color-line); display: grid; grid-template-columns: auto 1fr; column-gap: clamp(2rem, 6vw, 6rem); align-items: end; }
+  .pb--stacked .pb__crumbs, .pb--stacked .pb__eyebrow, .pb--stacked .pb__rule { grid-column: 1 / -1; }
+  .pb--stacked h1 { font-size: clamp(2.2rem, 3.6vw, 3.4rem); }
+  .pb--stacked .pb__lead { margin: 0 0 0.4rem; max-width: 30rem; }
+  @media (max-width: 800px) {
+    .pb.pb--stacked { padding-top: 72px; }
+    .pb--stacked .pb__bg img { aspect-ratio: 16 / 9; object-fit: cover; object-position: 18% 50%; }
+    .pb--stacked .pb__content { grid-template-columns: 1fr; }
+    .pb--stacked .pb__lead { margin-top: 1rem; }
+  }
+  @media (max-width: 1000px) {
+    /* telas estreitas: a proporção 3:1 ficaria baixa demais para o texto */
+    .pb--fit:not(.pb--stacked) { aspect-ratio: auto; min-height: 460px; align-items: flex-end; }
+  }
+  @media (max-width: 700px) {
+    .pb__shade { background: linear-gradient(0deg, rgba(53, 36, 29, 0.95) 0%, rgba(53, 36, 29, 0.7) 55%, rgba(53, 36, 29, 0.5) 100%); }
+  }
+</style>

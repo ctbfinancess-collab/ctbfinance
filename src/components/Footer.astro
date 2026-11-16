@@ -1,0 +1,54 @@
+---
+import { getLangFromUrl, useTranslations, routes } from '../i18n/utils';
+import { legalCommon } from '../i18n/legal';
+import { company } from '../i18n/company';
+const lang = getLangFromUrl(Astro.url);
+const t = useTranslations(lang);
+const year = new Date().getFullYear();
+const lc = legalCommon[lang];
+const policies = [{ href: routes.privacy[lang], label: lc.privacy }, { href: routes.terms[lang], label: lc.terms }, { href: routes.legal[lang], label: lc.legal }];
+const L = lang === 'pt'
+  ? { license: 'Licença comercial nº', place: 'Dubai, Emirados Árabes Unidos', phone: 'Telefone', madeBy: 'Site desenvolvido pela' }
+  : { license: 'Trade licence no.', place: 'Dubai, United Arab Emirates', phone: 'Phone', madeBy: 'Website developed by' };
+---
+<footer class="footer">
+  <div class="container footer__inner">
+    <div>
+      <p class="footer__legal">{company.legalName}</p>
+      <p>{L.license} {company.tradeLicense} · {L.place}</p>
+    </div>
+    <p class="footer__phone">{L.phone}: <a href={company.phoneHref}>{company.phone}</a>{company.emailConfirmed && <> · <a href={`mailto:${company.email}`}>{company.email}</a></>}</p>
+  </div>
+  <div class="container footer__bottom">
+    <p class="footer__copy">© {year} CTB Finances Dubai. {t('footer.rights')}</p>
+    <nav class="footer__policies" aria-label={lc.nav}>
+      {policies.map((p) => <a href={p.href}>{p.label}</a>)}
+    </nav>
+    <p class="credit">
+      {L.madeBy}
+      <a href="https://supernovafilms.ae" target="_blank" rel="noopener noreferrer" class="credit__link">
+        <img src="/brand/supernova-films.jpg" alt="" width="28" height="28" loading="lazy" />
+        <strong>Supernova Films e Turismo Ltda</strong>
+      </a>
+    </p>
+  </div>
+</footer>
+
+<style>
+  .footer { background: var(--color-bg-dark); border-top: 1px solid var(--color-line); padding-block: var(--space-4) var(--space-3); color: var(--color-champagne); font-size: 0.82rem; letter-spacing: 0.04em; }
+  .footer p { margin: 0; opacity: 0.85; }
+  .footer__inner { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1rem 2rem; align-items: flex-end; padding-bottom: 1.4rem; border-bottom: 1px solid var(--color-line); }
+  .footer__legal { font-family: var(--font-display); font-size: 1.15rem; letter-spacing: 0.08em; color: var(--color-ivory); opacity: 1 !important; margin-bottom: 0.3rem !important; }
+  .footer__phone a { color: var(--color-gold); }
+  .footer__phone a:hover { color: var(--color-champagne); }
+  .footer__bottom { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.8rem 2rem; padding-top: 1.2rem; }
+  .footer__copy { opacity: 0.7 !important; }
+  .footer__policies { display: flex; flex-wrap: wrap; gap: 0.4rem 1.4rem; }
+  .footer__policies a { color: var(--color-champagne); opacity: 0.8; }
+  .footer__policies a:hover { color: var(--color-gold); opacity: 1; }
+  .credit { display: inline-flex; align-items: center; gap: 0.5rem; opacity: 0.8 !important; }
+  .credit__link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--color-champagne); }
+  .credit img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+  .credit strong { font-weight: 500; }
+  .credit__link:hover strong { color: var(--color-gold); }
+</style>

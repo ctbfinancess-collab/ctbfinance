@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import GovernancePage from '../../components/GovernancePage.astro';
+import { governance } from '../../i18n/governance';
+---
+<BaseLayout overlayHeader title={governance.pt.meta.title} description={governance.pt.meta.description}>
+  <GovernancePage lang="pt" />
+</BaseLayout>

@@ -1,0 +1,102 @@
+/* ==========================================================================
+   CTB Finances — Botões oficiais
+   1. .btn--primary        ação principal (degradê dourado → champanhe)
+   2. .btn--secondary      contato / ação de apoio (contorno dourado)
+   3. .btn--institutional  páginas internas (marfim, cantos suaves)
+   4. .btn-link            link editorial (texto + seta + linha inferior)
+   Em fundos claros, envolva com .on-light para ajustar as cores.
+   ========================================================================== */
+
+.btn {
+  --btn-pad-y: 0.95rem;
+  --btn-pad-x: 2.2rem;
+  position: relative; isolation: isolate; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.65rem;
+  min-height: 48px; /* área de toque confortável */
+  padding: var(--btn-pad-y) var(--btn-pad-x);
+  border: 1px solid transparent; border-radius: 999px;
+  font-family: var(--font-body); font-size: 0.98rem; font-weight: 500; letter-spacing: 0.02em; line-height: 1.2;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: transform 0.35s cubic-bezier(.2,.7,.2,1), box-shadow 0.35s ease, background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease;
+}
+.btn svg, .btn-link svg { width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.35s cubic-bezier(.2,.7,.2,1); }
+.btn:hover svg, .btn-link:hover svg { transform: translateX(4px); }
+.btn--sm { --btn-pad-y: 0.6rem; --btn-pad-x: 1.5rem; min-height: 40px; font-size: 0.88rem; font-weight: 600; }
+
+/* Foco acessível (teclado) */
+.btn:focus-visible, .btn-link:focus-visible {
+  outline: 2px solid var(--color-champagne);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 6px rgba(181, 139, 77, 0.35);
+}
+.on-light .btn:focus-visible, .on-light .btn-link:focus-visible { outline-color: var(--color-espresso); }
+
+/* 1 · Primário */
+.btn--primary {
+  color: var(--color-espresso);
+  background: linear-gradient(115deg, var(--color-gold) 0%, #d2b07c 45%, var(--color-champagne) 100%);
+  background-size: 160% 100%; background-position: 0% 50%;
+  box-shadow: 0 8px 24px rgba(53, 36, 29, 0.28), inset 0 1px 0 rgba(246, 240, 230, 0.55);
+  transition: background-position 0.6s ease, transform 0.35s cubic-bezier(.2,.7,.2,1), box-shadow 0.35s ease;
+}
+/* brilho que atravessa o botão no hover */
+.btn--primary::after {
+  content: ''; position: absolute; inset: 0; z-index: -1;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform 0.9s ease;
+}
+.btn--primary:hover { color: var(--color-espresso); background-position: 100% 50%; transform: translateY(-2px); box-shadow: 0 14px 32px rgba(53, 36, 29, 0.32), inset 0 1px 0 rgba(246, 240, 230, 0.6); }
+.btn--primary:hover::after { transform: translateX(120%); }
+.btn--primary:active { transform: translateY(0); }
+
+/* 2 · Secundário */
+.btn--secondary {
+  color: var(--color-ivory);
+  background: transparent;
+  border-color: var(--color-gold);
+}
+.btn--secondary:hover { color: var(--color-ivory); background: rgba(181, 139, 77, 0.16); border-color: var(--color-champagne); transform: translateY(-2px); }
+.on-light .btn--secondary { color: var(--color-espresso); }
+.on-light .btn--secondary:hover { color: var(--color-espresso); background: rgba(181, 139, 77, 0.12); border-color: var(--color-cafe); }
+
+/* 3 · Institucional */
+.btn--institutional {
+  color: var(--color-espresso);
+  background: var(--color-ivory);
+  border-color: rgba(98, 72, 58, 0.18);
+  border-radius: 6px;
+  box-shadow: 0 4px 14px rgba(53, 36, 29, 0.12);
+}
+.btn--institutional:hover { color: var(--color-espresso); background: var(--color-champagne); border-color: var(--color-gold); transform: translateY(-2px); box-shadow: 0 10px 24px rgba(53, 36, 29, 0.18); }
+
+/* 4 · Link editorial */
+.btn-link {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 0.6rem;
+  min-height: 44px; padding: 0.25rem 0;
+  color: var(--color-champagne);
+  font-family: var(--font-body); font-size: 0.98rem; font-weight: 400; letter-spacing: 0.03em;
+  text-decoration: none; background: none; border: 0; cursor: pointer;
+}
+.btn-link svg { color: var(--color-gold); }
+.btn-link::after {
+  content: ''; position: absolute; left: 0; right: 0; bottom: 0.45rem; height: 1px;
+  background: currentColor; opacity: 0.35;
+  transform-origin: left; transition: opacity 0.35s ease, transform 0.5s cubic-bezier(.2,.7,.2,1);
+}
+.btn-link:hover { color: var(--color-ivory); }
+.btn-link:hover::after { opacity: 1; background: var(--color-gold); }
+.on-light .btn-link { color: var(--color-cafe); }
+.on-light .btn-link:hover { color: var(--color-espresso); }
+
+/* Celular: botões principais ocupam a largura disponível quando pedido */
+@media (max-width: 600px) {
+  .btn { --btn-pad-x: 1.6rem; }
+  .btn--block-mobile { width: 100%; }
+}
+
+/* Movimento reduzido */
+@media (prefers-reduced-motion: reduce) {
+  .btn, .btn svg, .btn-link svg, .btn-link::after, .btn--primary::after { transition: none; }
+  .btn:hover, .btn--primary:hover { transform: none; }
+}

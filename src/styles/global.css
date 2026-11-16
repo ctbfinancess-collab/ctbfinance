@@ -1,0 +1,22 @@
+@import './tokens.css';
+@import './buttons.css';
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: 0.01em; line-height: 1.1; }
+a { color: var(--color-cafe); text-decoration: none; transition: color 0.2s ease; }
+a:hover { color: var(--color-gold); }
+img { max-width: 100%; display: block; }
+.container { width: min(100% - 2rem, var(--container)); margin-inline: auto; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.32em; text-transform: uppercase; color: var(--color-gold); }
+.rule { width: 64px; height: 1px; background: var(--color-gold); border: 0; margin: var(--space-3) auto; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+

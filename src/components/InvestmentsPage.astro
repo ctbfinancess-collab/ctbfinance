@@ -1,0 +1,236 @@
+---
+import PageBanner from './PageBanner.astro';
+import Button from './Button.astro';
+import ImageSlot from './ImageSlot.astro';
+import { investments } from '../i18n/investments';
+import { routes, useTranslations } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = investments[lang];
+const t = useTranslations(lang);
+
+// Ícones dourados das classes de ativos (public/icons/inv-*.jpg)
+const assetIcons = ['renda-fixa', 'participacoes', 'ativos-reais', 'ativos-digitais'];
+// Mesmos ícones das 3 atividades na página Soluções
+const areaIcons = ['estruturacao', 'visao', 'consultoria'];
+---
+<PageBanner
+  video="/video/ctb-graficos" image="/video/ctb-graficos-poster.jpg"
+  eyebrow={c.banner.eyebrow} title={c.banner.title} lead={c.banner.lead}
+  crumbs={[{ label: t('nav.home'), href: routes.home[lang] }, { label: c.banner.crumb }]}
+/>
+
+<!-- 1 · Cenário e mercados (marfim) -->
+<section class="sec sec--ivory on-light">
+  <div class="container split">
+    <div class="reveal">
+      <p class="eyebrow">{c.intro.eyebrow}</p>
+      {c.intro.lead.map((p, i) => <p class:list={['lead', { 'lead--first': i === 0 }]}>{p}</p>)}
+      <span class="gold-rule"></span>
+      <h2>{c.intro.title}</h2>
+      {c.intro.body.map((p) => <p class="body">{p}</p>)}
+    </div>
+    <div class="split__media reveal" style="--d:120ms">
+      <span class="frame" aria-hidden="true"></span>
+      <ImageSlot label={c.intro.image} alt={c.intro.image} ratio="1672 / 941" natural
+        src="/brand/inv-cenario.jpg" srcSmall="/brand/inv-cenario-900.jpg" />
+    </div>
+  </div>
+</section>
+
+<!-- 2 · Fundamentos (café) -->
+<section class="sec sec--cafe">
+  <div class="container">
+    <header class="head reveal">
+      <p class="eyebrow">{c.fundamentals.eyebrow}</p>
+      <h2>{c.fundamentals.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <ul class="cards">
+      {c.fundamentals.items.map((item, i) => (
+        <li class="card reveal" style={`--d:${i * 90}ms`}>
+          <img class="medal" src={`/icons/${item.icon}.jpg`} alt="" width="76" height="76" loading="lazy" />
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- 3 · Classes de ativos (marfim) -->
+<section class="sec sec--ivory on-light">
+  <div class="container">
+    <header class="head reveal">
+      <p class="eyebrow">{c.assets.eyebrow}</p>
+      <h2>{c.assets.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <div class="assets__media reveal">
+      <ImageSlot label={c.assets.image} alt={c.assets.image} ratio="1672 / 941" natural
+        src="/brand/inv-ativos.jpg" srcSmall="/brand/inv-ativos-900.jpg" />
+    </div>
+    <ul class="assets">
+      {c.assets.items.map((item, i) => (
+        <li class="reveal" style={`--d:${i * 90}ms`}>
+          <img class="assets__icon" src={`/icons/inv-${assetIcons[i]}.jpg`} alt="" width="96" height="96" loading="lazy" />
+          <h3>{item.title}</h3>
+          <p>{item.text}</p>
+        </li>
+      ))}
+    </ul>
+    <p class="note reveal">{c.assets.note}</p>
+  </div>
+</section>
+
+<!-- 4 · Riscos e responsabilidade (espresso) -->
+<section class="sec sec--dark">
+  <div class="container risks-wrap">
+    <div class="reveal">
+      <p class="eyebrow">{c.risks.eyebrow}</p>
+      <h2>{c.risks.title}</h2>
+      <span class="gold-rule"></span>
+      {c.risks.body.map((p) => <p class="body">{p}</p>)}
+      <dl class="risks">
+        {c.risks.items.map((r) => (
+          <div><dt>{r.title}</dt><dd>{r.text}</dd></div>
+        ))}
+      </dl>
+      <p class="verify">{c.risks.verify}</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · Conheça a CTB Finances (espresso, duas colunas) + aviso legal -->
+<section class="closing">
+  <div class="container">
+    <div class="closing__grid">
+      <div class="closing__text reveal">
+        <p class="eyebrow">{c.solutions.eyebrow}</p>
+        <h2>{c.solutions.title}</h2>
+        <span class="gold-rule"></span>
+        {c.solutions.body.map((p) => <p class="closing__body">{p}</p>)}
+        <div class="closing__ctas">
+          <Button href={routes.solutions[lang]} variant="primary" arrow blockMobile>{c.solutions.primary}</Button>
+          <Button href={routes.contact[lang]} variant="secondary" blockMobile>{c.solutions.secondary}</Button>
+        </div>
+      </div>
+      <div class="areas-card reveal" style="--d:120ms">
+        <p class="areas-card__title">{c.solutions.cardTitle}</p>
+        <ul>
+          {c.solutions.areas.map((a, i) => (
+            <li>
+              <img src={`/icons/${areaIcons[i]}.jpg`} alt="" width="60" height="60" loading="lazy" />
+              <span class="areas-card__num">{String(i + 1).padStart(2, '0')}</span>
+              <span class="areas-card__name">{a}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+    <p class="disclaimer reveal">{c.disclaimer}</p>
+  </div>
+</section>
+
+<script>
+  const els = document.querySelectorAll<HTMLElement>('.reveal');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach((el) => el.classList.add('is-visible'));
+  } else {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+    }), { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+    els.forEach((el) => io.observe(el));
+  }
+</script>
+
+<style>
+  .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
+  .sec--ivory { background: var(--color-ivory); color: var(--color-espresso); }
+  .sec--cafe { background: linear-gradient(160deg, var(--color-cafe) 0%, var(--color-espresso) 75%); color: var(--color-ivory); }
+  .sec--dark { background: var(--color-espresso); color: var(--color-ivory); }
+  .on-light .eyebrow { color: var(--color-cafe); }
+  .sec--cafe .eyebrow, .sec--dark .eyebrow { color: var(--color-gold); }
+  h2 { font-size: clamp(2rem, 3.6vw, 3rem); font-weight: 400; line-height: 1.1; margin: 0.9rem 0 0; text-wrap: balance; }
+  .sec--cafe h2, .sec--dark h2 { color: var(--color-champagne); }
+  h3 { font-size: 1.45rem; font-weight: 500; margin: 0 0 0.5rem; }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.6rem 0; }
+  .gold-rule--center { margin-inline: auto; }
+  .head { text-align: center; max-width: 46rem; margin: 0 auto clamp(3rem, 6vw, 4.5rem); }
+  .body { margin: 1rem 0 0; }
+  .on-light .body { color: var(--color-cafe); }
+  .sec--dark .body { color: var(--color-ivory); opacity: 0.85; }
+  .medal { width: 76px; height: 76px; border-radius: 50%; clip-path: circle(47% at 50% 50%); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.25); transition: transform 0.5s cubic-bezier(.2,.7,.2,1); }
+
+  /* Duas colunas */
+  .split { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: clamp(3rem, 7vw, 7rem); align-items: center; }
+  .split__media .slot { box-shadow: 0 22px 46px rgba(53, 36, 29, 0.18); }
+  .assets__media { max-width: 60rem; margin: 0 auto clamp(3rem, 5vw, 4rem); }
+  .assets__media .slot { border: 1px solid rgba(181, 139, 77, 0.35); box-shadow: 0 22px 46px rgba(53, 36, 29, 0.15); }
+  .risks-wrap { max-width: 56rem; }
+  .risks-wrap .risks { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .split__media { position: relative; }
+  .frame { position: absolute; inset: 1.5rem -1.5rem -1.5rem 1.5rem; border: 1px solid var(--color-gold); opacity: 0.6; }
+  .lead { font-family: var(--font-display); font-size: clamp(1.35rem, 2vw, 1.7rem); line-height: 1.4; color: var(--color-espresso); margin: 1rem 0 0; }
+  .lead--first { margin-top: 1.4rem; }
+
+  /* Fundamentos */
+  .cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  .card { padding: 2rem 1.6rem; border: 1px solid var(--color-line); background: rgba(53, 36, 29, 0.35); transition: border-color 0.4s ease, transform 0.4s ease; }
+  .card:hover { border-color: var(--color-gold); transform: translateY(-3px); }
+  .card:hover .medal { transform: scale(1.05); }
+  .card h3 { color: var(--color-champagne); margin-top: 1.4rem; }
+  .card p { margin: 0; opacity: 0.85; font-size: 0.95rem; }
+
+  /* Classes de ativos */
+  .assets { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: clamp(1.5rem, 3vw, 2.5rem); }
+  .assets li { padding-top: 1.8rem; border-top: 1px solid rgba(98, 72, 58, 0.2); }
+  /* fundo branco do ícone some sobre o marfim com "multiply" */
+  .assets__icon { display: block; width: 96px; height: 96px; margin: 0 0 1.2rem -6px; mix-blend-mode: multiply; transition: transform 0.5s cubic-bezier(.2,.7,.2,1); }
+  .assets li:hover .assets__icon { transform: translateY(-3px) scale(1.04); }
+  .assets h3 { color: var(--color-espresso); }
+  .assets p { margin: 0; color: var(--color-cafe); font-size: 0.95rem; }
+  .note { margin: 2.5rem auto 0; max-width: 44rem; text-align: center; font-size: 0.85rem; color: var(--color-cafe); font-style: italic; }
+
+  /* Riscos */
+  .risks { margin: 2rem 0 0; display: grid; gap: 1rem; }
+  .risks div { padding: 1rem 0 0; border-top: 1px solid var(--color-line); }
+  .risks dt { font-family: var(--font-display); font-size: 1.3rem; color: var(--color-champagne); }
+  .risks dd { margin: 0.2rem 0 0; opacity: 0.8; font-size: 0.95rem; }
+  .verify { margin: 2rem 0 0; padding: 1rem 1.2rem; border-left: 2px solid var(--color-gold); background: rgba(181, 139, 77, 0.1); font-size: 0.95rem; color: var(--color-champagne); }
+
+  /* Encerramento */
+  .closing { background: var(--color-espresso); color: var(--color-ivory); border-top: 1px solid var(--color-line); padding-block: clamp(3.5rem, 7vw, 5.5rem) clamp(2rem, 4vw, 3rem); position: relative; overflow: hidden; }
+  .closing::before { content: ''; position: absolute; right: -10%; top: -40%; width: 60%; height: 140%; background: radial-gradient(ellipse at center, rgba(181, 139, 77, 0.14), transparent 65%); pointer-events: none; }
+  .closing__grid { position: relative; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(2.5rem, 6vw, 5rem); align-items: center; }
+  .closing .eyebrow { color: var(--color-gold); }
+  .closing h2 { color: var(--color-champagne); font-size: clamp(2rem, 3.2vw, 2.8rem); }
+  .closing__body { margin: 0; color: var(--color-ivory); opacity: 0.85; max-width: 34rem; }
+  .closing__ctas { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 2rem; }
+  .areas-card { position: relative; padding: clamp(1.8rem, 3vw, 2.4rem); background: linear-gradient(160deg, var(--color-champagne) 0%, #dcc69f 100%); color: var(--color-espresso); border: 1px solid rgba(181, 139, 77, 0.6); box-shadow: 0 24px 50px rgba(0, 0, 0, 0.3); }
+  .areas-card::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(98, 72, 58, 0.25); pointer-events: none; }
+  .areas-card__title { margin: 0 0 1.2rem; font-size: 0.75rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--color-cafe); }
+  .areas-card ul { list-style: none; margin: 0; padding: 0; }
+  .areas-card li { display: flex; align-items: center; gap: 1rem; padding: 0.9rem 0; border-top: 1px solid rgba(98, 72, 58, 0.22); }
+  .areas-card li:first-child { border-top: 0; padding-top: 0; }
+  .areas-card img { width: 60px; height: 60px; border-radius: 50%; clip-path: circle(47% at 50% 50%); box-shadow: 0 6px 14px rgba(53, 36, 29, 0.25); flex: none; }
+  .areas-card__num { font-family: var(--font-display); color: var(--color-gold-deep, #a8843f); letter-spacing: 0.15em; font-size: 0.95rem; }
+  .areas-card__name { font-family: var(--font-display); font-size: 1.35rem; line-height: 1.2; }
+  .disclaimer { position: relative; margin: clamp(2.5rem, 5vw, 3.5rem) 0 0; padding-top: 1.4rem; border-top: 1px solid var(--color-line); font-style: italic; font-size: 0.85rem; color: var(--color-champagne); opacity: 0.8; text-align: center; }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.9s ease, transform 0.9s ease; transition-delay: var(--d, 0ms); }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  @media (max-width: 1000px) {
+    .split, .closing__grid { grid-template-columns: 1fr; }
+    .risks-wrap .risks { grid-template-columns: 1fr; }
+    .split__media { max-width: 30rem; }
+    .cards, .assets { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .cards, .assets { grid-template-columns: 1fr; }
+    .frame { inset: 1rem -0.5rem -1rem 1rem; }
+  }
+</style>

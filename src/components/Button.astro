@@ -1,0 +1,20 @@
+---
+/** Botão oficial CTB Finances. O texto vem traduzido de quem chama. */
+interface Props {
+  href: string;
+  variant?: 'primary' | 'secondary' | 'institutional' | 'link';
+  size?: 'sm' | 'md';
+  arrow?: boolean | 'external';
+  blockMobile?: boolean;
+  class?: string;
+}
+const { href, variant = 'primary', size = 'md', arrow = false, blockMobile = false, class: cls } = Astro.props;
+const classes = variant === 'link'
+  ? ['btn-link', cls]
+  : ['btn', `btn--${variant}`, { 'btn--sm': size === 'sm', 'btn--block-mobile': blockMobile }, cls];
+---
+<a href={href} class:list={classes}>
+  <slot />
+  {arrow === true && <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>}
+  {arrow === 'external' && <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7"/><path d="M8 7h9v9"/></svg>}
+</a>

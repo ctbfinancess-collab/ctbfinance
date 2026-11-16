@@ -1,0 +1,347 @@
+---
+import PageBanner from './PageBanner.astro';
+import Button from './Button.astro';
+import ImageSlot from './ImageSlot.astro';
+import { governance } from '../i18n/governance';
+import { routes, useTranslations } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = governance[lang];
+const t = useTranslations(lang);
+
+// Ícones dourados da seção Privacidade (public/icons/gov-*.jpg)
+const privacyIcons = ['confidencialidade', 'tratamento_dados', 'seguranca_informacoes'];
+---
+<PageBanner
+  image="/brand/banner-governanca.jpg" imageSmall="/brand/banner-governanca-1100.jpg" fit="2172 / 724" stacked
+  eyebrow={c.banner.eyebrow} title={c.banner.title} lead={c.banner.lead}
+  crumbs={[{ label: t('nav.home'), href: routes.home[lang] }, { label: c.banner.crumb }]}
+/>
+
+<!-- 1 · Princípios (marfim) -->
+<section class="sec sec--ivory on-light">
+  <div class="container">
+    <div class="intro-split">
+      <div class="reveal">
+        <p class="eyebrow">{c.principles.eyebrow}</p>
+        <h2>{c.principles.title}</h2>
+        <span class="gold-rule"></span>
+        <p class="intro-split__text">{c.principles.text}</p>
+      </div>
+      <div class="intro-split__media reveal" style="--d:120ms">
+        <span class="frame" aria-hidden="true"></span>
+        <ImageSlot label={c.principles.image} alt={c.principles.image} ratio="1672 / 941" natural
+          src="/brand/gov-principios.jpg" srcSmall="/brand/gov-principios-900.jpg" />
+      </div>
+    </div>
+    <ul class="principles">
+      {c.principles.items.map((p, i) => (
+        <li class="reveal" style={`--d:${i * 90}ms`}>
+          <img class="medal" src={`/icons/${p.icon}.jpg`} alt="" width="76" height="76" loading="lazy" />
+          <h3>{p.title}</h3>
+          <p>{p.text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- 2 · Conformidade (espresso) -->
+<section class="sec sec--dark">
+  <div class="container">
+    <header class="head head--left reveal">
+      <p class="eyebrow">{c.compliance.eyebrow}</p>
+      <h2>{c.compliance.title}</h2>
+      <span class="gold-rule"></span>
+      <p class="intro">{c.compliance.intro}</p>
+    </header>
+    <div class="compliance">
+      <div class="panel reveal">
+        <p class="panel__title">{c.compliance.activitiesTitle}</p>
+        <ol class="activities">
+          {c.compliance.activities.map((a, i) => (
+            <li>
+              <span class="activities__num">{String(i + 1).padStart(2, '0')}</span>
+              <span>
+                <strong>{a.pt}</strong>
+                <em lang="en">{a.license}</em>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div class="panel reveal" style="--d:120ms">
+        <p class="panel__title">{c.compliance.entityTitle}</p>
+        <dl class="entity">
+          {c.compliance.entity.map((e) => (
+            <div>
+              <dt>{e.label}</dt>
+              <dd class:list={{ pending: e.pending }}>{e.pending ? c.compliance.pendingLabel : e.value}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </div>
+    <p class="regulatory reveal">{c.compliance.regulatory}</p>
+  </div>
+</section>
+
+<!-- 3 · Privacidade (marfim) -->
+<section class="sec sec--ivory on-light">
+  <div class="container">
+    <header class="head reveal">
+      <p class="eyebrow">{c.privacy.eyebrow}</p>
+      <h2>{c.privacy.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <ul class="privacy">
+      {c.privacy.items.map((p, i) => (
+        <li class="reveal" style={`--d:${i * 90}ms`}>
+          <img class="privacy__icon" src={`/icons/gov-${privacyIcons[i]}.png`} alt="" width="104" height="95" loading="lazy" />
+          <h3>{p.title}</h3>
+          <p>{p.text}</p>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>
+
+<!-- 4 · Nosso Grupo Empresarial (espresso) -->
+<section class="sec sec--dark group">
+  <div class="container">
+    <header class="head reveal">
+      <p class="eyebrow">{c.group.eyebrow}</p>
+      <h2>{c.group.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+      <p class="group__lead">{c.group.lead}</p>
+    </header>
+
+    <article class="org org--holding reveal">
+      <img src={`/group/${c.group.holding.logo}.png`} alt={`${c.group.holding.name} — logo`} class="org__logo" loading="lazy" />
+      <div>
+        <h3>{c.group.holding.name}</h3>
+        <p class="org__loc">{c.group.holding.location}</p>
+        <p class="org__text">{c.group.holding.text}</p>
+        <Button href={c.group.holding.website} variant="link" arrow="external">{c.group.visit}</Button>
+      </div>
+    </article>
+
+    <p class="group__label reveal">{c.group.companiesLabel}</p>
+    <div class="orgs">
+      {c.group.companies.map((e, i) => (
+        <article class:list={['org', 'reveal', { 'org--self': e.self }]} style={`--d:${i * 90}ms`}>
+          {e.self && <span class="org__badge">{c.group.selfLabel}</span>}
+          <img src={`/group/${e.logo}.${e.tile ? 'jpg' : 'png'}`} alt={`${e.name} — logo`} class:list={['org__logo', { 'org__logo--tile': e.tile }]} loading="lazy" />
+          <h3>{e.name}</h3>
+          <p class="org__loc">{e.location}</p>
+          <p class="org__text">{e.text}</p>
+          {e.website && <Button href={e.website} variant="link" arrow="external">{c.group.visit}</Button>}
+        </article>
+      ))}
+    </div>
+
+    <p class="group__label reveal">{c.group.institutionLabel}</p>
+    <div class="orgs orgs--two">
+      {c.group.institutions.map((e, i) => (
+        <article class="org org--institution reveal" style={`--d:${i * 90}ms`}>
+          <span class="org__kind">{e.kind}</span>
+          <img src={`/group/${e.logo}.png`} alt={`${e.name} — logo`} class="org__logo" loading="lazy" />
+          <div>
+            <h3>{e.name}</h3>
+            <p class="org__loc">{e.location}</p>
+            <p class="org__text">{e.text}</p>
+            <Button href={e.website} variant="link" arrow="external">{c.group.visit}</Button>
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <p class="group__note reveal">{c.group.note}</p>
+  </div>
+</section>
+
+<!-- 5 · Liderança e estrutura societária (espresso) -->
+<section class="sec sec--dark leaders-sec">
+  <div class="container">
+    <header class="head reveal">
+      <p class="eyebrow">{c.leadership.eyebrow}</p>
+      <h2>{c.leadership.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <div class="leaders">
+      {c.leadership.people.map((p, i) => (
+        <article class="leader reveal" style={`--d:${i * 100}ms`}>
+          <div class="leader__photo">
+            <ImageSlot label={c.leadership.photoLabel} alt={p.name} ratio="4 / 5" src={p.photo || undefined} position={p.position} natural />
+          </div>
+          <h3>{p.name}</h3>
+          <span class="leader__rule"></span>
+          <p class="leader__role">{p.role}</p>
+          {p.bio && (
+            <details class="leader__bio">
+              <summary>
+                <span>{c.leadership.bioToggle}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+              </summary>
+              <div class="leader__bio-text">
+                {p.bio.map((para) => <p>{para}</p>)}
+              </div>
+            </details>
+          )}
+        </article>
+      ))}
+    </div>
+  </div>
+</section>
+
+<!-- 6 · Contato -->
+<section class="band">
+  <div class="container band__inner reveal">
+    <div>
+      <h2>{c.cta.title}</h2>
+      <p>{c.cta.text}</p>
+    </div>
+    <Button href={routes.contact[lang]} variant="primary" arrow blockMobile>{c.cta.button}</Button>
+  </div>
+</section>
+
+<script>
+  const els = document.querySelectorAll<HTMLElement>('.reveal');
+  if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    els.forEach((el) => el.classList.add('is-visible'));
+  } else {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+    }), { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
+    els.forEach((el) => io.observe(el));
+  }
+</script>
+
+<style>
+  .sec { padding-block: clamp(4.5rem, 10vw, 8rem); }
+  .sec--ivory { background: var(--color-ivory); color: var(--color-espresso); }
+  .sec--champagne { background: linear-gradient(180deg, #efe3cf 0%, var(--color-champagne) 100%); color: var(--color-espresso); }
+  .sec--dark { background: var(--color-espresso); color: var(--color-ivory); }
+  .on-light .eyebrow { color: var(--color-cafe); }
+  .sec--dark .eyebrow { color: var(--color-gold); }
+  h2 { font-size: clamp(2rem, 3.6vw, 3rem); font-weight: 400; line-height: 1.1; margin: 0.9rem 0 0; text-wrap: balance; }
+  .sec--dark h2 { color: var(--color-champagne); }
+  h3 { font-size: 1.45rem; font-weight: 500; margin: 0 0 0.5rem; }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.6rem 0; }
+  .gold-rule--center { margin-inline: auto; }
+  .head { text-align: center; max-width: 46rem; margin: 0 auto clamp(3rem, 6vw, 4.5rem); }
+  .head--left { text-align: left; margin-left: 0; }
+  .medal { width: 76px; height: 76px; border-radius: 50%; clip-path: circle(47% at 50% 50%); box-shadow: 0 10px 22px rgba(53, 36, 29, 0.25); transition: transform 0.5s cubic-bezier(.2,.7,.2,1); }
+
+  .intro-split { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(3rem, 6vw, 6rem); align-items: center; margin-bottom: clamp(3rem, 6vw, 4.5rem); }
+  .intro-split h2 { color: var(--color-espresso); }
+  .intro-split__text { margin: 0; color: var(--color-cafe); }
+  .intro-split__media { position: relative; }
+  .intro-split__media .slot { box-shadow: 0 22px 46px rgba(53, 36, 29, 0.18); }
+  .principles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  .principles li { padding: 2rem 1.6rem; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.14); transition: border-color 0.4s ease, transform 0.4s ease; }
+  .principles li:hover { border-color: rgba(181, 139, 77, 0.5); transform: translateY(-3px); }
+  .principles li:hover .medal { transform: scale(1.05); }
+  .principles h3 { margin-top: 1.4rem; color: var(--color-espresso); }
+  .principles p { margin: 0; color: var(--color-cafe); font-size: 0.95rem; }
+
+  .intro { margin: 0; opacity: 0.85; }
+  .compliance { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .panel { padding: clamp(1.8rem, 3vw, 2.4rem); border: 1px solid var(--color-line); background: linear-gradient(160deg, rgba(98, 72, 58, 0.35), rgba(53, 36, 29, 0)); }
+  .panel__title { margin: 0 0 1.2rem; font-size: 0.75rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--color-gold); }
+  .activities { list-style: none; margin: 0; padding: 0; }
+  .activities li { display: flex; gap: 1rem; align-items: baseline; padding: 0.9rem 0; border-top: 1px solid var(--color-line); }
+  .activities li:first-child { border-top: 0; padding-top: 0; }
+  .activities__num { font-family: var(--font-display); color: var(--color-gold); letter-spacing: 0.15em; }
+  .activities strong { display: block; font-family: var(--font-display); font-weight: 500; font-size: 1.35rem; color: var(--color-champagne); }
+  .activities em { font-family: var(--font-display); color: var(--color-gold); font-size: 1rem; }
+  .entity { margin: 0; }
+  .entity div { display: flex; justify-content: space-between; gap: 1rem; padding: 0.85rem 0; border-top: 1px solid var(--color-line); }
+  .entity div:first-child { border-top: 0; padding-top: 0; }
+  .entity dt { opacity: 0.75; font-size: 0.92rem; }
+  .entity dd { margin: 0; text-align: right; color: var(--color-champagne); }
+  .entity dd.pending { font-style: italic; color: var(--color-gold); opacity: 0.85; }
+  .regulatory { margin: 2rem 0 0; padding: 1rem 1.2rem; border-left: 2px solid var(--color-gold); background: rgba(181, 139, 77, 0.1); font-size: 0.95rem; color: var(--color-champagne); }
+
+  .privacy { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(1.5rem, 3vw, 3rem); }
+  .privacy li { padding-top: 1.8rem; border-top: 1px solid rgba(98, 72, 58, 0.2); }
+  /* fundo claro do ícone se funde ao marfim */
+  .privacy__icon { display: block; width: 104px; height: auto; margin: 0 0 1.2rem -8px; transition: transform 0.5s cubic-bezier(.2,.7,.2,1); }
+  .privacy li:hover .privacy__icon { transform: translateY(-3px) scale(1.04); }
+  .privacy h3 { color: var(--color-espresso); }
+  .privacy p { margin: 0; color: var(--color-cafe); font-size: 0.95rem; }
+
+  /* Grupo */
+  .group__lead { margin: 0; opacity: 0.85; }
+  .group__label { margin: clamp(2.5rem, 5vw, 3.5rem) 0 1.2rem; font-size: 0.75rem; letter-spacing: 0.28em; text-transform: uppercase; color: var(--color-gold); display: flex; align-items: center; gap: 1rem; }
+  .group__label::after { content: ''; flex: 1; height: 1px; background: var(--color-line); }
+  .org { position: relative; padding: clamp(1.8rem, 3vw, 2.4rem); border: 1px solid var(--color-line); background: linear-gradient(160deg, rgba(98, 72, 58, 0.32), rgba(53, 36, 29, 0)); transition: border-color 0.4s ease, transform 0.4s ease; }
+  .org:hover { border-color: var(--color-gold); transform: translateY(-3px); }
+  .org__logo { display: block; height: 84px; width: auto; max-width: 180px; object-fit: contain; margin-bottom: 1.4rem; }
+  .org h3 { color: var(--color-champagne); margin: 0; }
+  .org__loc { margin: 0.3rem 0 0; font-size: 0.8rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-gold); }
+  .org__text { margin: 1rem 0 0; opacity: 0.82; font-size: 0.95rem; }
+  .org .btn-link { margin-top: 0.8rem; }
+  .org--holding, .org--institution { display: grid; grid-template-columns: auto 1fr; gap: clamp(1.5rem, 4vw, 3rem); align-items: center; }
+  .org--holding .org__logo, .org--institution .org__logo { margin: 0; height: 120px; max-width: 200px; }
+  .org--holding { max-width: 52rem; margin: 0 auto; border-color: rgba(181, 139, 77, 0.55); }
+  .org--holding::after { content: ''; position: absolute; left: 50%; bottom: calc(-1 * clamp(2.5rem, 5vw, 3.5rem)); height: clamp(1.8rem, 3.5vw, 2.4rem); width: 1px; background: var(--color-line); }
+  .orgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  /* logo com fundo próprio (quadrada) */
+  .org__logo--tile { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; }
+  .org--self { border-color: rgba(181, 139, 77, 0.7); background: linear-gradient(160deg, rgba(181, 139, 77, 0.16), rgba(53, 36, 29, 0)); }
+  .org__badge { position: absolute; top: 1rem; right: 1rem; font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-espresso); background: var(--color-champagne); padding: 0.3rem 0.6rem; border-radius: 999px; }
+  .orgs--two { grid-template-columns: repeat(2, 1fr); }
+  .org--institution { padding-top: 3rem; }
+  .org--institution .org__logo { height: 104px; max-width: 150px; }
+  .org__kind { position: absolute; top: 1rem; left: clamp(1.8rem, 3vw, 2.4rem); font-size: 0.65rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--color-gold); }
+  .group__note { margin: 2.5rem 0 0; text-align: center; font-size: 0.82rem; font-style: italic; color: var(--color-champagne); opacity: 0.7; }
+
+  /* Liderança */
+  .leaders-sec { border-top: 1px solid var(--color-line); }
+  .leaders { display: grid; grid-template-columns: repeat(2, minmax(0, 390px)); justify-content: center; align-items: start; gap: clamp(1.5rem, 4vw, 3.5rem); }
+  .leader { text-align: center; padding: 1rem 1rem 2rem; border: 1px solid var(--color-line); background: linear-gradient(170deg, rgba(98, 72, 58, 0.3), rgba(53, 36, 29, 0)); transition: border-color 0.4s ease, transform 0.4s ease; }
+  .leader:hover { border-color: var(--color-gold); transform: translateY(-3px); }
+  .leader__photo { position: relative; padding: 8px; border: 1px solid rgba(181, 139, 77, 0.6); margin-bottom: 1.6rem; }
+  .leader h3 { color: var(--color-champagne); font-size: clamp(1.45rem, 1.9vw, 1.75rem); font-weight: 400; margin: 0; text-wrap: balance; min-height: 2.4em; display: flex; align-items: center; justify-content: center; }
+  .leader__rule { display: block; width: 40px; height: 1px; background: var(--color-gold); margin: 0.9rem auto; }
+  .leader__role { margin: 0; font-size: 0.72rem; letter-spacing: 0.18em; line-height: 1.6; text-transform: uppercase; color: var(--color-gold); text-wrap: balance; }
+  .leader__bio { margin-top: 1.4rem; border-top: 1px solid var(--color-line); padding-top: 1rem; text-align: left; }
+  .leader__bio summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 44px; color: var(--color-champagne); font-size: 0.9rem; letter-spacing: 0.04em; }
+  .leader__bio summary::-webkit-details-marker { display: none; }
+  .leader__bio summary:hover { color: var(--color-gold); }
+  .leader__bio summary:focus-visible { outline: 2px solid var(--color-champagne); outline-offset: 3px; }
+  .leader__bio svg { width: 16px; height: 16px; fill: none; stroke: var(--color-gold); stroke-width: 1.8; transition: transform 0.3s ease; }
+  .leader__bio[open] svg { transform: rotate(180deg); }
+  .leader__bio-text { padding: 0.6rem 0.6rem 0.2rem; }
+  .leader__bio-text p { margin: 0 0 0.9rem; font-size: 0.92rem; line-height: 1.7; color: var(--color-ivory); opacity: 0.85; }
+
+  .band { background: linear-gradient(120deg, var(--color-espresso) 0%, var(--color-cafe) 140%); color: var(--color-ivory); border-top: 1px solid var(--color-line); }
+  .band__inner { display: flex; align-items: center; justify-content: space-between; gap: 2rem; padding-block: clamp(3rem, 6vw, 4.5rem); }
+  .band h2 { color: var(--color-champagne); font-size: clamp(1.8rem, 3vw, 2.5rem); margin: 0 0 0.6rem; }
+  .band p { margin: 0; opacity: 0.85; }
+
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.9s ease, transform 0.9s ease; transition-delay: var(--d, 0ms); }
+  .reveal.is-visible { opacity: 1; transform: none; }
+
+  @media (max-width: 1200px) {
+    .orgs:not(.orgs--two) { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 1000px) {
+    .principles { grid-template-columns: repeat(2, 1fr); }
+    .compliance, .privacy, .intro-split, .orgs { grid-template-columns: 1fr; }
+    .org--holding::after { display: none; }
+    .band__inner { flex-direction: column; align-items: flex-start; }
+  }
+  @media (max-width: 600px) {
+    .principles { grid-template-columns: 1fr; }
+    .leaders { grid-template-columns: minmax(0, 390px); }
+    .leader h3 { min-height: 0; }
+    .org--holding, .org--institution { grid-template-columns: 1fr; }
+    .entity div { flex-direction: column; gap: 0.2rem; }
+    .entity dd { text-align: left; }
+    .frame { inset: 1rem -0.5rem -1rem 1rem; }
+  }
+</style>

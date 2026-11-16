@@ -1,0 +1,9 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import LegalPage from '../../components/LegalPage.astro';
+import { legal } from '../../i18n/legal';
+const d = legal.privacy.pt;
+---
+<BaseLayout overlayHeader title={`${d.title} · CTB Finances Dubai`} description={d.lead}>
+  <LegalPage lang="pt" doc="privacy" />
+</BaseLayout>

@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Button from '../components/Button.astro';
+---
+<BaseLayout overlayHeader title="Página não encontrada · CTB Finances Dubai" description="A página procurada não foi encontrada.">
+  <section class="nf">
+    <div class="container nf__inner">
+      <p class="nf__code">404</p>
+      <span class="nf__rule" aria-hidden="true"></span>
+      <h1>Página não encontrada</h1>
+      <p class="nf__lead">O endereço acessado não existe ou foi alterado.</p>
+      <p class="nf__en" lang="en">Page not found — the address you visited does not exist or has changed.</p>
+      <div class="nf__ctas">
+        <Button href="/" variant="primary" arrow>Voltar ao início</Button>
+        <Button href="/en/" variant="secondary">Back to home</Button>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .nf { min-height: 100svh; display: grid; place-items: center; background: radial-gradient(ellipse 60% 60% at 50% 40%, var(--color-cafe), var(--color-espresso) 75%); color: var(--color-ivory); text-align: center; padding: 8rem 0 4rem; }
+  .nf__code { margin: 0; font-family: var(--font-display); font-size: clamp(5rem, 14vw, 9rem); line-height: 1; color: var(--color-gold); }
+  .nf__rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.5rem auto; }
+  h1 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); font-weight: 400; color: var(--color-champagne); }
+  .nf__lead { margin: 1rem 0 0.4rem; opacity: 0.9; }
+  .nf__en { margin: 0; font-size: 0.9rem; opacity: 0.6; }
+  .nf__ctas { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; margin-top: 2.2rem; }
+</style>

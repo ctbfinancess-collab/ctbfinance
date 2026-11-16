@@ -1,0 +1,33 @@
+/* Identidade visual CTB Finances — paleta oficial (sem preto). */
+:root {
+  /* Paleta oficial */
+  --color-espresso: #35241d;
+  --color-cafe: #62483a;
+  --color-gold: #b58b4d;
+  --color-champagne: #e8d6b7;
+  --color-ivory: #f6f0e6;
+  --color-logo-bg: #230d08;  /* fundo do logotipo oficial — usar só atrás do logo */
+
+  /* Papéis semânticos */
+  --color-bg: var(--color-ivory);            /* fundo claro padrão */
+  --color-bg-dark: var(--color-espresso);    /* seções escuras: header, hero, rodapé */
+  --color-text: var(--color-espresso);       /* texto sobre marfim */
+  --color-text-soft: var(--color-cafe);      /* texto secundário sobre marfim */
+  --color-text-on-dark: var(--color-champagne);
+  --color-accent: var(--color-gold);         /* detalhes, filetes, destaques sobre fundo escuro */
+  --color-line: rgba(181, 139, 77, 0.35);    /* filetes dourados translúcidos */
+
+  /* Tipografia */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+  /* Layout */
+  --container: 1200px;
+  --radius: 2px;
+  --space-1: 0.5rem;
+  --space-2: 1rem;
+  --space-3: 1.5rem;
+  --space-4: 2.5rem;
+  --space-5: 4rem;
+  --space-6: 6rem;
+}
