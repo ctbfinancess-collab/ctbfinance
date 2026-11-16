@@ -80,7 +80,7 @@ const signupUrl = company.appSignupUrl || routes.contact[lang];
     btn.addEventListener('click', () => set(menu.hidden));
     menu.querySelectorAll('a').forEach((a) => a.addEventListener('click', () => set(false)));
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !menu.hidden) { set(false); btn.focus(); } });
-    window.matchMedia('(min-width: 1281px)').addEventListener('change', (e) => { if (e.matches) set(false); });
+    window.matchMedia('(min-width: 1025px)').addEventListener('change', (e) => { if (e.matches) set(false); });
   }
 </script>
 
@@ -123,8 +123,25 @@ const signupUrl = company.appSignupUrl || routes.contact[lang];
   .brand__name { white-space: nowrap; }
   .nav { gap: clamp(0.9rem, 1.6vw, 2.25rem) !important; }
   /* telas entre 1281 e 1520 px: só a águia, para caber menu + botões */
-  @media (min-width: 1281px) and (max-width: 1520px) {
+  /* telas médias (ex.: notebooks com zoom do Windows): menu continua visível, mais compacto */
+  @media (min-width: 1025px) and (max-width: 1520px) {
     .brand__text { display: none; }
+  }
+  @media (min-width: 1025px) and (max-width: 1360px) {
+    .header__inner { gap: 1.25rem; padding-inline: 1.25rem; }
+    .brand__mark { height: 44px; }
+    .nav { gap: 1.1rem !important; font-size: 0.86rem; }
+    .tools { gap: 0.9rem; }
+    .lang svg { display: none; }
+    .account .btn--sm { --btn-pad-x: 1rem; font-size: 0.8rem; }
+  }
+  @media (min-width: 1025px) and (max-width: 1180px) {
+    .nav { gap: 0.8rem !important; font-size: 0.8rem; }
+    .lang { gap: 0.4rem; font-size: 0.78rem; }
+    .account { gap: 0.4rem; }
+    .account .btn--sm { --btn-pad-x: 0.8rem; font-size: 0.76rem; }
+  }
+  @media (min-width: 9999px) {
   }
   .account__signup { color: var(--color-ivory); }
   .is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; }
@@ -144,7 +161,7 @@ const signupUrl = company.appSignupUrl || routes.contact[lang];
   .mobile-menu > a { padding: 1.1rem 0; border-bottom: 1px solid var(--color-line); font-family: var(--font-display); font-size: 1.6rem; color: var(--color-champagne); }
   .mobile-menu > a:hover { color: var(--color-gold); }
 
-  @media (max-width: 1280px) {
+  @media (max-width: 1024px) {
     .nav { display: none; }
     .tools { margin-left: auto; }
     .burger { display: block; }
