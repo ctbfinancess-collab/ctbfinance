@@ -1,10 +1,9 @@
 ---
 /**
  * Portal autenticado da Área do Cliente.
- * Reaproveita o MESMO Firebase do aplicativo (projeto ctb-financess): mesmas contas (Auth),
- * mesmo perfil (users/{uid}) e mesma pasta de documentos (users/{uid}/uploads).
- * Só é ativado quando a configuração Web do Firebase é informada no build (PUBLIC_FIREBASE_*);
- * sem ela, mostra o aviso "acesso em preparação" (é o que vale para o site publicado hoje).
+ * Conversa com a API do próprio site no Railway (/api/cliente/*): sessão em cookie HttpOnly, banco Postgres
+ * e arquivos no volume do Railway. A área só fica ativa quando o servidor responde { ativo: true } em
+ * /api/cliente/status (banco e volume configurados); senão mostra "acesso em preparação".
  */
 import { portal } from '../i18n/portal';
 import { routes } from '../i18n/utils';
@@ -14,23 +13,11 @@ interface Props { lang: Lang }
 const { lang } = Astro.props;
 const p = portal[lang];
 
-const env = import.meta.env;
-const config = {
-  apiKey: env.PUBLIC_FIREBASE_API_KEY ?? '',
-  authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
-  projectId: env.PUBLIC_FIREBASE_PROJECT_ID ?? '',
-  storageBucket: env.PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
-  appId: env.PUBLIC_FIREBASE_APP_ID ?? '',
-  // endereço das Cloud Functions (download de documentos); padrão: região us-central1 do projeto
-  functionsUrl: env.PUBLIC_FUNCTIONS_URL ?? '',
-  emulators: env.PUBLIC_FIREBASE_EMULATORS === '1',
-};
-const enabled = Boolean(config.apiKey && config.projectId);
 const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'] as const;
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
-<div class="portal" data-portal data-enabled={enabled ? '1' : '0'} data-config={JSON.stringify(config)} data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded })}>
+<div class="portal" data-portal data-lang={lang}
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -38,7 +25,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     <h2>{p.loginTitle}</h2>
     <span class="gold-rule"></span>
     <form class="access-form" data-login novalidate>
-      <fieldset disabled={!enabled}>
+      <fieldset disabled data-login-fs>
         <label><span>{p.email}</span><input type="email" name="email" autocomplete="username" required /></label>
         <label><span>{p.password}</span><input type="password" name="password" autocomplete="current-password" required minlength="6" /></label>
         <button type="submit" class="btn btn--primary" data-login-btn>{p.submit}</button>
@@ -46,12 +33,10 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       </fieldset>
       <p class="msg" role="status" aria-live="polite" hidden data-login-msg></p>
     </form>
-    {!enabled && (
-      <p class="access-status" role="status">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        {p.unavailable}
-      </p>
-    )}
+    <p class="access-status" role="status" data-indisponivel>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      {p.unavailable}
+    </p>
     <p class="access-client">{lang === 'pt' ? 'Ainda não é cliente?' : 'Not a client yet?'} <a href={routes.client[lang]}>{lang === 'pt' ? 'Seja nosso cliente' : 'Become a client'}</a></p>
   </div>
 
@@ -71,6 +56,23 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     </form>
   </div>
 
+  <!-- Criar / redefinir senha (link do convite ou do e-mail de recuperação) -->
+  <div class="access-card" data-view="senha" hidden>
+    <p class="eyebrow eyebrow--gold">{lang === 'pt' ? 'Acesso' : 'Access'}</p>
+    <h2 data-senha-titulo>{p.setPwReset}</h2>
+    <span class="gold-rule"></span>
+    <p class="note">{p.pwRules}</p>
+    <form class="access-form" data-senha novalidate>
+      <fieldset>
+        <label><span>{p.newPassword}</span><input type="password" name="senha" autocomplete="new-password" required minlength="10" /></label>
+        <label><span>{p.confirmPassword}</span><input type="password" name="confirma" autocomplete="new-password" required minlength="10" /></label>
+        <button type="submit" class="btn btn--primary">{p.savePassword}</button>
+        <button type="button" class="forgot" data-go="login">{p.backToLogin}</button>
+      </fieldset>
+      <p class="msg" role="status" aria-live="polite" hidden data-senha-msg></p>
+    </form>
+  </div>
+
   <!-- Carregando (nenhum dado é mostrado antes de pertencer à sessão atual) -->
   <div class="access-card loading" data-view="loading" hidden>
     <p class="eyebrow eyebrow--gold">{lang === 'pt' ? 'Área do Cliente' : 'Client Area'}</p>
@@ -87,7 +89,6 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       </div>
       <button type="button" class="btn btn--secondary btn--sm" data-signout>{p.signOut}</button>
     </header>
-    <p class="banner-warn" hidden data-unverified>{p.unverified} <button type="button" data-resend>{p.resendVerify}</button></p>
 
     <nav class="tabs" role="tablist">
       <button role="tab" aria-selected="true" data-tab="profile">{p.tabs.profile}</button>
@@ -135,112 +136,116 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 </div>
 
 <script>
-  import { initializeApp, getApps } from 'firebase/app';
-  import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
-  import { getFirestore, connectFirestoreEmulator, doc, getDoc, updateDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
-  import { getStorage, connectStorageEmulator, ref, listAll, uploadBytes } from 'firebase/storage';
-
+  // Área do Cliente: API do próprio site no Railway. Sessão em cookie HttpOnly (o JavaScript não lê o cookie).
   const PROFILE = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'];
   const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
   const TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
   const MAX = 10 * 1024 * 1024;
-  const LIBERADOS = ['disponivel_analise', 'aprovado'];
 
   function boot() {
     const root = document.querySelector<HTMLElement>('[data-portal]');
-    if (!root || root.dataset.ready || root.dataset.enabled !== '1') return;
+    if (!root || root.dataset.ready) return;
     root.dataset.ready = '1';
-    const cfg = JSON.parse(root.dataset.config!);
     const M = JSON.parse(root.dataset.msg!);
     const lang = root.dataset.lang;
     const locale = lang === 'en' ? 'en-GB' : 'pt-BR';
-    const fnBase = cfg.functionsUrl || `https://us-central1-${cfg.projectId}.cloudfunctions.net`;
-
-    const app = getApps()[0] ?? initializeApp(cfg);
-    const auth = getAuth(app); auth.languageCode = lang === 'en' ? 'en' : 'pt';
-    const db = getFirestore(app);
-    const st = getStorage(app);
-    // falhas de rede aparecem em até 15 s (o padrão do SDK tenta por 2 min sem avisar o cliente)
-    st.maxOperationRetryTime = 15000; st.maxUploadRetryTime = 60000;
-    if (cfg.emulators && !(window as any).__ctbEmu) {
-      (window as any).__ctbEmu = true;
-      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-      connectFirestoreEmulator(db, '127.0.0.1', 8181);
-      connectStorageEmulator(st, '127.0.0.1', 9199);
-    }
-    // sessão termina ao fechar o navegador (dados pessoais)
-    const ready = setPersistence(auth, browserSessionPersistence).catch(() => {});
+    const API = '/api/cliente';
+    const api = (rota: string, opts: RequestInit = {}) => fetch(API + rota, { credentials: 'same-origin', ...opts });
+    const enviarJson = (rota: string, metodo: string, corpo: unknown) => api(rota, { method: metodo, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
 
     const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
     const views = root.querySelectorAll<HTMLElement>('[data-view]');
     const show = (v: string) => views.forEach((el) => (el.hidden = el.dataset.view !== v));
     const msg = (el: HTMLElement, text: string, kind: 'ok' | 'err' = 'ok') => { el.hidden = false; el.textContent = text; el.dataset.kind = kind; };
     const limparMsg = (el: HTMLElement) => { el.hidden = true; el.textContent = ''; delete el.dataset.kind; };
-    root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go!)));
+    root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => { history.replaceState(null, '', location.pathname); show(b.dataset.go!); }));
 
-    // ---- Sessão: cada login/logout cria uma nova sessão; respostas de sessões anteriores são descartadas
+    // ---- Sessão: cada entrada/saída cria uma nova sessão de tela; respostas de sessões anteriores são descartadas
     let sessao = 0;
-    let unsubDocs: (() => void) | null = null;
+    let usuarioAtual: string | null = null;
     let original: Record<string, string> = {};
-    let nomesNoStorage: string[] = [];
-    const vigente = (s: number, uid: string) => s === sessao && auth.currentUser?.uid === uid;
+    const vigente = (s: number, email: string) => s === sessao && usuarioAtual === email;
     const upInput = $<HTMLInputElement>('[data-upload]'); const upLabel = $('[data-upload-label]');
     const profileForm = $<HTMLFormElement>('[data-profile]'); const saveBtn = $<HTMLButtonElement>('[data-save]');
 
     function limparTudo() {
-      if (unsubDocs) { unsubDocs(); unsubDocs = null; }
-      original = {}; nomesNoStorage = [];
+      original = {};
       $('[data-name]').textContent = ''; $('[data-email]').textContent = '';
       root.querySelectorAll<HTMLInputElement>('[data-profile] input').forEach((i) => (i.value = ''));
       $('[data-company]').hidden = true;
       $('[data-docs]').innerHTML = ''; $('[data-appts]').innerHTML = '';
       ['[data-profile-msg]', '[data-docs-msg]'].forEach((k) => limparMsg($(k)));
-      $('[data-unverified]').hidden = true;
       upInput.value = ''; upLabel.textContent = M.upload; saveBtn.disabled = false; saveBtn.textContent = M.save;
       root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'profile')));
       root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== 'profile'));
     }
 
-    // Login
+    // ---- Login
     const loginForm = $<HTMLFormElement>('[data-login]'); const loginBtn = $<HTMLButtonElement>('[data-login-btn]');
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const f = new FormData(loginForm); const lm = $('[data-login-msg]'); limparMsg(lm);
       loginBtn.disabled = true; loginBtn.textContent = M.signingIn;
-      try { await ready; await signInWithEmailAndPassword(auth, String(f.get('email')).trim(), String(f.get('password'))); loginForm.reset(); }
-      catch (err: any) { msg(lm, err?.code === 'auth/too-many-requests' ? M.tooMany : M.loginError, 'err'); }
+      try {
+        const r = await enviarJson('/entrar', 'POST', { email: String(f.get('email')).trim(), senha: String(f.get('password')) });
+        if (r.ok) { loginForm.reset(); await abrirSessao(); }
+        else msg(lm, r.status === 429 ? M.tooMany : r.status === 401 ? M.loginError : M.genericError, 'err');
+      } catch { msg(lm, M.genericError, 'err'); }
       finally { loginBtn.disabled = false; loginBtn.textContent = M.submit; }
     });
 
-    // Recuperar senha (mesma mensagem exista ou não a conta)
+    // ---- Esqueci a senha (mesma mensagem exista ou não a conta)
     const resetForm = $<HTMLFormElement>('[data-reset]');
     resetForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = String(new FormData(resetForm).get('email')).trim(); const rm = $('[data-reset-msg]');
-      try { await sendPasswordResetEmail(auth, email); } catch (err: any) { if (err?.code === 'auth/too-many-requests') return msg(rm, M.tooMany, 'err'); }
-      msg(rm, M.resetSent);
+      try { await enviarJson('/esqueci', 'POST', { email, lang }); msg(rm, M.resetSent); } catch { msg(rm, M.genericError, 'err'); }
     });
 
-    $('[data-signout]').addEventListener('click', () => { limparTudo(); show('login'); signOut(auth); });
-    $('[data-resend]').addEventListener('click', async () => { if (auth.currentUser) { await sendEmailVerification(auth.currentUser).catch(() => {}); msg($('[data-unverified]'), M.verifySent); } });
+    // ---- Criar/redefinir senha (token do link no endereço; removido da barra assim que lido)
+    const params = new URLSearchParams(location.search);
+    const tokenSenha = params.get('convite') || params.get('redefinir');
+    if (tokenSenha) {
+      history.replaceState(null, '', location.pathname);
+      $('[data-senha-titulo]').textContent = params.get('convite') ? M.setPwInvite : M.setPwReset;
+    }
+    const senhaForm = $<HTMLFormElement>('[data-senha]');
+    senhaForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(senhaForm); const sm = $('[data-senha-msg]'); limparMsg(sm);
+      const senha = String(f.get('senha')), confirma = String(f.get('confirma'));
+      if (senha !== confirma) return msg(sm, M.pwMismatch, 'err');
+      try {
+        const r = await enviarJson('/redefinir', 'POST', { token: tokenSenha, senha });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok) { senhaForm.reset(); await abrirSessao(); return; }
+        msg(sm, d.erro === 'link_invalido' ? M.linkInvalid : (M.pwErr[d.erro] || M.genericError), 'err');
+      } catch { msg(sm, M.genericError, 'err'); }
+    });
 
-    // Abas
+    $('[data-signout]').addEventListener('click', async () => {
+      sessao++; usuarioAtual = null; limparTudo(); show('login');
+      await api('/sair', { method: 'POST' }).catch(() => {});
+    });
+
+    // ---- Abas
     root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.addEventListener('click', () => {
       root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
       root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.tab));
     }));
+    // sessão encerrada no servidor (expirada/revogada): volta ao login
+    const sessaoCaiu = () => { sessao++; usuarioAtual = null; limparTudo(); show('login'); msg($('[data-login-msg]'), M.sessionEnded, 'err'); };
 
     // ---- Perfil
-    const lerPerfil = async (uid: string) => { const snap = await getDoc(doc(db, 'users', uid)); return (snap.exists() ? snap.data() : {}) as Record<string, any>; };
     function mostrarPerfil(d: Record<string, any>, email: string) {
-      $('[data-name]').textContent = d.display_name || email;
+      const p = d.perfil || {};
+      $('[data-name]').textContent = p.display_name || email;
       $('[data-email]').textContent = email;
       $<HTMLInputElement>('[data-ro="email"]').value = email;
-      const pn = String(d.passportnumber || '');
-      $<HTMLInputElement>('[data-ro="passport"]').value = pn ? '•••• ' + pn.slice(-3) : '—';
+      $<HTMLInputElement>('[data-ro="passport"]').value = p.passaporte || '—';
       original = {};
       for (const k of [...PROFILE, ...COMPANY]) {
-        const v = typeof d[k] === 'string' ? d[k] : '';
+        const v = typeof p[k] === 'string' ? p[k] : '';
         original[k] = v;
         const input = root.querySelector<HTMLInputElement>(`[data-profile] [name="${k}"]`); if (input) input.value = v;
       }
@@ -248,8 +253,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     }
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const u = auth.currentUser; if (!u) return;
-      const s = sessao, uid = u.uid;
+      if (!usuarioAtual) return;
+      const s = sessao, email = usuarioAtual;
       const pm = $('[data-profile-msg]'); const changes: Record<string, string> = {};
       for (const k of [...PROFILE, ...COMPANY]) {
         const input = profileForm.querySelector<HTMLInputElement>(`[name="${k}"]`); if (!input) continue;
@@ -259,128 +264,129 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       if (!Object.keys(changes).length) return msg(pm, M.nothingChanged);
       saveBtn.disabled = true; saveBtn.textContent = M.saving;
       try {
-        await updateDoc(doc(db, 'users', uid), changes);
-        if (!vigente(s, uid)) return;
+        const r = await enviarJson('/perfil', 'PUT', changes);
+        if (!vigente(s, email)) return;
+        if (r.status === 401) return sessaoCaiu();
+        if (!r.ok) throw new Error();
         Object.assign(original, changes); msg(pm, M.saved); if (changes.display_name) $('[data-name]').textContent = changes.display_name;
-      } catch { if (vigente(s, uid)) msg(pm, M.genericError, 'err'); }
-      finally { if (vigente(s, uid)) { saveBtn.disabled = false; saveBtn.textContent = M.save; } }
+      } catch { if (vigente(s, email)) msg(pm, M.genericError, 'err'); }
+      finally { if (vigente(s, email)) { saveBtn.disabled = false; saveBtn.textContent = M.save; } }
     });
 
-    // ---- Documentos (estado vem do servidor; download pela função baixarDocumento)
+    // ---- Documentos (estado definido pelo servidor; download pelo servidor, sem link)
     const fmtSize = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
     const fmtDate = (d: Date) => d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
-    async function baixar(r: any, s: number, uid: string) {
+    async function baixar(d: any, s: number, email: string) {
       const dm = $('[data-docs-msg]');
       try {
-        const tok = await auth.currentUser!.getIdToken();
-        const resp = await fetch(`${fnBase}/baixarDocumento?caminho=${encodeURIComponent(r.caminho)}`, { headers: { Authorization: `Bearer ${tok}` } });
-        if (!vigente(s, uid)) return;
-        if (resp.status === 401) { msg(dm, M.sessionEnded, 'err'); return; }
-        if (!resp.ok) throw new Error(String(resp.status));
-        const blob = await resp.blob();
-        if (!vigente(s, uid)) return;
+        const r = await api(`/documentos/${encodeURIComponent(d.id)}/arquivo`);
+        if (!vigente(s, email)) return;
+        if (r.status === 401) return sessaoCaiu();
+        if (!r.ok) throw new Error(String(r.status));
+        const blob = await r.blob();
+        if (!vigente(s, email)) return;
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a'); a.href = url; a.download = r.nome; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000);
-      } catch { if (vigente(s, uid)) msg(dm, M.genericError, 'err'); }
+        const a = document.createElement('a'); a.href = url; a.download = d.nome; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+      } catch { if (vigente(s, email)) msg(dm, M.genericError, 'err'); }
     }
-    function renderDocs(uid: string, registros: any[], s: number) {
+    function renderDocs(lista: any[], s: number, email: string) {
       const ul = $('[data-docs]'); ul.innerHTML = '';
-      const porCaminho = new Map(registros.map((r) => [r.caminho, r]));
-      const linhas: any[] = nomesNoStorage.map((n) => porCaminho.get(`users/${uid}/uploads/${n}`) ?? { caminho: `users/${uid}/uploads/${n}`, nome: n.replace(/^\d{10,}[-_]?/, '') || n, status: 'recebido', quando: new Date(Number((n.match(/^(\d{13})/) || [])[1]) || Date.now()) });
-      registros.filter((r) => !nomesNoStorage.includes(String(r.caminho).split('/').pop())).forEach((r) => linhas.push(r));
-      if (!linhas.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.docsEmpty; ul.append(li); return; }
-      linhas.forEach((r) => { r._t = r.quando ? r.quando.getTime() : (r.recebidoEm?.toMillis?.() ?? 0); });
-      linhas.sort((a, b) => b._t - a._t);
-      for (const r of linhas) {
-        const status = r.status === 'em_validacao' ? 'recebido' : r.status;
-        const li = document.createElement('li'); li.dataset.status = status;
-        const name = document.createElement('span'); name.className = 'name'; name.textContent = r.nome;
+      if (!lista.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.docsEmpty; ul.append(li); return; }
+      for (const d of lista) {
+        const li = document.createElement('li'); li.dataset.status = d.status;
+        const name = document.createElement('span'); name.className = 'name'; name.textContent = d.nome;
         const info = document.createElement('span'); info.className = 'info';
-        info.textContent = [r._t ? fmtDate(new Date(r._t)) : '', r.tamanho ? fmtSize(r.tamanho) : ''].filter(Boolean).join(' · ');
-        const badge = document.createElement('span'); badge.className = 'badge'; badge.dataset.status = status; badge.textContent = M.st[status] ?? status;
+        info.textContent = [d.recebidoEm ? fmtDate(new Date(d.recebidoEm)) : '', d.tamanho ? fmtSize(d.tamanho) : ''].filter(Boolean).join(' · ');
+        const badge = document.createElement('span'); badge.className = 'badge'; badge.dataset.status = d.status; badge.textContent = M.st[d.status] ?? d.status;
         li.append(name, info, badge);
-        if (LIBERADOS.includes(status) || (status === 'rejeitado' && r.motivo === 'analise_equipe')) {
+        if (d.baixavel) {
           const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'link'; btn.textContent = M.download;
-          btn.addEventListener('click', () => baixar(r, s, uid));
+          btn.addEventListener('click', () => baixar(d, s, email));
           li.append(btn);
         } else { li.append(document.createElement('span')); }
-        if (status === 'rejeitado' && r.orientacao) { const o = document.createElement('p'); o.className = 'orient'; o.textContent = `${r.orientacao[lang === 'en' ? 'en' : 'pt'] || r.orientacao.pt} ${M.resendHint}`; li.append(o); }
-        if (status === 'recebido') { const o = document.createElement('p'); o.className = 'orient orient--info'; o.textContent = M.pendingHint; li.append(o); }
+        if (d.status === 'rejeitado' && d.orientacao) { const o = document.createElement('p'); o.className = 'orient'; o.textContent = `${d.orientacao[lang === 'en' ? 'en' : 'pt'] || d.orientacao.pt} ${M.resendHint}`; li.append(o); }
         ul.append(li);
       }
     }
-    const lerNomes = async (uid: string) => (await listAll(ref(st, `users/${uid}/uploads`))).items.map((it) => it.name);
-    function assinarDocs(uid: string, s: number) {
-      if (unsubDocs) unsubDocs();
-      let ultimos: any[] = [];
-      unsubDocs = onSnapshot(query(collection(db, 'documentos'), where('dono', '==', doc(db, 'users', uid))), (snap) => {
-        if (!vigente(s, uid)) return;
-        ultimos = snap.docs.map((d) => d.data());
-        renderDocs(uid, ultimos, s);
-      }, () => { if (vigente(s, uid)) renderDocs(uid, ultimos, s); });
-    }
+    const lerDocs = async () => { const r = await api('/documentos'); if (r.status === 401) throw Object.assign(new Error(), { sessao: true }); if (!r.ok) throw new Error(); return (await r.json()).documentos; };
     upInput.addEventListener('change', async () => {
-      const u = auth.currentUser; const file = upInput.files?.[0]; const dm = $('[data-docs-msg]'); upInput.value = '';
-      if (!u || !file) return;
-      const s = sessao, uid = u.uid;
+      const file = upInput.files?.[0]; const dm = $('[data-docs-msg]'); upInput.value = '';
+      if (!usuarioAtual || !file) return;
+      const s = sessao, email = usuarioAtual;
       if (!TYPES.includes(file.type)) return msg(dm, M.badType, 'err');
       if (file.size > MAX) return msg(dm, M.tooBig, 'err');
-      const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
       upLabel.textContent = M.uploading;
       try {
-        await uploadBytes(ref(st, `users/${uid}/uploads/${Date.now()}-${safe}`), file, { contentType: file.type });
-        const nomes = await lerNomes(uid);
-        if (!vigente(s, uid)) return;
-        nomesNoStorage = nomes; msg(dm, M.uploaded); assinarDocs(uid, s);
-      } catch { if (vigente(s, uid)) msg(dm, M.genericError, 'err'); }
-      finally { if (vigente(s, uid)) upLabel.textContent = M.upload; }
+        const r = await api('/documentos', { method: 'POST', headers: { 'Content-Type': file.type, 'X-Nome-Arquivo': encodeURIComponent(file.name) }, body: file });
+        if (!vigente(s, email)) return;
+        if (r.status === 401) return sessaoCaiu();
+        const lista = await lerDocs();
+        if (!vigente(s, email)) return;
+        renderDocs(lista, s, email);
+        if (r.status === 201) msg(dm, M.uploaded);
+        else if (r.status === 422) msg(dm, M.st.rejeitado + ' — ' + M.resendHint, 'err');
+        else msg(dm, r.status === 413 ? M.tooBig : r.status === 415 ? M.badType : M.genericError, 'err');
+      } catch { if (vigente(s, email)) msg(dm, M.genericError, 'err'); }
+      finally { if (vigente(s, email)) upLabel.textContent = M.upload; }
     });
 
     // ---- Agendamentos: data SOLICITADA (data civil, sem horário) x horário CONFIRMADO pela equipe
-    const lerAgendamentos = async (uid: string) => (await getDocs(query(collection(db, 'appointments'), where('appointmentPerson', '==', doc(db, 'users', uid))))).docs.map((d) => d.data());
     const dataCivil = (s: string) => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)).toLocaleDateString(locale, { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }); };
     function mostrarAgendamentos(lista: any[]) {
       const ul = $('[data-appts]'); ul.innerHTML = '';
       if (!lista.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.apptEmpty; ul.append(li); return; }
-      const chave = (a: any) => a.horarioConfirmado?.toMillis?.() ?? (a.dataSolicitada ? Date.parse(a.dataSolicitada + 'T00:00:00Z') : 0);
-      lista.sort((a, b) => chave(b) - chave(a)).forEach((a: any) => {
+      for (const a of lista) {
         const li = document.createElement('li'); li.className = 'appt';
-        const n = document.createElement('span'); n.className = 'name'; n.textContent = a.appointmentType || a.appointmentName || '—';
+        const n = document.createElement('span'); n.className = 'name'; n.textContent = a.tipo || '—';
         const i = document.createElement('span'); i.className = 'info';
         if (a.horarioConfirmado) {
-          i.textContent = `${M.apptConfirmed}: ${a.horarioConfirmado.toDate().toLocaleString(locale, { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' })} · ${M.tz}`;
+          i.textContent = `${M.apptConfirmed}: ${new Date(a.horarioConfirmado).toLocaleString(locale, { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' })} · ${M.tz}`;
           li.dataset.tipo = 'confirmado';
         } else if (a.dataSolicitada) {
           i.textContent = `${M.apptRequested}: ${dataCivil(a.dataSolicitada)} · ${M.apptToConfirm}`;
           li.dataset.tipo = 'solicitado';
-        } else if (a.appointmentTime || a.dataPendenteConfirmacao) {
-          // registro antigo: o app guardava a meia-noite do APARELHO, sem o fuso. O dia original não pode ser
-          // deduzido com segurança — não exibimos data nem hora (a equipe confirma com o cliente).
-          i.textContent = `${M.apptPending} (${M.apptLegacy})`;
-          li.dataset.tipo = 'pendente';
+        } else {
+          i.textContent = M.apptPending; li.dataset.tipo = 'pendente';
         }
         li.append(n, i); ul.append(li);
-      });
+      }
     }
 
-    // ---- Troca de sessão: limpa tudo, mostra "carregando" e só exibe dados que pertencem à sessão atual
-    onAuthStateChanged(auth, async (user) => {
+    // ---- Abrir sessão: limpa tudo, mostra "carregando" e só exibe dados que pertencem à sessão atual
+    async function abrirSessao() {
       const s = ++sessao;
-      limparTudo();
-      if (!user) { show('login'); return; }
-      const uid = user.uid, email = user.email || '';
+      usuarioAtual = null; limparTudo();
       show('loading');
-      const [perfil, nomes, agend] = await Promise.allSettled([lerPerfil(uid), lerNomes(uid), lerAgendamentos(uid)]);
-      if (!vigente(s, uid)) return;                     // resposta de sessão anterior: descartada
+      const r = await api('/sessao').catch(() => null);
+      if (s !== sessao) return;
+      if (!r || !r.ok) { show(tokenSenha ? 'senha' : 'login'); return; }
+      const { email } = await r.json();
+      if (s !== sessao) return;
+      usuarioAtual = email;
+      const [perfil, docs, agend] = await Promise.allSettled([
+        api('/perfil').then((x) => (x.ok ? x.json() : Promise.reject(x.status))),
+        lerDocs(),
+        api('/agendamentos').then((x) => (x.ok ? x.json() : Promise.reject(x.status))),
+      ]);
+      if (!vigente(s, email)) return;                       // resposta de sessão anterior: descartada
+      if ([perfil, docs, agend].some((x) => x.status === 'rejected' && ((x as PromiseRejectedResult).reason === 401 || (x as any).reason?.sessao))) return sessaoCaiu();
       if (perfil.status === 'fulfilled') mostrarPerfil(perfil.value, email); else { $('[data-email]').textContent = email; msg($('[data-profile-msg]'), M.genericError, 'err'); }
-      nomesNoStorage = nomes.status === 'fulfilled' ? nomes.value : [];
-      if (nomes.status === 'rejected') msg($('[data-docs-msg]'), M.genericError, 'err');
-      renderDocs(uid, [], s); assinarDocs(uid, s);
-      mostrarAgendamentos(agend.status === 'fulfilled' ? agend.value : []);
-      $('[data-unverified]').hidden = user.emailVerified;
+      if (docs.status === 'fulfilled') renderDocs(docs.value, s, email); else msg($('[data-docs-msg]'), M.genericError, 'err');
+      mostrarAgendamentos(agend.status === 'fulfilled' ? agend.value.agendamentos : []);
       show('dash');
       requestAnimationFrame(() => root.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-    });
+    }
+
+    // ---- Início: a área só funciona se o servidor estiver configurado (banco + volume)
+    (async () => {
+      let ativo = false;
+      try { ativo = (await (await api('/status')).json()).ativo === true; } catch { /* indisponível */ }
+      $('[data-indisponivel]').hidden = ativo;
+      $<HTMLFieldSetElement>('[data-login-fs]').disabled = !ativo;
+      if (!ativo) { show('login'); return; }
+      if (tokenSenha) { show('senha'); return; }
+      await abrirSessao();
+    })();
   }
   document.addEventListener('astro:page-load', boot);
 </script>

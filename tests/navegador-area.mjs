@@ -1,0 +1,173 @@
+// Navegador REAL (Chrome headless) + servidor do site + Postgres REAL + volume temporário + Resend falso.
+// Fluxo completo do portal na versão Railway. Dados fictícios. Interceptação de rede pelo protocolo do Chrome.
+import EmbeddedPostgres from 'embedded-postgres';
+import { spawn } from 'node:child_process';
+import http from 'node:http';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import net from 'node:net';
+
+const RAIZ = path.resolve(new URL('..', import.meta.url).pathname);
+const TMP = fs.mkdtempSync(path.join(process.env.TEST_TMP || os.tmpdir(), 'ctb-nav-'));
+const SAIDA = process.env.TELAS_DIR || TMP;
+const livre = () => new Promise((ok) => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => ok(p)); }); });
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const [PG, PORTA, MOCK, CDP] = [await livre(), await livre(), await livre(), await livre()];
+const epg = new EmbeddedPostgres({ databaseDir: path.join(TMP, 'pg'), user: 'ctb', password: 'teste-local', port: PG, persistent: false, onLog: () => {} });
+await epg.initialise(); await epg.start(); await epg.createDatabase('ctb_area');
+const emails = [];
+const mock = http.createServer((req, res) => { let b = ''; req.on('data', (c) => (b += c)); req.on('end', () => { try { emails.push(JSON.parse(b)); } catch {} res.end('{"id":"x"}'); }); });
+await new Promise((ok) => mock.listen(MOCK, '127.0.0.1', ok));
+const BASE = `http://127.0.0.1:${PORTA}`;
+Object.assign(process.env, { DATABASE_URL: `postgres://ctb:teste-local@127.0.0.1:${PG}/ctb_area`, ARQUIVOS_DIR: path.join(TMP, 'volume'), RESEND_API_KEY: 'teste', RESEND_API_BASE: `http://127.0.0.1:${MOCK}`, CONTACT_EMAIL_TO: 'equipe@exemplo.invalid', AREA_COOKIE_INSEGURO: '1', AREA_SITE_URL: BASE });
+const srv = spawn(process.execPath, ['server.mjs'], { cwd: RAIZ, env: { ...process.env, PORT: String(PORTA) }, stdio: ['ignore', 'pipe', 'pipe'] });
+let logSrv = ''; srv.stdout.on('data', (d) => (logSrv += d)); srv.stderr.on('data', (d) => (logSrv += d));
+for (let i = 0; i < 100 && !/porta/.test(logSrv); i++) await sleep(100);
+
+const { criarBanco, criarArquivos } = await import('../server/area/nucleo.mjs');
+const { criarApi } = await import('../server/area/api.mjs');
+const { criarAdmin } = await import('../server/area/admin.mjs');
+const { enviarEmailAcesso } = await import('../server/area/emails.mjs');
+const db = criarBanco(process.env.DATABASE_URL); const arquivos = criarArquivos(process.env.ARQUIVOS_DIR);
+const adm = criarAdmin({ db, arquivos, api: criarApi({ db, arquivos, origens: new Set(), enviarEmail: enviarEmailAcesso, siteUrl: BASE }) });
+const link = (to, tipo) => { const e = [...emails].reverse().find((m) => m.to.includes(to)); return e && (e.text.match(new RegExp(`https?://\\S+[?&]${tipo}=[A-Za-z0-9_-]+`)) || [])[0]; };
+// dados fictícios: Ana (com empresa, passaporte, agendamentos) e Bruno (com contrato); senha do Bruno definida por convite via API
+await adm.convidar('ana@example.com', { nome: 'Ana Teste' }); await adm.convidar('bruno@example.com', { nome: 'Bruno Teste' });
+const conviteAna = link('ana@example.com', 'convite');
+const tokB = link('bruno@example.com', 'convite').split('convite=')[1];
+await fetch(`${BASE}/api/cliente/redefinir`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ token: tokB, senha: 'ChaveSegura2026' }) });
+const cB = (await fetch(`${BASE}/api/cliente/entrar`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE }, body: JSON.stringify({ email: 'bruno@example.com', senha: 'ChaveSegura2026' }) })).headers.get('set-cookie').split(';')[0];
+await fetch(`${BASE}/api/cliente/documentos`, { method: 'POST', headers: { Cookie: cB, Origin: BASE, 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'contrato-bruno.pdf' }, body: Buffer.from('%PDF-1.4 bruno\n%%EOF\n') });
+await adm.definirDadosRestritos('ana@example.com', { passportnumber: 'FX123456' });
+await db.q(`update perfis set dados = dados || '{"phone_number":"+971 50 000 0000","nationality":"Brasileira","city":"Dubai","country":"Emirados Árabes Unidos","CompanyName":"Ana Trading LLC","companycity":"Dubai"}'::jsonb where usuario_id=(select id from usuarios where email='ana@example.com')`);
+await adm.registrarAgendamento('ana@example.com', '2026-11-25', 'Abertura de conta');
+const ag = await adm.registrarAgendamento('ana@example.com', '2026-11-27', 'Revisão de documentos');
+await adm.confirmarAgendamento(ag.id, '2026-11-27T14:00', 'analista');
+fs.writeFileSync(path.join(TMP, 'comprovante.pdf'), '%PDF-1.4\nDocumento de teste\n%%EOF\n');
+fs.writeFileSync(path.join(TMP, 'falso.pdf'), 'ABC'); fs.writeFileSync(path.join(TMP, 'logo.svg'), '<svg/>');
+
+// ---- Chrome
+const ch = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${CDP}`, `--user-data-dir=${fs.mkdtempSync(path.join(TMP, 'chrome-'))}`, 'about:blank'], { stdio: 'ignore' });
+let alvo; for (let i = 0; i < 150; i++) { try { alvo = await (await fetch(`http://127.0.0.1:${CDP}/json`)).json(); break; } catch { await sleep(200); } }
+const ws = new WebSocket(alvo.find((x) => x.type === 'page').webSocketDebuggerUrl); await new Promise((r) => (ws.onopen = r));
+let id = 0; const pend = new Map(); const errs = []; const reqs = []; let onPaused = null;
+ws.onmessage = (m) => { const d = JSON.parse(m.data); if (d.id && pend.has(d.id)) { pend.get(d.id)(d.result); pend.delete(d.id); }
+  if (d.method === 'Runtime.exceptionThrown') errs.push(d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text);
+  if (d.method === 'Network.requestWillBeSent') reqs.push(d.params.request.url);
+  if (d.method === 'Fetch.requestPaused' && onPaused) onPaused(d.params); };
+const send = (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+const ev = async (e) => (await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true })).result?.value;
+const waitFor = async (expr, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await ev(expr)) return true; await sleep(100); } return false; };
+const vis = (sel) => `(()=>{const e=document.querySelector('${sel}');return !!e && !e.hidden && e.getClientRects().length>0})()`;
+const shot = async (f, w = 1440) => { await send('Emulation.setDeviceMetricsOverride', { width: w, height: 900, deviceScaleFactor: 1, mobile: w < 500 }); await sleep(400); const r = await ev(`(()=>{const b=document.querySelector('[data-portal]').getBoundingClientRect();return {y:b.top+window.scrollY-30,h:b.height+60}})()`); const { data } = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: r.y, width: w, height: Math.min(r.h, 3000), scale: 1 } }); fs.writeFileSync(path.join(SAIDA, `${f}.png`), Buffer.from(data, 'base64')); };
+let ok = 0, fail = 0; const check = (d, c) => { if (c) { ok++; console.log('✅', d); } else { fail++; console.log('❌', d); } };
+const login = (e, s) => ev(`(()=>{const f=document.querySelector('[data-login]');f.email.value='${e}';f.password.value='${s}';f.requestSubmit();return 1})()`);
+const sair = () => ev(`document.querySelector('[data-signout]').click(),1`);
+const nav = async (u) => { await send('Page.navigate', { url: u }); await waitFor(`document.querySelector('[data-portal]')?.dataset.ready==='1' && !document.querySelector('[data-login-fs]').disabled || ${vis('[data-view="senha"]')}`, 20000); };
+const linha = (n) => `[...document.querySelectorAll('[data-docs] li')].find(l=>l.querySelector('.name')?.textContent==='${n}')`;
+const MARCAS_ANA = ['Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Abertura de conta', 'ana@example.com'];
+const temAna = `(()=>{const r=document.querySelector('[data-portal]');const txt=r.textContent+' '+[...r.querySelectorAll('input')].map(i=>i.value).join(' ');return ${JSON.stringify(MARCAS_ANA)}.filter(m=>txt.includes(m))})()`;
+async function vigiar(ms) { const v = new Set(); const t0 = Date.now(); while (Date.now() - t0 < ms) { (await ev(temAna) || []).forEach((m) => v.add(m)); await sleep(40); } return [...v]; }
+
+try {
+  await send('Runtime.enable'); await send('Network.enable');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  console.log('--- Convite e login');
+  await nav(conviteAna);
+  check('Link do convite abre "Criar sua senha" e o token sai da barra de endereço', await waitFor(vis('[data-view="senha"]')) && await ev(`document.querySelector('[data-senha-titulo]').textContent==='Criar sua senha' && !location.search.includes('convite')`));
+  await ev(`(()=>{const f=document.querySelector('[data-senha]');f.senha.value='curta1';f.confirma.value='curta1';f.requestSubmit();return 1})()`);
+  check('Senha curta → mensagem clara', await waitFor(`(document.querySelector('[data-senha-msg]')||{}).textContent?.includes('10 caracteres')`));
+  await ev(`(()=>{const f=document.querySelector('[data-senha]');f.senha.value='SenhaForte2026';f.confirma.value='SenhaForte2026';f.requestSubmit();return 1})()`);
+  check('Senha criada → painel da Ana abre', await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste' && ${vis('[data-view="dash"]')}`));
+  check('Passaporte mascarado, empresa visível, nenhum saldo/conta', await ev(`document.querySelector('[data-ro="passport"]').value==='•••• 456' && ${vis('[data-company]')} && !/saldo|balance|PL-0/i.test(document.querySelector('[data-portal]').innerText)`));
+  await ev(`(()=>{const i=document.querySelector('[data-profile] [name=city]');i.value='Abu Dhabi';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
+  check('Salvar cidade → "Dados atualizados."', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.'`));
+  await shot('1-perfil');
+  console.log('--- Documentos');
+  await ev(`document.querySelector('[data-tab=documents]').click(),1`);
+  const { root } = await send('DOM.getDocument', { depth: -1, pierce: true });
+  const { nodeId } = await send('DOM.querySelector', { nodeId: root.nodeId, selector: '[data-upload]' });
+  await send('DOM.setFileInputFiles', { nodeId, files: [path.join(TMP, 'logo.svg')] });
+  check('SVG recusado no navegador ("Formato não aceito")', await waitFor(`(document.querySelector('[data-docs-msg]')||{}).textContent?.includes('Formato não aceito')`));
+  await send('DOM.setFileInputFiles', { nodeId, files: [path.join(TMP, 'comprovante.pdf')] });
+  check('PDF válido → na hora: "Validado · em análise pela equipe" com Baixar', await waitFor(`(()=>{const l=${linha('comprovante.pdf')};return !!l && l.dataset.status==='disponivel_analise' && !!l.querySelector('.link')})()`));
+  await send('DOM.setFileInputFiles', { nodeId, files: [path.join(TMP, 'falso.pdf')] });
+  check('PDF falso → "Rejeitado" com orientação para reenvio, sem Baixar', await waitFor(`(()=>{const l=${linha('falso.pdf')};return !!l && l.dataset.status==='rejeitado' && /Exporte o documento novamente/.test(l.innerText) && !l.querySelector('.link')})()`));
+  check('Lista não mostra o documento do Bruno', await ev(`!document.querySelector('[data-docs]').innerText.includes('contrato-bruno')`));
+  await ev(`window.__dl=0; const o=URL.createObjectURL; URL.createObjectURL=(b)=>{window.__dl=b.size; return o(b)}; (${linha('comprovante.pdf')}).querySelector('.link').click(); 1`);
+  check('Baixar: arquivo vem do servidor (blob com os bytes do PDF)', await waitFor(`window.__dl===${fs.statSync(path.join(TMP, 'comprovante.pdf')).size}`));
+  await shot('2-documentos');
+  console.log('--- Agendamentos (4 fusos)');
+  await ev(`document.querySelector('[data-tab=appointments]').click(),1`);
+  check('Pedido: "Data solicitada: 25 de nov." sem hora; confirmado: 14:00 de Dubai', await ev(`(()=>{const t=document.querySelector('[data-appts]').innerText;return /Abertura de conta\\s*Data solicitada: 25 de nov\\. de 2026 · horário a confirmar/.test(t) && /Revisão de documentos\\s*Confirmado: 27 de nov\\. de 2026, 14:00 · horário de Dubai/.test(t)})()`));
+  await shot('3-agendamentos');
+  const vistosTz = {};
+  for (const tz of ['America/Sao_Paulo', 'Asia/Tokyo', 'Pacific/Honolulu']) { await send('Emulation.setTimezoneOverride', { timezoneId: tz }); await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-appts] li')`); vistosTz[tz] = await ev(`document.querySelector('[data-appts]').innerText.replace(/\\s+/g,' ')`); }
+  await send('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Dubai' });
+  check('Mesmas datas e só a hora confirmada (14:00 Dubai) em São Paulo, Tóquio e Honolulu', Object.values(vistosTz).every((v) => /25 de nov\. de 2026/.test(v) && /14:00/.test(v) && (v.match(/\d{1,2}:\d{2}/g) || []).length === 1));
+  check('Sessão mantida ao recarregar a página (cookie de sessão)', await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`));
+  await sair();
+  check('Encerrar sessão → login, painel limpo', await waitFor(vis('[data-view="login"]')) && await ev(`!document.querySelector('[data-portal]').textContent.includes('Ana Teste')`));
+  await login('ana@example.com', 'errada1234567');
+  check('Senha errada → "E-mail ou senha incorretos"', await waitFor(`(document.querySelector('[data-login-msg]')||{}).textContent?.includes('incorretos')`));
+  await ev(`document.querySelector('[data-go=reset]').click(),1`);
+  const nEmails = emails.length;
+  await ev(`(()=>{const f=document.querySelector('[data-reset]');f.email.value='ana@example.com';f.requestSubmit();return 1})()`);
+  check('Esqueci a senha → mensagem neutra e e-mail de redefinição enviado', await waitFor(`(document.querySelector('[data-reset-msg]')||{}).textContent?.includes('Se o e-mail estiver cadastrado')`) && await (async () => { for (let i = 0; i < 30 && emails.length === nEmails; i++) await sleep(100); return emails.length === nEmails + 1 && /Redefinir/.test(emails.at(-1).subject); })());
+
+  console.log('--- R07 Troca de conta na mesma aba');
+  await nav(BASE + '/area-do-cliente/');
+  await send('Network.emulateNetworkConditions', { offline: false, latency: 700, downloadThroughput: 200000, uploadThroughput: 200000 });
+  await login('ana@example.com', 'SenhaForte2026');
+  await waitFor(vis('[data-view="loading"]'), 15000); await sair(); await login('bruno@example.com', 'ChaveSegura2026');
+  const v1 = await vigiar(500); const brunoOk = await waitFor(`document.querySelector('[data-name]')?.textContent==='Bruno Teste'`, 30000); const v1b = await vigiar(2500);
+  check(`S1 Rede lenta, Ana sai antes de carregar, Bruno entra: nada da Ana (vistos: ${JSON.stringify([...v1, ...v1b])})`, brunoOk && v1.length === 0 && v1b.length === 0);
+  await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+  await sair(); await waitFor(vis('[data-view="login"]'));
+  // S2: lista de documentos da Ana retida e liberada DEPOIS do painel do Bruno
+  const retidos = []; let reter = true;
+  onPaused = (p) => { if (reter && p.request.url.endsWith('/api/cliente/documentos') && p.request.method === 'GET') { retidos.push(p.requestId); reter = false; } else send('Fetch.continueRequest', { requestId: p.requestId }); };
+  await send('Fetch.enable', { patterns: [{ urlPattern: '*/api/cliente/*' }] });
+  await login('ana@example.com', 'SenhaForte2026');
+  for (let i = 0; i < 100 && !retidos.length; i++) await sleep(100);
+  await sair(); await login('bruno@example.com', 'ChaveSegura2026');
+  await waitFor(`document.querySelector('[data-name]')?.textContent==='Bruno Teste'`, 20000);
+  for (const r of retidos.splice(0)) await send('Fetch.continueRequest', { requestId: r });
+  const v2 = await vigiar(2500);
+  await ev(`document.querySelector('[data-tab=documents]').click(),1`);
+  check(`S2 Resposta atrasada da Ana descartada (vistos: ${JSON.stringify(v2)}); lista do Bruno só com o dele`, v2.length === 0 && await waitFor(`document.querySelector('[data-docs]').innerText.includes('contrato-bruno') && !document.querySelector('[data-docs]').innerText.includes('comprovante')`));
+  await sair(); await waitFor(vis('[data-view="login"]'));
+  // S3: Ana usa o painel; depois a leitura de documentos do Bruno FALHA
+  onPaused = (p) => send('Fetch.continueRequest', { requestId: p.requestId });
+  await login('ana@example.com', 'SenhaForte2026'); await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  await sair(); let falhar = true;
+  onPaused = (p) => { if (falhar && p.request.url.endsWith('/api/cliente/documentos') && p.request.method === 'GET') { falhar = false; send('Fetch.failRequest', { requestId: p.requestId, errorReason: 'Failed' }); } else send('Fetch.continueRequest', { requestId: p.requestId }); };
+  await login('bruno@example.com', 'ChaveSegura2026');
+  const b3 = await waitFor(`document.querySelector('[data-name]')?.textContent==='Bruno Teste' && ${vis('[data-view="dash"]')}`, 20000);
+  const v3 = await vigiar(2000);
+  check(`S3 Falha na leitura do Bruno: painel com aviso de erro e nada da Ana (vistos: ${JSON.stringify(v3)})`, b3 && v3.length === 0 && await ev(`(document.querySelector('[data-docs-msg]')||{}).dataset?.kind==='err'`));
+  await send('Fetch.disable'); onPaused = null; await sair();
+
+  console.log('--- Inglês, celular, revogação e geral');
+  await nav(BASE + '/en/client-area/'); await login('ana@example.com', 'SenhaForte2026');
+  await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  await ev(`document.querySelector('[data-tab=documents]').click(),1`);
+  check('Inglês: "Hello", datas "Nov 2026", estado "Verified · under review"', await waitFor(`document.querySelector('.dash__head h2').innerText.includes('Hello') && /\\d{1,2} Nov 2026/.test(document.querySelector('[data-docs]').innerText) && document.querySelector('[data-docs]').innerText.includes('Verified · under review by our team')`));
+  await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true }); await sleep(500);
+  check('Celular: sem rolagem lateral', (await ev('document.documentElement.scrollWidth')) <= 390);
+  await shot('4-celular-en', 390);
+  await adm.bloquear('ana@example.com');
+  await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
+  await ev(`(()=>{const i=document.querySelector('[data-profile] [name=city]');document.querySelector('[data-tab=profile]').click();i.value='Sharjah';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
+  check('Conta bloqueada pela equipe: a próxima ação já leva ao login ("sessão terminou")', await waitFor(`${vis('[data-view="login"]')} && (document.querySelector('[data-login-msg]')||{}).textContent?.includes('session has ended')`));
+  const externos = [...new Set(reqs.filter((u) => /^https?:/.test(u) && !u.startsWith(BASE)).map((u) => new URL(u).host))];
+  console.log(`   (hosts externos usados pela página: ${JSON.stringify(externos)})`);
+  check('Nenhuma chamada ao Firebase (firebaseio, firestore, identitytoolkit, firebasestorage, securetoken)', !reqs.some((u) => /firebase|firestore\.googleapis|identitytoolkit|securetoken|firebasestorage/.test(u)));
+  check('Sem erros de JavaScript', errs.length === 0); if (errs.length) console.log(errs.slice(0, 3));
+} finally {
+  console.log(`\nRESULTADO NAVEGADOR (Railway): ${ok} corretos, ${fail} com problema`);
+  ws.close(); ch.kill(); srv.kill(); mock.close(); await db.fechar(); await epg.stop();
+  if (!process.env.TELAS_DIR) fs.rmSync(TMP, { recursive: true, force: true });
+  if (fail) { console.log(logSrv.slice(-2000)); process.exitCode = 1; }
+}
