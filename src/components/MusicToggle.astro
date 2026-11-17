@@ -23,7 +23,7 @@
     const VOLUME = 0.35;
     const lang = () => (document.documentElement.lang.startsWith('en') ? 'en' : 'pt');
     const label = () => {
-      const on = !audio.paused;
+      const on = wantOn;
       const text = btn.dataset[`label${on ? 'On' : 'Off'}${lang() === 'en' ? 'En' : 'Pt'}` as keyof DOMStringMap] || '';
       btn.setAttribute('aria-label', text);
       btn.title = text;
@@ -31,29 +31,47 @@
       btn.classList.toggle('is-on', on);
     };
     let fade: number | undefined;
+    let wantOn = false; // estado pedido pelo último clique
     const fadeTo = (target: number, done?: () => void) => {
       window.clearInterval(fade);
+      let steps = 0;
       fade = window.setInterval(() => {
+        steps++;
         const step = target > audio.volume ? 0.03 : -0.05;
         const next = audio.volume + step;
-        if ((step > 0 && next >= target) || (step < 0 && next <= target)) {
-          audio.volume = Math.max(0, Math.min(1, target));
+        // alguns navegadores (iPhone/Safari) não deixam mudar o volume: encerra mesmo assim
+        if (steps > 20 || (step > 0 && next >= target) || (step < 0 && next <= target)) {
+          try { audio.volume = Math.max(0, Math.min(1, target)); } catch {}
           window.clearInterval(fade);
           done?.();
-        } else audio.volume = Math.max(0, Math.min(1, next));
-      }, 60);
+        } else { try { audio.volume = Math.max(0, Math.min(1, next)); } catch {} }
+      }, 50);
     };
-    btn.addEventListener('click', async () => {
-      if (audio.paused) {
-        audio.volume = 0;
-        try { await audio.play(); fadeTo(VOLUME); } catch { /* bloqueado pelo navegador */ }
-      } else {
-        fadeTo(0, () => audio.pause());
-      }
+    // se o site estiver aberto em outra aba, só uma toca por vez
+    const channel = 'BroadcastChannel' in window ? new BroadcastChannel('ctb-music') : null;
+    const stop = () => {
+      wantOn = false;
+      fadeTo(0, () => audio.pause());
+      window.setTimeout(() => { if (!wantOn) audio.pause(); label(); }, 800); // parada garantida
       label();
+    };
+    channel?.addEventListener('message', (e) => { if (e.data === 'playing' && wantOn) stop(); });
+    btn.addEventListener('click', async () => {
+      if (!wantOn) {
+        wantOn = true;
+        label();
+        try { audio.volume = 0; } catch {}
+        try { await audio.play(); } catch { wantOn = false; label(); return; } // bloqueado pelo navegador
+        if (!wantOn) { audio.pause(); return; }
+        channel?.postMessage('playing');
+        fadeTo(VOLUME);
+      } else {
+        stop();
+      }
     });
-    audio.addEventListener('play', label);
-    audio.addEventListener('pause', label);
+    // teclas de mídia do teclado / controles do sistema também atualizam o botão
+    audio.addEventListener('play', () => { wantOn = true; label(); });
+    audio.addEventListener('pause', () => { wantOn = false; label(); });
     document.addEventListener('astro:page-load', label); // atualiza o texto PT/EN ao trocar de idioma
     label();
   }
