@@ -30,7 +30,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-enabled={enabled ? '1' : '0'} data-config={JSON.stringify(config)} data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, sessionEnded: p.sessionEnded })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -342,7 +342,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     function mostrarAgendamentos(lista: any[]) {
       const ul = $('[data-appts]'); ul.innerHTML = '';
       if (!lista.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.apptEmpty; ul.append(li); return; }
-      const chave = (a: any) => a.horarioConfirmado?.toMillis?.() ?? (a.dataSolicitada ? Date.parse(a.dataSolicitada + 'T00:00:00Z') : a.appointmentTime?.toMillis?.() ?? 0);
+      const chave = (a: any) => a.horarioConfirmado?.toMillis?.() ?? (a.dataSolicitada ? Date.parse(a.dataSolicitada + 'T00:00:00Z') : 0);
       lista.sort((a, b) => chave(b) - chave(a)).forEach((a: any) => {
         const li = document.createElement('li'); li.className = 'appt';
         const n = document.createElement('span'); n.className = 'name'; n.textContent = a.appointmentType || a.appointmentName || '—';
@@ -353,10 +353,11 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         } else if (a.dataSolicitada) {
           i.textContent = `${M.apptRequested}: ${dataCivil(a.dataSolicitada)} · ${M.apptToConfirm}`;
           li.dataset.tipo = 'solicitado';
-        } else if (a.appointmentTime) {
-          // registro antigo: só a data escolhida (sem horário real) — exibida como data, nunca como reunião marcada
-          i.textContent = `${M.apptRequested} (${M.apptLegacy}): ${a.appointmentTime.toDate().toLocaleDateString(locale, { timeZone: 'Asia/Dubai', day: 'numeric', month: 'short', year: 'numeric' })} · ${M.apptToConfirm}`;
-          li.dataset.tipo = 'antigo';
+        } else if (a.appointmentTime || a.dataPendenteConfirmacao) {
+          // registro antigo: o app guardava a meia-noite do APARELHO, sem o fuso. O dia original não pode ser
+          // deduzido com segurança — não exibimos data nem hora (a equipe confirma com o cliente).
+          i.textContent = `${M.apptPending} (${M.apptLegacy})`;
+          li.dataset.tipo = 'pendente';
         }
         li.append(n, i); ul.append(li);
       });
