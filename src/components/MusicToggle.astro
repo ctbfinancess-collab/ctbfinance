@@ -1,0 +1,89 @@
+---
+/**
+ * Música ambiente do site ("Desert Wind" — Pixabay, licença livre).
+ * Começa DESLIGADA; o visitante liga pelo botão. Graças ao ClientRouter
+ * (navegação contínua) e ao transition:persist, a música não para ao trocar de página.
+ */
+---
+<div class="music" transition:persist="music">
+  <audio data-music-audio src="/audio/desert-wind.mp3" loop preload="none"></audio>
+  <button type="button" class="music__btn" data-music-btn aria-pressed="false"
+    data-label-on-pt="Pausar música" data-label-off-pt="Tocar música"
+    data-label-on-en="Pause music" data-label-off-en="Play music"
+    aria-label="Tocar música" title="Tocar música">
+    <span class="music__bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <svg class="music__note" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+  </button>
+</div>
+
+<script>
+  const btn = document.querySelector<HTMLButtonElement>('[data-music-btn]');
+  const audio = document.querySelector<HTMLAudioElement>('[data-music-audio]');
+  if (btn && audio) {
+    const VOLUME = 0.35;
+    const lang = () => (document.documentElement.lang.startsWith('en') ? 'en' : 'pt');
+    const label = () => {
+      const on = !audio.paused;
+      const text = btn.dataset[`label${on ? 'On' : 'Off'}${lang() === 'en' ? 'En' : 'Pt'}` as keyof DOMStringMap] || '';
+      btn.setAttribute('aria-label', text);
+      btn.title = text;
+      btn.setAttribute('aria-pressed', String(on));
+      btn.classList.toggle('is-on', on);
+    };
+    let fade: number | undefined;
+    const fadeTo = (target: number, done?: () => void) => {
+      window.clearInterval(fade);
+      fade = window.setInterval(() => {
+        const step = target > audio.volume ? 0.03 : -0.05;
+        const next = audio.volume + step;
+        if ((step > 0 && next >= target) || (step < 0 && next <= target)) {
+          audio.volume = Math.max(0, Math.min(1, target));
+          window.clearInterval(fade);
+          done?.();
+        } else audio.volume = Math.max(0, Math.min(1, next));
+      }, 60);
+    };
+    btn.addEventListener('click', async () => {
+      if (audio.paused) {
+        audio.volume = 0;
+        try { await audio.play(); fadeTo(VOLUME); } catch { /* bloqueado pelo navegador */ }
+      } else {
+        fadeTo(0, () => audio.pause());
+      }
+      label();
+    });
+    audio.addEventListener('play', label);
+    audio.addEventListener('pause', label);
+    document.addEventListener('astro:page-load', label); // atualiza o texto PT/EN ao trocar de idioma
+    label();
+  }
+</script>
+
+<style>
+  .music { position: fixed; right: clamp(1rem, 2.5vw, 1.75rem); bottom: clamp(1rem, 2.5vw, 1.75rem); z-index: 60; }
+  .music__btn {
+    display: grid; place-items: center; width: 48px; height: 48px; padding: 0; border-radius: 50%;
+    border: 1px solid rgba(181, 139, 77, 0.6); background: rgba(53, 36, 29, 0.82); color: var(--color-gold);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28); transition: border-color 0.3s ease, transform 0.3s ease, background 0.3s ease;
+  }
+  .music__btn:hover { border-color: var(--color-gold); transform: translateY(-2px); background: rgba(53, 36, 29, 0.95); }
+  .music__btn:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 3px; }
+  .music__note { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .music__bars { display: none; align-items: flex-end; gap: 3px; height: 18px; }
+  .music__bars i { display: block; width: 3px; height: 100%; border-radius: 2px; background: var(--color-gold); transform-origin: bottom; animation: bars 1.1s ease-in-out infinite; }
+  .music__bars i:nth-child(2) { animation-delay: -0.35s; }
+  .music__bars i:nth-child(3) { animation-delay: -0.7s; }
+  .music__bars i:nth-child(4) { animation-delay: -0.2s; }
+  .music__btn.is-on .music__bars { display: flex; }
+  .music__btn.is-on .music__note { display: none; }
+  /* convite sutil enquanto está desligada */
+  .music__btn:not(.is-on)::after {
+    content: ''; position: absolute; inset: -1px; border-radius: 50%; border: 1px solid rgba(181, 139, 77, 0.5);
+    animation: invite 2.8s ease-out infinite; pointer-events: none;
+  }
+  .music__btn { position: relative; }
+  @keyframes bars { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+  @keyframes invite { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .music__bars i, .music__btn::after { animation: none !important; } }
+</style>

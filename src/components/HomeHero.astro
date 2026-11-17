@@ -79,50 +79,56 @@ const pillars: { key: UiKey; icon: string }[] = [
 </section>
 
 <script>
-  const INTERVAL = 7000;
-  const root = document.querySelector<HTMLElement>('[data-hero-slides]');
-  const dotsRoot = document.querySelector<HTMLElement>('[data-hero-dots]');
-  if (root && dotsRoot) {
-    const slides = Array.from(root.children) as HTMLElement[];
-    const dots = Array.from(dotsRoot.children) as HTMLButtonElement[];
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let current = 0;
-    let timer: number | undefined;
+  // Executa a cada página (navegação contínua do site, para a música não parar)
+  function init() {
+    const INTERVAL = 7000;
+    const root = document.querySelector<HTMLElement>('[data-hero-slides]');
+    const dotsRoot = document.querySelector<HTMLElement>('[data-hero-dots]');
+    if (root && dotsRoot) {
+      const slides = Array.from(root.children) as HTMLElement[];
+      const dots = Array.from(dotsRoot.children) as HTMLButtonElement[];
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let current = 0;
+      let timer: number | undefined;
 
-    const show = (n: number) => {
-      const next = (n + slides.length) % slides.length;
-      const img = slides[next].querySelector('img');
-      const vid = slides[next].querySelector('video');
-      // se a próxima foto/vídeo ainda não carregou, espera o próximo ciclo (nunca mostra quadro vazio)
-      if (img && !img.complete) return;
-      if (vid && vid.readyState < 2) { vid.preload = 'auto'; vid.load(); return; }
-      if (next === current) return;
-      if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
-      const prevVid = slides[current].querySelector('video');
-      if (prevVid) window.setTimeout(() => prevVid.pause(), 1900);
-      slides[current].classList.remove('is-active');
-      dots[current].classList.remove('is-active');
-      current = next;
-      slides[current].classList.add('is-active');
-      dots[current].classList.add('is-active');
-      preloadNext();
-    };
-    // carrega o vídeo seguinte com antecedência, para a troca nunca travar
-    const preloadNext = () => {
-      const v = slides[(current + 1) % slides.length].querySelector('video');
-      if (v && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
-    };
-    const first = slides[0].querySelector('video');
-    if (first) first.addEventListener('canplay', preloadNext, { once: true }); else preloadNext();
-    const start = () => {
-      if (reduced) return;
-      window.clearInterval(timer);
-      timer = window.setInterval(() => show(current + 1), INTERVAL);
-    };
-    dots.forEach((d, i) => d.addEventListener('click', () => { show(i); start(); }));
-    document.addEventListener('visibilitychange', () => (document.hidden ? window.clearInterval(timer) : start()));
-    start();
+      const show = (n: number) => {
+        const next = (n + slides.length) % slides.length;
+        const img = slides[next].querySelector('img');
+        const vid = slides[next].querySelector('video');
+        // se a próxima foto/vídeo ainda não carregou, espera o próximo ciclo (nunca mostra quadro vazio)
+        if (img && !img.complete) return;
+        if (vid && vid.readyState < 2) { vid.preload = 'auto'; vid.load(); return; }
+        if (next === current) return;
+        if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+        const prevVid = slides[current].querySelector('video');
+        if (prevVid) window.setTimeout(() => prevVid.pause(), 1900);
+        slides[current].classList.remove('is-active');
+        dots[current].classList.remove('is-active');
+        current = next;
+        slides[current].classList.add('is-active');
+        dots[current].classList.add('is-active');
+        preloadNext();
+      };
+      // carrega o vídeo seguinte com antecedência, para a troca nunca travar
+      const preloadNext = () => {
+        const v = slides[(current + 1) % slides.length].querySelector('video');
+        if (v && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
+      };
+      const first = slides[0].querySelector('video');
+      if (first) first.addEventListener('canplay', preloadNext, { once: true }); else preloadNext();
+      const start = () => {
+        if (reduced) return;
+        window.clearInterval(timer);
+        timer = window.setInterval(() => show(current + 1), INTERVAL);
+      };
+      dots.forEach((d, i) => d.addEventListener('click', () => { show(i); start(); }));
+      const ac = new AbortController();
+      document.addEventListener('visibilitychange', () => (document.hidden ? window.clearInterval(timer) : start()), { signal: ac.signal });
+      document.addEventListener('astro:before-swap', () => { window.clearInterval(timer); ac.abort(); }, { once: true });
+      start();
+    }
   }
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>

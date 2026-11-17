@@ -107,43 +107,47 @@ const formReady = Boolean(company.formEndpoint);
 </section>
 
 <script>
-  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
-  if (form && form.getAttribute('action')) {
-    const status = form.querySelector<HTMLElement>('[data-status]')!;
-    const btn = form.querySelector<HTMLButtonElement>('[data-submit]')!;
-    const started = form.querySelector<HTMLInputElement>('[data-started-at]')!;
-    started.value = String(Date.now());
-    const label = btn.innerHTML;
-    const show = (msg: string, kind: 'ok' | 'err' | 'info') => {
-      status.hidden = false; status.textContent = msg; status.dataset.kind = kind;
-    };
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      form.querySelectorAll('.is-invalid').forEach((el) => el.classList.remove('is-invalid'));
-      if (!form.checkValidity()) {
-        form.querySelectorAll<HTMLElement>(':invalid').forEach((el) => el.classList.add('is-invalid'));
-        (form.querySelector(':invalid') as HTMLElement | null)?.focus();
-        return show(form.dataset.msgInvalid!, 'err');
-      }
-      btn.disabled = true; btn.textContent = form.dataset.msgSending!;
-      try {
-        const body = new URLSearchParams(new FormData(form) as unknown as Record<string, string>);
-        const r = await fetch(form.action, { method: 'POST', body, headers: { Accept: 'application/json' } });
-        const j = await r.json().catch(() => ({}));
-        if (r.ok && j.ok) { form.reset(); started.value = String(Date.now()); return show(form.dataset.msgSuccess!, 'ok'); }
-        if (r.status === 422 && Array.isArray(j.fields)) {
-          j.fields.forEach((f: string) => form.querySelector(`[name="${f}"]`)?.classList.add('is-invalid'));
+  // Executa a cada página (navegação contínua do site, para a música não parar)
+  function init() {
+    const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+    if (form && form.getAttribute('action')) {
+      const status = form.querySelector<HTMLElement>('[data-status]')!;
+      const btn = form.querySelector<HTMLButtonElement>('[data-submit]')!;
+      const started = form.querySelector<HTMLInputElement>('[data-started-at]')!;
+      started.value = String(Date.now());
+      const label = btn.innerHTML;
+      const show = (msg: string, kind: 'ok' | 'err' | 'info') => {
+        status.hidden = false; status.textContent = msg; status.dataset.kind = kind;
+      };
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        form.querySelectorAll('.is-invalid').forEach((el) => el.classList.remove('is-invalid'));
+        if (!form.checkValidity()) {
+          form.querySelectorAll<HTMLElement>(':invalid').forEach((el) => el.classList.add('is-invalid'));
+          (form.querySelector(':invalid') as HTMLElement | null)?.focus();
           return show(form.dataset.msgInvalid!, 'err');
         }
-        if (r.status === 429) return show(form.dataset.msgRate!, 'err');
-        show(form.dataset.msgError!, 'err');
-      } catch {
-        show(form.dataset.msgError!, 'err');
-      } finally {
-        btn.disabled = false; btn.innerHTML = label;
-      }
-    });
+        btn.disabled = true; btn.textContent = form.dataset.msgSending!;
+        try {
+          const body = new URLSearchParams(new FormData(form) as unknown as Record<string, string>);
+          const r = await fetch(form.action, { method: 'POST', body, headers: { Accept: 'application/json' } });
+          const j = await r.json().catch(() => ({}));
+          if (r.ok && j.ok) { form.reset(); started.value = String(Date.now()); return show(form.dataset.msgSuccess!, 'ok'); }
+          if (r.status === 422 && Array.isArray(j.fields)) {
+            j.fields.forEach((f: string) => form.querySelector(`[name="${f}"]`)?.classList.add('is-invalid'));
+            return show(form.dataset.msgInvalid!, 'err');
+          }
+          if (r.status === 429) return show(form.dataset.msgRate!, 'err');
+          show(form.dataset.msgError!, 'err');
+        } catch {
+          show(form.dataset.msgError!, 'err');
+        } finally {
+          btn.disabled = false; btn.innerHTML = label;
+        }
+      });
+    }
   }
+  document.addEventListener('astro:page-load', init);
 </script>
 
 <style>
