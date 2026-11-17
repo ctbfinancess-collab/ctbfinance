@@ -14,17 +14,22 @@ interface Props {
   stacked?: boolean;
   /** Imagem ocupa só o lado direito (ex.: '62%'), fundindo-se ao espresso à esquerda */
   side?: string;
+  /** Frase exibida sobre o vídeo (texto do site, não altera o vídeo) — modo stacked */
+  caption?: string;
   /** Vídeo de fundo em loop, sem som (ex.: '/video/x' → x.webm + x.mp4 + x-poster.jpg) */
   video?: string;
 }
-const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = [], fit, stacked = false, side, video } = Astro.props;
+const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = [], fit, stacked = false, side, video, caption } = Astro.props;
 ---
 <section class:list={['pb', { 'pb--fit': fit, 'pb--stacked': stacked, 'pb--side': side }]} style={[fit && `--pb-ratio: ${fit}`, side && `--pb-side: ${side}`].filter(Boolean).join(';') || undefined}>
   {video ? (
-    <video class="pb__video" autoplay muted loop playsinline preload="metadata" poster={`${video}-poster.jpg`} aria-hidden="true">
-      {!stacked && <source src={`${video}.webm`} type="video/webm" />}
-      <source src={`${video}.mp4`} type="video/mp4" />
-    </video>
+    <div class="pb__media">
+      <video class="pb__video" autoplay muted loop playsinline preload="metadata" poster={`${video}-poster.jpg`} aria-hidden="true">
+        {!stacked && <source src={`${video}.webm`} type="video/webm" />}
+        <source src={`${video}.mp4`} type="video/mp4" />
+      </video>
+      {caption && <p class="pb__caption"><span aria-hidden="true"></span>{caption}<span aria-hidden="true"></span></p>}
+    </div>
   ) : image ? (
     <picture class="pb__bg" aria-hidden="true">
       {imageSmall && <source media="(max-width: 900px)" srcset={imageSmall} />}
@@ -88,11 +93,16 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   .pb.pb--stacked { display: block; min-height: 0; aspect-ratio: auto; padding-top: 84px; }
   .pb--stacked .pb__bg img { position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--pb-ratio, 3 / 1); filter: var(--photo-tone); }
   .pb--stacked .pb__shade { display: none; }
+  .pb__media { display: contents; }
+  .pb--stacked .pb__media { display: block; position: relative; }
+  .pb__caption { position: absolute; left: clamp(1.25rem, 4vw, 4rem); top: 50%; transform: translateY(-50%); max-width: min(30rem, 38%); margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.5rem, 3.6vw, 3.4rem); line-height: 1.1; color: var(--color-ivory); text-shadow: 0 2px 18px rgba(53, 36, 29, 0.75); text-wrap: balance; }
+  .pb__caption span { display: block; width: 3rem; height: 1px; background: var(--color-gold); margin: 1.1rem 0; }
+  @media (max-width: 600px) { .pb__caption { font-size: 1.25rem; max-width: 55%; } .pb__caption span { margin: 0.6rem 0; width: 2rem; } }
   /* vídeo no modo stacked: original exato, inteiro, sem filtro, recorte ou véu */
   .pb--stacked .pb__video { position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; filter: none; -webkit-mask-image: none; mask-image: none; }
   .pb--stacked .pb__content { max-width: none; padding-top: clamp(2rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 3.5rem); background: var(--color-espresso); border-top: 1px solid var(--color-line); display: grid; grid-template-columns: auto 1fr; column-gap: clamp(2rem, 6vw, 6rem); align-items: end; }
   .pb--stacked .pb__crumbs, .pb--stacked .pb__eyebrow, .pb--stacked .pb__rule { grid-column: 1 / -1; }
-  .pb--stacked h1 { font-size: clamp(2.2rem, 3.6vw, 3.4rem); }
+  .pb--stacked h1 { font-size: clamp(2.2rem, 3.6vw, 3.4rem); max-width: 40rem; }
   .pb--stacked .pb__lead { margin: 0 0 0.4rem; max-width: 30rem; }
   @media (max-width: 800px) {
     .pb.pb--stacked { padding-top: 72px; }

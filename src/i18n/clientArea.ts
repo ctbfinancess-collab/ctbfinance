@@ -10,6 +10,8 @@ export const clientArea = {
     meta: { title: 'Área do Cliente · CTB Finances Dubai', description: 'Um ambiente reservado para acompanhar seu relacionamento com a CTB Finances.' },
     banner: {
       crumb: 'Área do Cliente',
+      // frase sobre o vídeo — provisória, aguardando a frase final
+      caption: 'O futuro não tem fronteiras. Suas possibilidades também não.',
       eyebrow: 'Área do Cliente',
       title: 'Bem-vindo à sua área exclusiva.',
       lead: 'Um ambiente reservado para acompanhar seu relacionamento com a CTB Finances.',
@@ -61,6 +63,7 @@ export const clientArea = {
     meta: { title: 'Client Area · CTB Finances Dubai', description: 'A private environment to follow your relationship with CTB Finances.' },
     banner: {
       crumb: 'Client Area',
+      caption: 'The future knows no boundaries. Neither do your possibilities.',
       eyebrow: 'Client Area',
       title: 'Welcome to your exclusive area.',
       lead: 'A private environment to follow your relationship with CTB Finances.',
