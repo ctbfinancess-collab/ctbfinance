@@ -33,8 +33,9 @@ export const portal = {
     docsText: 'Envie documentos em PDF, JPEG ou PNG, com até 10 MB. Documentos já enviados ficam guardados para análise e não podem ser substituídos ou apagados por aqui; se precisar corrigir algum, envie a nova versão e avise nossa equipe.',
     docsEmpty: 'Nenhum documento enviado.', upload: 'Enviar documento', uploading: 'Enviando…', uploaded: 'Documento enviado.',
     download: 'Baixar', badType: 'Formato não aceito. Use PDF, JPEG ou PNG.', tooBig: 'O arquivo passa de 10 MB.',
-    apptTitle: 'Meus agendamentos', apptEmpty: 'Nenhum agendamento registrado.', apptText: 'Para agendar uma conversa, fale com nossa equipe pela página de Contato.',
+    apptTitle: 'Meus agendamentos', apptEmpty: 'Nenhum agendamento registrado.', apptText: 'Horários exibidos no fuso de Dubai (GST, UTC+4). Para agendar uma conversa, fale com nossa equipe pela página de Contato.',
     contact: 'Falar com a equipe',
+    tz: 'horário de Dubai (GST, UTC+4)',
   },
   en: {
     loginTitle: 'Sign in',
@@ -63,7 +64,8 @@ export const portal = {
     docsText: 'Upload documents as PDF, JPEG or PNG, up to 10 MB. Submitted documents are kept for review and cannot be replaced or deleted here; if you need to correct one, upload the new version and let our team know.',
     docsEmpty: 'No documents submitted.', upload: 'Upload document', uploading: 'Uploading…', uploaded: 'Document uploaded.',
     download: 'Download', badType: 'Format not accepted. Use PDF, JPEG or PNG.', tooBig: 'The file exceeds 10 MB.',
-    apptTitle: 'My appointments', apptEmpty: 'No appointments registered.', apptText: 'To schedule a conversation, contact our team through the Contact page.',
+    apptTitle: 'My appointments', apptEmpty: 'No appointments registered.', apptText: 'Times are shown in Dubai time (GST, UTC+4). To schedule a conversation, contact our team through the Contact page.',
     contact: 'Contact our team',
+    tz: 'Dubai time (GST, UTC+4)',
   },
 } satisfies Record<Lang, unknown>;

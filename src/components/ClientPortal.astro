@@ -28,7 +28,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-enabled={enabled ? '1' : '0'} data-config={JSON.stringify(config)} data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -270,7 +270,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       snap.docs.map((d) => d.data()).sort((a: any, b: any) => (b.appointmentTime?.seconds ?? 0) - (a.appointmentTime?.seconds ?? 0)).forEach((a: any) => {
         const li = document.createElement('li');
         const n = document.createElement('span'); n.className = 'name'; n.textContent = a.appointmentType || a.appointmentName || '—';
-        const i = document.createElement('span'); i.className = 'info'; i.textContent = a.appointmentTime ? a.appointmentTime.toDate().toLocaleString(lang === 'en' ? 'en-GB' : 'pt-BR') : '';
+        const i = document.createElement('span'); i.className = 'info'; i.textContent = a.appointmentTime ? a.appointmentTime.toDate().toLocaleString(lang === 'en' ? 'en-GB' : 'pt-BR', { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' }) + ' · ' + M.tz : '';
         li.append(n, i); ul.append(li);
       });
     }
@@ -278,6 +278,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     onAuthStateChanged(auth, async (user) => {
       if (!user) { show('login'); return; }
       show('dash');
+      // leva o cliente direto ao painel (o banner continua acima)
+      requestAnimationFrame(() => root.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       $('[data-unverified]').hidden = user.emailVerified;
       try { await Promise.all([loadProfile(user.uid, user.email || ''), loadDocs(user.uid), loadAppts(user.uid)]); }
       catch { msg($('[data-profile-msg]'), M.genericError, 'err'); }
@@ -287,6 +289,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 </script>
 
 <style>
+  .portal { scroll-margin-top: 110px; }
   .portal [hidden] { display: none !important; }
   .access-card { position: relative; padding: clamp(2rem, 3.5vw, 2.8rem); background: var(--color-espresso); color: var(--color-ivory); border: 1px solid var(--color-line); box-shadow: 0 30px 60px rgba(53, 36, 29, 0.18); }
   .access-card::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(181, 139, 77, 0.25); pointer-events: none; }
