@@ -7,8 +7,16 @@ const { lang } = Astro.props;
 const t = useTranslations(lang);
 const home = localizePath('/', lang);
 
-// Ordem das imagens do carrossel (arquivos em public/brand/hero-<nome>.jpg)
-const slides = ['dubai', 'crescimento', 'investimentos', 'comercio', 'escritorio'];
+// Ordem do carrossel. Cada item é uma foto (public/brand/hero-<nome>.jpg)
+// ou um vídeo original sem filtro (public/video/<video>.mp4 + <video>-poster.jpg).
+type Slide = { name: string; video?: string };
+const slides: Slide[] = [
+  { name: 'dubai', video: 'hero-1' },
+  { name: 'crescimento', video: 'hero-2' },
+  { name: 'investimentos', video: 'hero-3' },
+  { name: 'comercio', video: 'hero-4' },
+  { name: 'escritorio', video: 'hero-5' },
+];
 
 const pillars: { key: UiKey; icon: string }[] = [
   { key: 'pillar.security', icon: '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/>' },
@@ -20,7 +28,14 @@ const pillars: { key: UiKey; icon: string }[] = [
 ---
 <section class="hero">
   <div class="hero__slides" aria-hidden="true" data-hero-slides>
-    {slides.map((name, i) => (
+    {slides.map(({ name, video }, i) => video ? (
+      <div class:list={['hero__slide', 'hero__slide--video', { 'is-active': i === 0 }]}>
+        <video muted loop playsinline preload={i === 0 ? 'auto' : 'metadata'} autoplay={i === 0}
+          poster={`/video/${video}-poster.jpg`}>
+          <source src={`/video/${video}.mp4`} type="video/mp4" />
+        </video>
+      </div>
+    ) : (
       <picture class:list={['hero__slide', { 'is-active': i === 0 }]}>
         <source media="(max-width: 900px)" srcset={`/brand/hero-${name}-900.jpg`} />
         <img src={`/brand/hero-${name}.jpg`} alt="" width="1671" height="941"
@@ -77,15 +92,28 @@ const pillars: { key: UiKey; icon: string }[] = [
     const show = (n: number) => {
       const next = (n + slides.length) % slides.length;
       const img = slides[next].querySelector('img');
-      // se a próxima imagem ainda não carregou, espera o próximo ciclo (nunca mostra quadro vazio)
+      const vid = slides[next].querySelector('video');
+      // se a próxima foto/vídeo ainda não carregou, espera o próximo ciclo (nunca mostra quadro vazio)
       if (img && !img.complete) return;
+      if (vid && vid.readyState < 2) { vid.preload = 'auto'; vid.load(); return; }
       if (next === current) return;
+      if (vid) { vid.currentTime = 0; vid.play().catch(() => {}); }
+      const prevVid = slides[current].querySelector('video');
+      if (prevVid) window.setTimeout(() => prevVid.pause(), 1900);
       slides[current].classList.remove('is-active');
       dots[current].classList.remove('is-active');
       current = next;
       slides[current].classList.add('is-active');
       dots[current].classList.add('is-active');
+      preloadNext();
     };
+    // carrega o vídeo seguinte com antecedência, para a troca nunca travar
+    const preloadNext = () => {
+      const v = slides[(current + 1) % slides.length].querySelector('video');
+      if (v && v.preload !== 'auto') { v.preload = 'auto'; v.load(); }
+    };
+    const first = slides[0].querySelector('video');
+    if (first) first.addEventListener('canplay', preloadNext, { once: true }); else preloadNext();
     const start = () => {
       if (reduced) return;
       window.clearInterval(timer);
@@ -106,6 +134,8 @@ const pillars: { key: UiKey; icon: string }[] = [
   .hero__slides { position: absolute; inset: 0; z-index: -2; }
   .hero__slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1.8s ease-in-out; }
   .hero__slide.is-active { opacity: 1; }
+  /* vídeo: exatamente como o original (sem filtro, zoom ou recorte extra) */
+  .hero__slide--video video { width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; display: block; }
   .hero__slide img { width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; transform: scale(1.06);
     filter: var(--photo-tone);
   }
