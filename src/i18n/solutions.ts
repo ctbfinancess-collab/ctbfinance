@@ -22,9 +22,9 @@ export const solutions = {
       eyebrow: 'Áreas de atuação',
       title: 'Três frentes, um mesmo compromisso',
       items: [
-        { icon: 'estruturacao', image: 'sol-bancaria-v2', alt: 'Miniatura dourada de edifício com colunas clássicas sobre mesa de mármore, com caneta-tinteiro e pasta de couro', title: 'Intermediação Bancária', license: 'Bank Brokers', text: 'Aproximação entre clientes e instituições bancárias, facilitando o relacionamento e a identificação de alternativas compatíveis com diferentes necessidades financeiras.' },
-        { icon: 'visao', image: 'sol-credito-v2', alt: 'Lupa dourada sobre relatórios financeiros, com livros, ampulheta e calculadora em mesa de mármore', title: 'Análise de Crédito', license: 'Credit Review Services', text: 'Apoio à avaliação de informações financeiras e documentação relacionada a operações de crédito, contribuindo para processos de análise mais organizados e transparentes.' },
-        { icon: 'consultoria', image: 'sol-financiamento-v2', alt: 'Prancheta com caneta-tinteiro ao lado de pilhas de moedas douradas e gráfico de crescimento', title: 'Intermediação de Financiamentos', license: 'Financing Broker', text: 'Apoio na identificação e intermediação de oportunidades de financiamento, conectando necessidades de clientes a possíveis instituições financiadoras.' },
+        { icon: 'estruturacao', image: 'sol-bancaria-v3', alt: 'Miniatura dourada de edifício com colunas clássicas sobre mesa de mármore, com caneta-tinteiro e pasta de couro', title: 'Intermediação Bancária', license: 'Bank Brokers', text: 'Aproximação entre clientes e instituições bancárias, facilitando o relacionamento e a identificação de alternativas compatíveis com diferentes necessidades financeiras.' },
+        { icon: 'visao', image: 'sol-credito-v3', alt: 'Lupa dourada sobre relatórios financeiros, com livros, ampulheta e calculadora em mesa de mármore', title: 'Análise de Crédito', license: 'Credit Review Services', text: 'Apoio à avaliação de informações financeiras e documentação relacionada a operações de crédito, contribuindo para processos de análise mais organizados e transparentes.' },
+        { icon: 'consultoria', image: 'sol-financiamento-v3', alt: 'Prancheta com caneta-tinteiro ao lado de pilhas de moedas douradas e gráfico de crescimento', title: 'Intermediação de Financiamentos', license: 'Financing Broker', text: 'Apoio na identificação e intermediação de oportunidades de financiamento, conectando necessidades de clientes a possíveis instituições financiadoras.' },
       ],
     },
     process: {
@@ -68,9 +68,9 @@ export const solutions = {
       eyebrow: 'Areas of activity',
       title: 'Three fronts, one commitment',
       items: [
-        { icon: 'estruturacao', image: 'sol-bancaria-v2', alt: 'A golden miniature building with classical columns on a marble desk, with a fountain pen and leather folder', title: 'Bank Brokerage', license: 'Bank Brokers', text: 'Bringing clients and banking institutions together, facilitating the relationship and the identification of alternatives suited to different financial needs.' },
-        { icon: 'visao', image: 'sol-credito-v2', alt: 'A golden magnifying glass over financial reports, with books, an hourglass and a calculator on a marble desk', title: 'Credit Review', license: 'Credit Review Services', text: 'Support in reviewing financial information and documentation related to credit operations, contributing to more organised and transparent assessment processes.' },
-        { icon: 'consultoria', image: 'sol-financiamento-v2', alt: 'A clipboard with a fountain pen beside stacks of gold coins and a rising chart', title: 'Financing Brokerage', license: 'Financing Broker', text: 'Support in identifying and brokering financing opportunities, connecting client needs with potential financing institutions.' },
+        { icon: 'estruturacao', image: 'sol-bancaria-v3', alt: 'A golden miniature building with classical columns on a marble desk, with a fountain pen and leather folder', title: 'Bank Brokerage', license: 'Bank Brokers', text: 'Bringing clients and banking institutions together, facilitating the relationship and the identification of alternatives suited to different financial needs.' },
+        { icon: 'visao', image: 'sol-credito-v3', alt: 'A golden magnifying glass over financial reports, with books, an hourglass and a calculator on a marble desk', title: 'Credit Review', license: 'Credit Review Services', text: 'Support in reviewing financial information and documentation related to credit operations, contributing to more organised and transparent assessment processes.' },
+        { icon: 'consultoria', image: 'sol-financiamento-v3', alt: 'A clipboard with a fountain pen beside stacks of gold coins and a rising chart', title: 'Financing Brokerage', license: 'Financing Broker', text: 'Support in identifying and brokering financing opportunities, connecting client needs with potential financing institutions.' },
       ],
     },
     process: {

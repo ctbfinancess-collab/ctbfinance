@@ -23,7 +23,7 @@ const roman = ['I', 'II', 'III', 'IV'];
     <div class="about__media reveal">
       <span class="about__frame" aria-hidden="true"></span>
       <ImageSlot label={c.about.image} alt={c.about.image} ratio="4 / 5"
-        src="/brand/sec-sobre-v2.jpg" srcSmall="/brand/sec-sobre-v2-900.jpg" position="18% 50%" />
+        src="/brand/sec-sobre-v3.jpg" srcSmall="/brand/sec-sobre-v3-900.jpg" position="18% 50%" />
     </div>
   </div>
 </section>
@@ -74,7 +74,7 @@ const roman = ['I', 'II', 'III', 'IV'];
   <div class="container">
     <div class="reveal">
       <ImageSlot label={c.dubai.image} alt={c.dubai.image} ratio="21 / 9" class="dubai__pano"
-        src="/brand/sec-dubai-v2.jpg" srcSmall="/brand/sec-dubai-v2-900.jpg" position="50% 55%" />
+        src="/brand/sec-dubai-v3.jpg" srcSmall="/brand/sec-dubai-v3-900.jpg" position="50% 55%" />
     </div>
     <div class="dubai__text">
       <div class="reveal">
@@ -92,8 +92,8 @@ const roman = ['I', 'II', 'III', 'IV'];
 <!-- 4 · Filosofia (escuro) -->
 <section id="filosofia" class="sec sec--dark sec--cafe sec--photo">
   <picture class="sec__photo" aria-hidden="true">
-    <source media="(max-width: 900px)" srcset="/brand/sec-filosofia-900.jpg" />
-    <img src="/brand/sec-filosofia.jpg" alt="" loading="lazy" decoding="async" />
+    <source media="(max-width: 900px)" srcset="/brand/sec-filosofia-v3-900.jpg" />
+    <img src="/brand/sec-filosofia-v3.jpg" alt="" loading="lazy" decoding="async" />
   </picture>
   <div class="container">
     <header class="sec__head reveal">
@@ -119,8 +119,8 @@ const roman = ['I', 'II', 'III', 'IV'];
 <!-- 5 · Chamada final (composição com imagem) -->
 <section id="contato" class="contact">
   <picture class="contact__media" aria-hidden="true">
-    <source media="(max-width: 800px)" srcset="/brand/cta-conversa-v2-760.jpg" />
-    <img src="/brand/cta-conversa-v2.jpg" alt="" width="1042" height="724" loading="lazy" decoding="async" />
+    <source media="(max-width: 800px)" srcset="/brand/cta-conversa-v3-760.jpg" />
+    <img src="/brand/cta-conversa-v3.jpg" alt="" width="1042" height="724" loading="lazy" decoding="async" />
   </picture>
   <div class="contact__shade" aria-hidden="true"></div>
   <div class="contact__inner">
@@ -143,7 +143,7 @@ const roman = ['I', 'II', 'III', 'IV'];
   .sec--cafe { background: linear-gradient(160deg, var(--color-cafe) 0%, var(--color-espresso) 70%); }
   /* Filosofia: foto de atendimento ao fundo, velada em espresso para manter a leitura */
   .sec--photo { position: relative; isolation: isolate; overflow: hidden; }
-  .sec__photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; z-index: -2; filter: var(--photo-tone); }
+  .sec__photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 40%; z-index: -2; }
   .sec--photo::before {
     content: ''; position: absolute; inset: 0; z-index: -1;
     background:
@@ -217,7 +217,7 @@ const roman = ['I', 'II', 'III', 'IV'];
 
   /* 5 · Contato — imagem à direita, degradê espresso à esquerda para o texto */
   .contact { position: relative; isolation: isolate; overflow: hidden; background: var(--color-espresso); color: var(--color-ivory); border-top: 1px solid var(--color-line); }
-  .contact__media img { position: absolute; top: 0; right: 0; width: 62%; height: 100%; object-fit: cover; object-position: 60% 50%; z-index: -2; filter: var(--photo-tone); }
+  .contact__media img { position: absolute; top: 0; right: 0; width: 62%; height: 100%; object-fit: cover; object-position: 60% 50%; z-index: -2; }
   .contact__shade { position: absolute; inset: 0; z-index: -1; background:
     linear-gradient(90deg, var(--color-espresso) 0%, var(--color-espresso) 38%, rgba(53, 36, 29, 0.85) 46%, rgba(53, 36, 29, 0.35) 60%, rgba(53, 36, 29, 0) 75%),
     linear-gradient(0deg, rgba(53, 36, 29, 0.55) 0%, rgba(53, 36, 29, 0) 25%); }
