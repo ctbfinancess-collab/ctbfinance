@@ -20,6 +20,8 @@ const links = [
 ];
 // Endereços do aplicativo em src/i18n/company.ts
 // Enquanto não houver login no aplicativo, o botão leva à página institucional da Área do Cliente
+// Nome "CTB FINANCES" ao lado da águia (imagem enviada pela cliente)
+const WORDMARK = '/brand/ctb-wordmark-ouro.png';
 const loginUrl = company.appLoginUrl || routes.clientArea[lang];
 const signupUrl = company.appSignupUrl || routes.client[lang];
 ---
@@ -28,7 +30,7 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
     <a href={home} class="brand" aria-label="CTB Finances Dubai">
       <img src="/brand/ctb-eagle.png" alt="" width="480" height="225" class="brand__mark" />
       <span class="brand__text">
-        <span class="brand__name">CTB Finances</span>
+        <img class="brand__word" src={WORDMARK} alt="CTB Finances" width="818" height="80" />
         <span class="brand__sub">Dubai</span>
       </span>
     </a>
@@ -111,6 +113,7 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
   .brand { display: flex; align-items: center; gap: 0.9rem; color: var(--color-champagne); }
   .brand__mark { height: 52px; width: auto; }
   .brand__text { display: flex; flex-direction: column; align-items: center; padding-left: 1rem; border-left: 1px solid var(--color-line); line-height: 1; }
+  .brand__word { display: block; height: 21px; width: auto; }
   .brand__name { font-family: var(--font-display); font-size: 1.65rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; color: var(--color-gold); background: linear-gradient(180deg, #e8d6b7 0%, #b58b4d 70%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
   .brand__sub { margin-top: 0.35rem; font-size: 0.62rem; letter-spacing: 0.5em; text-transform: uppercase; color: var(--color-champagne); display: flex; align-items: center; gap: 0.6rem; }
   .brand__sub::before, .brand__sub::after { content: ''; width: 2.2rem; height: 1px; background: var(--color-line); }
@@ -133,7 +136,23 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
   /* telas entre 1281 e 1520 px: só a águia, para caber menu + botões */
   /* telas médias (ex.: notebooks com zoom do Windows): menu continua visível, mais compacto */
   @media (min-width: 1025px) and (max-width: 1520px) {
-    .brand__text { display: none; }
+    .brand__sub { display: none; }
+    .brand__text { padding-left: 0.8rem; }
+    .brand__word { height: 17px; }
+  }
+  @media (min-width: 1025px) and (max-width: 1400px) {
+    .brand { gap: 0.6rem; }
+    .brand__word { height: 14px; }
+  }
+  @media (min-width: 1025px) and (max-width: 1180px) {
+    .brand__mark { height: 38px; }
+    .brand__word { height: 12px; }
+    .brand__text { padding-left: 0.6rem; }
+  }
+  /* tablet: só o nome (sem "Dubai"), tamanho médio */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .brand__sub { display: none; }
+    .brand__word { height: 16px; }
   }
   @media (min-width: 1025px) and (max-width: 1360px) {
     .header__inner { gap: 1.25rem; padding-inline: 1.25rem; }
@@ -171,6 +190,7 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
 
   @media (max-width: 1024px) {
     .nav { display: none; }
+    .account { display: none; } /* no tablet os botões ficam dentro do menu */
     .tools { margin-left: auto; }
     .burger { display: block; }
   }
@@ -180,8 +200,17 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
     .brand { flex: none; }
     .tools { gap: 0.6rem; }
     .lang svg { display: none; }
-    .brand__text { display: none; }
+    .brand__sub { display: none; }
+    .brand__text { padding-left: 0.6rem; }
+    .brand__word { height: 12px; }
+    .brand { gap: 0.5rem; min-width: 0; }
+    .brand__mark { flex: none; }
     .brand__mark { height: 40px; }
     .tools .btn--sm { --btn-pad-x: 1rem; font-size: 0.8rem; }
+  }
+  @media (max-width: 380px) {
+    .brand__mark { height: 34px !important; }
+    .brand__word { height: 10px; }
+    .tools { gap: 0.45rem; }
   }
 </style>
