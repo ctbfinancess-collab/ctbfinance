@@ -22,7 +22,7 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
 <section class:list={['pb', { 'pb--fit': fit, 'pb--stacked': stacked, 'pb--side': side }]} style={[fit && `--pb-ratio: ${fit}`, side && `--pb-side: ${side}`].filter(Boolean).join(';') || undefined}>
   {video ? (
     <video class="pb__video" autoplay muted loop playsinline preload="metadata" poster={`${video}-poster.jpg`} aria-hidden="true">
-      <source src={`${video}.webm`} type="video/webm" />
+      {!stacked && <source src={`${video}.webm`} type="video/webm" />}
       <source src={`${video}.mp4`} type="video/mp4" />
     </video>
   ) : image ? (
@@ -88,6 +88,8 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   .pb.pb--stacked { display: block; min-height: 0; aspect-ratio: auto; padding-top: 84px; }
   .pb--stacked .pb__bg img { position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--pb-ratio, 3 / 1); filter: var(--photo-tone); }
   .pb--stacked .pb__shade { display: none; }
+  /* vídeo no modo stacked: original exato, inteiro, sem filtro, recorte ou véu */
+  .pb--stacked .pb__video { position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; filter: none; -webkit-mask-image: none; mask-image: none; }
   .pb--stacked .pb__content { max-width: none; padding-top: clamp(2rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 3.5rem); background: var(--color-espresso); border-top: 1px solid var(--color-line); display: grid; grid-template-columns: auto 1fr; column-gap: clamp(2rem, 6vw, 6rem); align-items: end; }
   .pb--stacked .pb__crumbs, .pb--stacked .pb__eyebrow, .pb--stacked .pb__rule { grid-column: 1 / -1; }
   .pb--stacked h1 { font-size: clamp(2.2rem, 3.6vw, 3.4rem); }
