@@ -1,0 +1,163 @@
+---
+import PageBanner from './PageBanner.astro';
+import Button from './Button.astro';
+import { clientArea } from '../i18n/clientArea';
+import { routes, useTranslations } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const c = clientArea[lang];
+const t = useTranslations(lang);
+
+const icons = [
+  '<circle cx="12" cy="8" r="4"/><path d="M4 21v-1a7 7 0 0 1 7-7h2a7 7 0 0 1 7 7v1"/>',
+  '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="m9 13 2 2 4-4"/>',
+  '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8"/><path d="M8 13h5"/>',
+  '<path d="M20 13c0 5-3.5 7.5-7.7 9a1 1 0 0 1-.6 0C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.2-2.7a1.2 1.2 0 0 1 1.6 0C14.5 3.8 17 5 19 5a1 1 0 0 1 1 1z"/><rect x="9.5" y="10.5" width="5" height="4" rx="0.6"/><path d="M10.5 10.5V9a1.5 1.5 0 0 1 3 0v1.5"/>',
+];
+---
+<PageBanner
+  eyebrow={c.banner.eyebrow} title={c.banner.title} lead={c.banner.lead}
+  crumbs={[{ label: t('nav.home'), href: routes.home[lang] }, { label: c.banner.crumb }]}
+/>
+
+<!-- Acesso (desativado) + apresentação -->
+<section class="sec sec--ivory">
+  <div class="container access-grid">
+    <div class="access-card">
+      <p class="eyebrow eyebrow--gold">{c.access.eyebrow}</p>
+      <h2>{c.access.title}</h2>
+      <span class="gold-rule"></span>
+      <form class="access-form" aria-disabled="true" onsubmit="return false">
+        <fieldset disabled>
+          <label>
+            <span>{c.access.email}</span>
+            <input type="email" autocomplete="off" />
+          </label>
+          <label>
+            <span>{c.access.password}</span>
+            <input type="password" autocomplete="off" />
+          </label>
+          <button type="button" class="btn btn--primary">{c.access.submit}</button>
+          <span class="forgot">{c.access.forgot}</span>
+        </fieldset>
+      </form>
+      <p class="access-status" role="status">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        {c.access.status}
+      </p>
+      <p class="access-client">{c.access.notClient} <a href={routes.client[lang]}>{c.access.notClientLink}</a></p>
+    </div>
+
+    <div class="intro">
+      <p class="eyebrow">{c.intro.eyebrow}</p>
+      <h2>{c.intro.title}</h2>
+      <span class="gold-rule"></span>
+      {c.intro.paragraphs.map((p, i) => <p class:list={{ lead: i === 0 }}>{p}</p>)}
+    </div>
+  </div>
+</section>
+
+<!-- O que você encontrará -->
+<section class="sec sec--dark">
+  <div class="container">
+    <header class="head">
+      <p class="eyebrow eyebrow--gold">{c.features.eyebrow}</p>
+      <h2>{c.features.title}</h2>
+      <span class="gold-rule gold-rule--center"></span>
+    </header>
+    <ul class="features">
+      {c.features.items.map((f, i) => (
+        <li>
+          <span class="features__icon"><svg viewBox="0 0 24 24" aria-hidden="true" set:html={icons[i]} /></span>
+          <h3>{f.title}</h3>
+          <p>{f.text}</p>
+        </li>
+      ))}
+    </ul>
+    <p class="features__note">{c.features.note}</p>
+  </div>
+</section>
+
+<!-- Segurança + contato -->
+<section class="sec sec--ivory on-light">
+  <div class="container security">
+    <div>
+      <p class="eyebrow">{c.security.eyebrow}</p>
+      <h2>{c.security.title}</h2>
+      <span class="gold-rule"></span>
+      <p>{c.security.text}</p>
+      <Button href={routes.privacy[lang]} variant="link" arrow>{c.security.privacyLink}</Button>
+    </div>
+    <div class="cta-card">
+      <h3>{c.cta.title}</h3>
+      <p>{c.cta.text}</p>
+      <div class="cta-card__buttons">
+        <Button href={routes.contact[lang]} variant="primary" arrow blockMobile>{c.cta.contact}</Button>
+        <Button href={routes.client[lang]} variant="secondary" blockMobile>{c.cta.client}</Button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .sec { padding-block: clamp(4rem, 9vw, 6.5rem); }
+  .sec--ivory { background: var(--color-ivory); color: var(--color-espresso); }
+  .sec--dark { background: var(--color-espresso); color: var(--color-ivory); }
+  .eyebrow { color: var(--color-cafe); }
+  .eyebrow--gold, .sec--dark .eyebrow { color: var(--color-gold); }
+  h2 { font-size: clamp(2rem, 3.4vw, 2.8rem); font-weight: 400; line-height: 1.1; margin: 0.8rem 0 0; text-wrap: balance; }
+  .sec--dark h2 { color: var(--color-champagne); }
+  h3 { font-size: 1.4rem; font-weight: 500; margin: 0 0 0.6rem; }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.5rem 0; }
+  .gold-rule--center { margin-inline: auto; }
+  .head { text-align: center; max-width: 44rem; margin: 0 auto clamp(2.5rem, 5vw, 4rem); }
+
+  /* Acesso */
+  .access-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2.5rem, 6vw, 5.5rem); align-items: center; }
+  .access-card { position: relative; padding: clamp(2rem, 3.5vw, 2.8rem); background: var(--color-espresso); color: var(--color-ivory); border: 1px solid var(--color-line); box-shadow: 0 30px 60px rgba(53, 36, 29, 0.18); }
+  .access-card::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(181, 139, 77, 0.25); pointer-events: none; }
+  .access-card h2 { color: var(--color-champagne); }
+  .access-form fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 1rem; min-width: 0; opacity: 0.5; }
+  .access-form label { display: flex; flex-direction: column; gap: 0.4rem; }
+  .access-form label span { font-size: 0.78rem; letter-spacing: 0.06em; color: var(--color-champagne); }
+  .access-form input { font: inherit; font-size: 1rem; color: var(--color-ivory); background: rgba(246, 240, 230, 0.06); border: 1px solid var(--color-line); border-radius: 4px; padding: 0.8rem 0.9rem; min-height: 48px; width: 100%; cursor: not-allowed; }
+  .access-form .btn { justify-content: center; cursor: not-allowed; margin-top: 0.3rem; }
+  .forgot { font-size: 0.85rem; color: var(--color-champagne); text-align: center; text-decoration: underline; text-decoration-color: var(--color-line); text-underline-offset: 3px; }
+  .access-status { position: relative; display: flex; gap: 0.6rem; align-items: flex-start; margin: 1.6rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--color-line); font-size: 0.88rem; color: var(--color-champagne); }
+  .access-status svg { flex: none; width: 18px; height: 18px; margin-top: 2px; fill: none; stroke: var(--color-gold); stroke-width: 1.6; stroke-linecap: round; }
+  .access-client { position: relative; margin: 0.9rem 0 0; font-size: 0.88rem; opacity: 0.85; }
+  .access-client a { color: var(--color-gold); }
+  .intro h2 { color: var(--color-espresso); }
+  .intro p { color: var(--color-cafe); margin: 0 0 1rem; }
+  .intro .lead { font-family: var(--font-display); font-size: clamp(1.3rem, 1.9vw, 1.6rem); line-height: 1.45; color: var(--color-espresso); }
+
+  /* Funcionalidades */
+  .features { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; }
+  .features li { padding: 2rem 1.6rem; border: 1px solid var(--color-line); background: linear-gradient(160deg, rgba(98, 72, 58, 0.32), rgba(53, 36, 29, 0)); transition: border-color 0.4s ease, transform 0.4s ease; }
+  .features li:hover { border-color: var(--color-gold); transform: translateY(-3px); }
+  .features__icon { display: grid; place-items: center; width: 60px; height: 60px; border-radius: 50%; border: 1px solid var(--color-gold); margin-bottom: 1.4rem; }
+  .features svg { width: 26px; height: 26px; fill: none; stroke: var(--color-champagne); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+  .features h3 { color: var(--color-champagne); }
+  .features p { margin: 0; opacity: 0.82; font-size: 0.95rem; }
+  .features__note { margin: 2.2rem 0 0; text-align: center; font-size: 0.85rem; font-style: italic; color: var(--color-champagne); opacity: 0.75; }
+
+  /* Segurança + CTA */
+  .security { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(2.5rem, 6vw, 5rem); align-items: center; }
+  .security h2 { color: var(--color-espresso); }
+  .security p { color: var(--color-cafe); }
+  .cta-card { padding: clamp(2rem, 3.5vw, 2.6rem); background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); box-shadow: 0 24px 50px rgba(53, 36, 29, 0.08); }
+  .cta-card h3 { font-size: clamp(1.5rem, 2.2vw, 1.9rem); font-weight: 400; color: var(--color-espresso); }
+  .cta-card p { margin: 0 0 1.6rem; color: var(--color-cafe); }
+  .cta-card__buttons { display: flex; flex-wrap: wrap; gap: 0.8rem; }
+
+  @media (max-width: 1000px) {
+    .access-grid, .security { grid-template-columns: 1fr; }
+    .access-grid .intro { order: -1; }
+    .features { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .features { grid-template-columns: 1fr; }
+  }
+</style>

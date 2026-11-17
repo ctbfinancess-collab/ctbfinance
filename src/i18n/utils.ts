@@ -27,6 +27,7 @@ export const routes = {
   legal: { pt: '/aviso-legal/', en: '/en/legal-notice/' },
   contact: { pt: '/contato/', en: '/en/contact/' },
   client: { pt: '/seja-nosso-cliente/', en: '/en/become-a-client/' },
+  clientArea: { pt: '/area-do-cliente/', en: '/en/client-area/' },
 } as const;
 export type RouteKey = keyof typeof routes;
 

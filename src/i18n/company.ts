@@ -16,7 +16,7 @@ export const company = {
   /**
    * Endereços do aplicativo. Enquanto vazios:
    * - "Seja nosso cliente" leva para a página Contato;
-   * - "Área do Cliente" aparece desativado.
+   * - "Área do Cliente" leva à página institucional /area-do-cliente/ (login em preparação).
    */
   appLoginUrl: '',
   appSignupUrl: '',

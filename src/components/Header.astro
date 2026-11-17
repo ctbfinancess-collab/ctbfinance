@@ -19,7 +19,8 @@ const links = [
   { href: routes.contact[lang], label: t('nav.contact') },
 ];
 // Endereços do aplicativo em src/i18n/company.ts
-const loginUrl = company.appLoginUrl;
+// Enquanto não houver login no aplicativo, o botão leva à página institucional da Área do Cliente
+const loginUrl = company.appLoginUrl || routes.clientArea[lang];
 const signupUrl = company.appSignupUrl || routes.client[lang];
 ---
 <header class:list={['header', { 'header--overlay': overlay }]}>
