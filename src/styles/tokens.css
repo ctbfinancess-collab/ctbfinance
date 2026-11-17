@@ -6,6 +6,8 @@
   --color-gold: #b58b4d;
   --color-champagne: #e8d6b7;
   --color-ivory: #f6f0e6;
+  /* Tom único das fotos e vídeos: suaviza o dourado estourado sem apagar as imagens */
+  --photo-tone: brightness(0.9) saturate(0.82) contrast(1.02);
   --color-logo-bg: #230d08;  /* fundo do logotipo oficial — usar só atrás do logo */
 
   /* Papéis semânticos */

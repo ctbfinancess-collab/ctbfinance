@@ -54,10 +54,10 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
 
 <style>
   .pb { position: relative; isolation: isolate; overflow: hidden; min-height: clamp(460px, 68vh, 680px); display: flex; align-items: flex-end; background: var(--color-espresso); color: var(--color-ivory); }
-  .pb__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; z-index: -2; }
+  .pb__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 70% 40%; z-index: -2; filter: var(--photo-tone); }
   @media (prefers-reduced-motion: reduce) { .pb__video { display: none; } }
   .pb__placeholder { position: absolute; inset: 0; z-index: -2; background: radial-gradient(ellipse 60% 80% at 78% 40%, rgba(181, 139, 77, 0.35), transparent 70%), linear-gradient(135deg, var(--color-cafe) 0%, var(--color-espresso) 60%); }
-  .pb__bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; filter: brightness(0.92) saturate(0.86) contrast(1.06); }
+  .pb__bg img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; filter: var(--photo-tone); }
   /* Espresso #35241D: esquerda escura para o texto, direita preservando a arquitetura */
   .pb__shade { position: absolute; inset: 0; z-index: -1; background:
     linear-gradient(90deg, rgba(53, 36, 29, 0.9) 0%, rgba(53, 36, 29, 0.7) 35%, rgba(53, 36, 29, 0.25) 62%, rgba(53, 36, 29, 0.12) 100%),
@@ -85,7 +85,7 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   /* Modo "stacked": imagem inteira, sem filtro nem véu lateral; texto numa faixa espresso abaixo */
   /* imagem começa abaixo do cabeçalho, para o emblema não ficar escondido */
   .pb.pb--stacked { display: block; min-height: 0; aspect-ratio: auto; padding-top: 84px; }
-  .pb--stacked .pb__bg img { position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--pb-ratio, 3 / 1); filter: none; }
+  .pb--stacked .pb__bg img { position: static; display: block; width: 100%; height: auto; aspect-ratio: var(--pb-ratio, 3 / 1); filter: var(--photo-tone); }
   .pb--stacked .pb__shade { display: none; }
   .pb--stacked .pb__content { max-width: none; padding-top: clamp(2rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 3.5rem); background: var(--color-espresso); border-top: 1px solid var(--color-line); display: grid; grid-template-columns: auto 1fr; column-gap: clamp(2rem, 6vw, 6rem); align-items: end; }
   .pb--stacked .pb__crumbs, .pb--stacked .pb__eyebrow, .pb--stacked .pb__rule { grid-column: 1 / -1; }

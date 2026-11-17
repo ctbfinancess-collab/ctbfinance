@@ -1,0 +1,8 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ClientPage from '../../components/ClientPage.astro';
+import { client } from '../../i18n/client';
+---
+<BaseLayout overlayHeader title={client.pt.meta.title} description={client.pt.meta.description}>
+  <ClientPage lang="pt" />
+</BaseLayout>

@@ -8,11 +8,11 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "start": "serve dist -l tcp://0.0.0.0:${PORT:-3000} --no-port-switching"
+    "start": "node server.mjs"
   },
   "dependencies": {
     "astro": "^7.4.12",
-    "serve": "^14.2.8"
+    "serve-handler": "^6.1.8"
   },
   "engines": {
     "node": "24.x"

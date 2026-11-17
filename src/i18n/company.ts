@@ -8,10 +8,11 @@ export const company = {
   /** E-mail confirmado como ativo em 16/11/2026. */
   emailConfirmed: true,
   /**
-   * Endpoint do serviço de envio do formulário (ex.: Formspree, Web3Forms, função própria).
-   * Enquanto vazio, o formulário fica DESATIVADO — nenhum envio é simulado.
+   * Endpoint do formulário (servidor próprio em server.mjs, que envia pelo Resend).
+   * Se as variáveis RESEND_API_KEY / CONTACT_EMAIL_TO não estiverem configuradas no Railway,
+   * o servidor responde 503 e o site mostra a mensagem de indisponibilidade — nada é simulado.
    */
-  formEndpoint: '',
+  formEndpoint: '/api/contact',
   /**
    * Endereços do aplicativo. Enquanto vazios:
    * - "Seja nosso cliente" leva para a página Contato;

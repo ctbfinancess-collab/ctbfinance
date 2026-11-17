@@ -51,7 +51,11 @@ const formReady = Boolean(company.formEndpoint);
     <!-- Formulário -->
     <div class="form-card">
       <h2>{c.form.title}</h2>
-      <form action={formReady ? company.formEndpoint : undefined} method="post" class="form" aria-disabled={!formReady}>
+      <form action={formReady ? company.formEndpoint : undefined} method="post" class="form" novalidate data-contact-form
+        data-msg-sending={c.form.sending} data-msg-success={c.form.success} data-msg-error={c.form.error}
+        data-msg-invalid={c.form.invalid} data-msg-rate={c.form.rateLimit}>
+        <input type="hidden" name="lang" value={lang} />
+        <input type="hidden" name="started_at" value="" data-started-at />
         <!-- armadilha anti-spam (invisível para pessoas) -->
         <div class="hp" aria-hidden="true">
           <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label>
@@ -85,24 +89,69 @@ const formReady = Boolean(company.formEndpoint);
             <textarea name="message" rows="6" required minlength="10" maxlength="3000"></textarea>
           </label>
           <label class="consent">
-            <input type="checkbox" name="consent" required />
+            <input type="checkbox" name="consent" value="on" required />
             <span>{c.form.consent} <a href={routes.privacy[lang]} target="_blank">{c.form.privacyLink}</a></span>
           </label>
           <div class="actions">
-            <button type="submit" class="btn btn--primary">
+            <button type="submit" class="btn btn--primary" data-submit>
               {c.form.submit}
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
             </button>
             <small>* {c.form.required}</small>
           </div>
         </fieldset>
-        {!formReady && <p class="unavailable" role="status">{c.form.unavailable}</p>}
+        <p class="form-status" role="status" aria-live="polite" hidden data-status></p>
       </form>
     </div>
   </div>
 </section>
 
+<script>
+  const form = document.querySelector<HTMLFormElement>('[data-contact-form]');
+  if (form && form.getAttribute('action')) {
+    const status = form.querySelector<HTMLElement>('[data-status]')!;
+    const btn = form.querySelector<HTMLButtonElement>('[data-submit]')!;
+    const started = form.querySelector<HTMLInputElement>('[data-started-at]')!;
+    started.value = String(Date.now());
+    const label = btn.innerHTML;
+    const show = (msg: string, kind: 'ok' | 'err' | 'info') => {
+      status.hidden = false; status.textContent = msg; status.dataset.kind = kind;
+    };
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      form.querySelectorAll('.is-invalid').forEach((el) => el.classList.remove('is-invalid'));
+      if (!form.checkValidity()) {
+        form.querySelectorAll<HTMLElement>(':invalid').forEach((el) => el.classList.add('is-invalid'));
+        (form.querySelector(':invalid') as HTMLElement | null)?.focus();
+        return show(form.dataset.msgInvalid!, 'err');
+      }
+      btn.disabled = true; btn.textContent = form.dataset.msgSending!;
+      try {
+        const body = new URLSearchParams(new FormData(form) as unknown as Record<string, string>);
+        const r = await fetch(form.action, { method: 'POST', body, headers: { Accept: 'application/json' } });
+        const j = await r.json().catch(() => ({}));
+        if (r.ok && j.ok) { form.reset(); started.value = String(Date.now()); return show(form.dataset.msgSuccess!, 'ok'); }
+        if (r.status === 422 && Array.isArray(j.fields)) {
+          j.fields.forEach((f: string) => form.querySelector(`[name="${f}"]`)?.classList.add('is-invalid'));
+          return show(form.dataset.msgInvalid!, 'err');
+        }
+        if (r.status === 429) return show(form.dataset.msgRate!, 'err');
+        show(form.dataset.msgError!, 'err');
+      } catch {
+        show(form.dataset.msgError!, 'err');
+      } finally {
+        btn.disabled = false; btn.innerHTML = label;
+      }
+    });
+  }
+</script>
+
 <style>
+  .form-status { margin: 1.4rem 0 0; padding: 0.9rem 1.1rem; border-left: 2px solid var(--color-gold); background: rgba(181, 139, 77, 0.12); font-size: 0.92rem; color: var(--color-espresso); }
+  .form-status[data-kind='ok'] { border-left-color: #4f7a52; background: rgba(79, 122, 82, 0.12); }
+  .form-status[data-kind='err'] { border-left-color: #a5523a; background: rgba(165, 82, 58, 0.1); }
+  :global(.is-invalid) { border-color: #a5523a !important; box-shadow: 0 0 0 3px rgba(165, 82, 58, 0.15) !important; }
+  .actions .btn:disabled { opacity: 0.7; cursor: wait; transform: none; }
   .contact-sec { background: var(--color-ivory); color: var(--color-espresso); padding-block: clamp(4rem, 9vw, 7rem); }
   .grid { display: grid; grid-template-columns: 0.85fr 1.15fr; gap: clamp(2rem, 5vw, 4.5rem); align-items: start; }
   h2 { font-size: clamp(1.9rem, 3vw, 2.6rem); font-weight: 400; line-height: 1.1; margin: 0.8rem 0 0; }

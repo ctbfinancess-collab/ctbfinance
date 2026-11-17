@@ -30,8 +30,9 @@ const { label, ratio = '4 / 5', src, srcSmall, alt = '', position = '50% 50%', n
 
 <style>
   .slot { position: relative; margin: 0; overflow: hidden; }
-  .slot img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.94) saturate(0.86) contrast(1.06); } /* mesmo tratamento de cor do hero */
-  .slot--natural img { filter: none; }
+  .slot img { width: 100%; height: 100%; object-fit: cover; filter: var(--photo-tone); } /* mesmo tratamento de cor do hero */
+  /* fotos 'naturais' recebem só a suavização leve dos dourados */
+  .slot--natural img { filter: brightness(0.94) saturate(0.88); }
   .slot--empty {
     display: grid; place-items: center;
     background:
