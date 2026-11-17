@@ -74,7 +74,8 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   .pb__lead { margin: 1.5rem 0 0; max-width: 36rem; font-size: clamp(1rem, 1.3vw, 1.2rem); font-weight: 300; opacity: 0.9; text-wrap: balance; }
   /* Modo "side": imagem só à direita, com a borda esquerda dissolvida no espresso */
   .pb--side .pb__bg img { left: auto; right: 0; width: var(--pb-side); -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%); mask-image: linear-gradient(to right, transparent 0%, #000 30%); }
-  @media (max-width: 700px) { .pb--side .pb__bg img { width: 100%; -webkit-mask-image: none; mask-image: none; } }
+  .pb--side .pb__video { left: auto; right: 0; width: var(--pb-side); object-position: 50% 40%; -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 30%); mask-image: linear-gradient(to right, transparent 0%, #000 30%); }
+  @media (max-width: 700px) { .pb--side .pb__bg img, .pb--side .pb__video { width: 100%; -webkit-mask-image: none; mask-image: none; } }
   /* Modo "fit": a seção tem a mesma proporção da imagem, então ela aparece inteira */
   .pb--fit { min-height: 0; aspect-ratio: var(--pb-ratio); align-items: center; }
   .pb--fit .pb__content { padding-top: calc(80px + 1.5rem); padding-bottom: clamp(1.5rem, 3vw, 2.5rem); max-width: 44rem; }
