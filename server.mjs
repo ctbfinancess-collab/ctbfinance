@@ -8,12 +8,20 @@
  *   CONTACT_EMAIL_TO    caixa que recebe as mensagens (obrigatória para enviar)
  *   CONTACT_EMAIL_FROM  remetente autenticado (padrão: "CTB Finances – Site <site@ctbfinances.ae>")
  *   CONTACT_DRY_RUN=1   modo de teste: valida tudo mas NÃO envia e-mail
+ *   CONTACT_REPLY_TO    e-mail para respostas na confirmação automática (padrão: primeiro de CONTACT_EMAIL_TO)
+ *   NEWSLETTER_SECRET   segredo para assinar os links de confirmação da newsletter (obrigatório p/ newsletter)
+ *   RESEND_SEGMENT_ID   (opcional) segmento do Resend onde incluir os inscritos (os contatos já ficam em Público › Contatos)
+ *   A gravação de contatos exige chave do Resend com permissão "Full access".
+ *
+ * POST /api/newsletter, GET /api/newsletter/confirm e GET /api/newsletter/unsubscribe:
+ *   inscrição com confirmação por e-mail (double opt-in) e cancelamento por link assinado.
  */
 import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import handler from 'serve-handler';
+import crypto from 'node:crypto';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DIST = path.join(ROOT, 'dist');
@@ -115,6 +123,92 @@ function validate(f) {
   return { data, errors: [...new Set(errors)] };
 }
 
+const SITE = 'https://ctbfinances.ae';
+const RESEND_API = process.env.RESEND_API_BASE || 'https://api.resend.com'; // trocável só para testes locais
+const fromAddress = () => process.env.CONTACT_EMAIL_FROM || 'CTB Finances – Site <site@ctbfinances.ae>';
+const teamList = () => String(process.env.CONTACT_EMAIL_TO || '').split(',').map((x) => x.trim()).filter(Boolean);
+const replyToTeam = () => process.env.CONTACT_REPLY_TO || teamList()[0];
+
+async function sendEmail(payload, label) {
+  if (process.env.CONTACT_DRY_RUN === '1') { console.log(`[email] DRY_RUN — ${label} validado, não enviado.`); return true; }
+  try {
+    const r = await fetch(`${RESEND_API}/emails`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!r.ok) { console.error(`[email] ${label}: Resend respondeu`, r.status); return false; }
+    console.log(`[email] ${label} enviado`);
+    return true;
+  } catch {
+    console.error(`[email] ${label}: falha de rede ao chamar o Resend`);
+    return false;
+  }
+}
+
+/** Moldura visual dos e-mails da CTB Finances (sem dados enviados pelo visitante: evita uso indevido). */
+function brandedHtml(lang, title, paragraphs, button) {
+  const btn = button ? `<p style="margin:28px 0"><a href="${button.href}" style="background:#B58B4D;color:#35241D;text-decoration:none;padding:13px 26px;border-radius:999px;font-weight:bold;display:inline-block">${button.label}</a></p>` : '';
+  const foot = lang === 'en'
+    ? 'CTB FINANCE BROKER L.L.C. · Dubai, United Arab Emirates · ctbfinances.ae'
+    : 'CTB FINANCE BROKER L.L.C. · Dubai, Emirados Árabes Unidos · ctbfinances.ae';
+  return `<!doctype html><html lang="${lang === 'en' ? 'en' : 'pt-BR'}"><head><meta charset="utf-8"><title>${title}</title></head>
+<body style="margin:0;padding:24px;background:#F6F0E6">
+<div style="max-width:600px;margin:0 auto;background:#35241D;padding:22px 32px;text-align:center;font-family:Georgia,serif;letter-spacing:4px;color:#E8D6B7;font-size:18px">CTB FINANCES</div>
+<div style="max-width:600px;margin:0 auto;background:#ffffff;padding:32px;border:1px solid #E8D6B7;border-top:3px solid #B58B4D;font-family:Arial,sans-serif;color:#35241D;line-height:1.65;font-size:15px">
+<h1 style="font-family:Georgia,serif;font-weight:400;font-size:24px;margin:0 0 18px">${title}</h1>
+${paragraphs.map((x) => `<p style="margin:0 0 14px">${x}</p>`).join('')}
+${btn}
+<hr style="border:0;border-top:1px solid #E8D6B7;margin:24px 0 14px">
+<p style="font-size:12px;color:#62483A;margin:0">${foot}</p>
+</div></body></html>`;
+}
+
+// Limite por destinatário para as confirmações automáticas (no máx. 3 por dia por e-mail)
+const recipientHits = new Map();
+function recipientLimited(email) {
+  const now = Date.now(), DAY = 24 * 60 * 60 * 1000;
+  const list = (recipientHits.get(email) || []).filter((t) => now - t < DAY);
+  list.push(now); recipientHits.set(email, list);
+  if (recipientHits.size > 5000) for (const [k, v] of recipientHits) if (!v.some((t) => now - t < DAY)) recipientHits.delete(k);
+  return list.length > 3;
+}
+
+/** Confirmação automática para quem enviou o formulário. Não repete o conteúdo enviado. */
+async function sendAutoReply(data) {
+  if (recipientLimited(data.email)) return;
+  const en = data.lang === 'en';
+  const isClient = data.form === 'client';
+  const title = en
+    ? (isClient ? 'We have received your request' : 'We have received your message')
+    : (isClient ? 'Recebemos a sua solicitação' : 'Recebemos a sua mensagem');
+  const paragraphs = en ? [
+    'Thank you for contacting CTB Finances.',
+    isClient
+      ? 'Your relationship request has been received and will be reviewed by our team. A specialist will get in touch to better understand your needs and guide you on the next steps.'
+      : 'Your message has been received and our team will reply as soon as possible.',
+    'Please do not send personal documents by email. If they are needed, our team will indicate the appropriate channel.',
+    isClient ? 'Submitting this request does not represent approval, engagement or account opening.' : '',
+    'Kind regards,<br>CTB Finances team',
+  ] : [
+    'Obrigado por entrar em contato com a CTB Finances.',
+    isClient
+      ? 'Sua solicitação de relacionamento foi recebida e será analisada pela nossa equipe. Um especialista entrará em contato para entender melhor as suas necessidades e orientar sobre os próximos passos.'
+      : 'Sua mensagem foi recebida e nossa equipe responderá o mais breve possível.',
+    'Por segurança, não envie documentos pessoais por e-mail. Caso sejam necessários, nossa equipe indicará o canal adequado.',
+    isClient ? 'O envio desta solicitação não representa aprovação, contratação ou abertura de conta.' : '',
+    'Atenciosamente,<br>Equipe CTB Finances',
+  ];
+  const ps = paragraphs.filter(Boolean);
+  await sendEmail({
+    from: fromAddress(), to: [data.email], reply_to: replyToTeam(),
+    subject: `${title} · CTB Finances`,
+    html: brandedHtml(data.lang, title, ps),
+    text: [title, '', ...ps.map((x) => x.replace(/<br>/g, '\n')), '', 'CTB FINANCE BROKER L.L.C. · ctbfinances.ae'].join('\n'),
+  }, 'confirmação automática');
+}
+
 async function handleContact(req, res) {
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
@@ -176,32 +270,151 @@ ${rows.map(([k, v]) => `<tr><td><b>${k}</b></td><td>${escapeHtml(v)}</td></tr>`)
     text, html,
   };
 
-  if (process.env.CONTACT_DRY_RUN === '1') {
-    console.log('[contact] DRY_RUN — e-mail validado, não enviado.');
-    return sendJson(res, 200, { ok: true, dryRun: true });
-  }
+  const ok = await sendEmail(payload, isClient ? 'solicitação de relacionamento' : 'mensagem de contato');
+  if (!ok) return sendJson(res, 502, { ok: false, error: 'send_failed' });
+  await sendAutoReply(data); // falha aqui não afeta o envio principal
+  return sendJson(res, 200, { ok: true });
+}
 
+// ---------- Newsletter (double opt-in) ----------
+const b64url = (buf) => Buffer.from(buf).toString('base64url');
+function signToken(email, lang, purpose = 'c') {
+  const body = b64url(JSON.stringify({ e: email, l: lang, t: Date.now(), p: purpose }));
+  const sig = crypto.createHmac('sha256', process.env.NEWSLETTER_SECRET).update(body).digest('base64url');
+  return `${body}.${sig}`;
+}
+function readToken(token) {
+  const [body, sig] = String(token || '').split('.');
+  if (!body || !sig) return null;
+  const good = crypto.createHmac('sha256', process.env.NEWSLETTER_SECRET).update(body).digest('base64url');
+  if (sig.length !== good.length || !crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
   try {
-    const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!r.ok) {
-      console.error('[contact] Resend respondeu', r.status); // sem dados pessoais nem chave
-      return sendJson(res, 502, { ok: false, error: 'send_failed' });
-    }
-    console.log('[contact] e-mail enviado');
-    return sendJson(res, 200, { ok: true });
-  } catch {
-    console.error('[contact] falha de rede ao chamar o Resend');
-    return sendJson(res, 502, { ok: false, error: 'send_failed' });
+    const d = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'));
+    if (d.p !== 'u' && Date.now() - d.t > 7 * 24 * 60 * 60 * 1000) return { expired: true, ...d }; // link de cancelamento não expira
+    return d;
+  } catch { return null; }
+}
+const newsletterReady = () => Boolean(process.env.RESEND_API_KEY && process.env.CONTACT_EMAIL_TO && process.env.NEWSLETTER_SECRET);
+
+async function handleNewsletter(req, res) {
+  const origin = req.headers.origin;
+  if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
+  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limit' });
+  let f;
+  try {
+    const raw = await readBody(req, 5000);
+    f = String(req.headers['content-type'] || '').includes('application/json') ? JSON.parse(raw) : Object.fromEntries(new URLSearchParams(raw));
+  } catch (e) { return sendJson(res, e.status || 400, { ok: false, error: 'bad_request' }); }
+  const startedAt = Number(f.started_at || 0);
+  if (clean(f.website) || (startedAt && Date.now() - startedAt < 2000)) return sendJson(res, 200, { ok: true });
+  const email = oneLine(f.email).toLowerCase();
+  const lang = f.lang === 'en' ? 'en' : 'pt';
+  const errors = [];
+  if (!email || email.length > 160 || !EMAIL_RE.test(email)) errors.push('email');
+  if (f.consent !== true && f.consent !== 'on' && f.consent !== 'true') errors.push('consent');
+  if (errors.length) return sendJson(res, 422, { ok: false, error: 'validation', fields: errors });
+  if (!newsletterReady()) return sendJson(res, 503, { ok: false, error: 'not_configured' });
+  if (!recipientLimited(email)) {
+    const link = `${SITE}/api/newsletter/confirm?t=${signToken(email, lang)}`;
+    const en = lang === 'en';
+    const title = en ? 'Confirm your subscription' : 'Confirme a sua inscrição';
+    const ps = en
+      ? ['Thank you for your interest in the CTB Finances newsletter.', 'To start receiving our institutional updates, please confirm your email address by clicking the button below. The link is valid for 7 days.', 'If you did not request this subscription, simply ignore this email.']
+      : ['Obrigado pelo interesse na newsletter da CTB Finances.', 'Para começar a receber nossos conteúdos e novidades institucionais, confirme o seu e-mail clicando no botão abaixo. O link é válido por 7 dias.', 'Se você não solicitou esta inscrição, basta ignorar este e-mail.'];
+    await sendEmail({
+      from: fromAddress(), to: [email], reply_to: replyToTeam(),
+      subject: `${title} · CTB Finances`,
+      html: brandedHtml(lang, title, ps, { href: link, label: en ? 'Confirm subscription' : 'Confirmar inscrição' }),
+      text: [title, '', ...ps, '', link].join('\n'),
+    }, 'confirmação de newsletter');
   }
+  return sendJson(res, 200, { ok: true }); // resposta igual sempre (não revela se o e-mail já existe)
+}
+
+async function handleNewsletterConfirm(url, res) {
+  const d = newsletterReady() ? readToken(url.searchParams.get('t')) : null;
+  const page = (lang, status) => {
+    res.writeHead(303, { Location: `${lang === 'en' ? '/en/newsletter/' : '/newsletter/'}?status=${status}`, 'Cache-Control': 'no-store' });
+    res.end();
+  };
+  if (!d) return page('pt', 'error');
+  if (d.expired) return page(d.l, 'expired');
+  const email = String(d.e).toLowerCase();
+  if (!EMAIL_RE.test(email)) return page(d.l, 'error');
+  if (d.p && d.p !== 'c') return page(d.l, 'error');
+  // 1) cadastra em Resend › Público › Contatos (API atual: POST /contacts; se já existir, reativa com PATCH)
+  const saved = await upsertContact(email, false);
+  // 2) avisa a equipe (assim nenhum inscrito se perde, mesmo sem lista configurada)
+  const when = new Date().toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  await sendEmail({
+    from: fromAddress(), to: teamList(),
+    subject: `Nova inscrição confirmada na newsletter — ${email}`,
+    text: `Nova inscrição confirmada na newsletter da CTB Finances.\n\nE-mail: ${email}\nIdioma: ${d.l === 'en' ? 'EN' : 'PT'}\nConfirmado em: ${when}\nSalvo em Resend › Contatos: ${saved ? 'sim' : 'NÃO — verifique se a RESEND_API_KEY tem permissão Full access'}`,
+    html: brandedHtml('pt', 'Nova inscrição na newsletter', [`E-mail: <b>${escapeHtml(email)}</b>`, `Idioma: ${d.l === 'en' ? 'EN' : 'PT'}`, `Confirmado em: ${when}`, `Salvo em Resend › Contatos: ${saved ? 'sim' : 'NÃO — verifique se a RESEND_API_KEY tem permissão Full access'}`]),
+  }, 'aviso de nova inscrição');
+  // 3) boas-vindas com link para cancelar a inscrição
+  const en = d.l === 'en';
+  const unsub = `${SITE}/api/newsletter/unsubscribe?t=${signToken(email, d.l, 'u')}`;
+  const title = en ? 'Welcome to the CTB Finances newsletter' : 'Boas-vindas à newsletter da CTB Finances';
+  const ps = en
+    ? ['Your subscription has been confirmed. You will receive institutional content and updates from CTB Finances.', `If you no longer wish to receive our emails, you can <a href="${unsub}" style="color:#9B6448">unsubscribe at any time</a>.`]
+    : ['Sua inscrição foi confirmada. Você passará a receber conteúdos e novidades institucionais da CTB Finances.', `Se não quiser mais receber nossos e-mails, você pode <a href="${unsub}" style="color:#9B6448">cancelar a inscrição a qualquer momento</a>.`];
+  await sendEmail({
+    from: fromAddress(), to: [email], reply_to: replyToTeam(),
+    subject: `${title}`,
+    html: brandedHtml(d.l, title, ps),
+    text: [title, '', ps[0], '', (en ? 'Unsubscribe: ' : 'Cancelar inscrição: ') + unsub].join('\n'),
+    headers: { 'List-Unsubscribe': `<${unsub}>` },
+  }, 'boas-vindas da newsletter');
+  return page(d.l, 'ok');
+}
+
+/** Cria o contato; se já existir (inscrição duplicada), atualiza o status. Retorna true se ficou gravado. */
+async function upsertContact(email, unsubscribed) {
+  if (process.env.CONTACT_DRY_RUN === '1' && !process.env.RESEND_API_BASE) { console.log(`[contatos] DRY_RUN — ${unsubscribed ? 'cancelamento' : 'inscrição'} validado`); return true; }
+  const headers = { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' };
+  try {
+    if (!unsubscribed) {
+      const body = { email, unsubscribed: false };
+      if (process.env.RESEND_SEGMENT_ID) body.segments = [{ id: process.env.RESEND_SEGMENT_ID }];
+      const c = await fetch(`${RESEND_API}/contacts`, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+      if (c.ok) { console.log('[contatos] contato criado'); return true; }
+      if (c.status === 401 || c.status === 403) { console.error('[contatos] chave sem permissão para contatos (precisa Full access)'); return false; }
+      console.log('[contatos] criação respondeu', c.status, '— tentando atualizar contato existente');
+    }
+    const u = await fetch(`${RESEND_API}/contacts/${encodeURIComponent(email)}`, { method: 'PATCH', headers, body: JSON.stringify({ unsubscribed }), signal: AbortSignal.timeout(15000) });
+    if (u.ok) { console.log(`[contatos] contato ${unsubscribed ? 'descadastrado' : 'reativado'}`); return true; }
+    console.error('[contatos] atualização respondeu', u.status);
+    return false;
+  } catch {
+    console.error('[contatos] falha de rede');
+    return false;
+  }
+}
+
+async function handleNewsletterUnsubscribe(url, res) {
+  const d = newsletterReady() ? readToken(url.searchParams.get('t')) : null;
+  const go = (lang, status) => { res.writeHead(303, { Location: `${lang === 'en' ? '/en/newsletter/' : '/newsletter/'}?status=${status}`, 'Cache-Control': 'no-store' }); res.end(); };
+  if (!d || d.p !== 'u' || !EMAIL_RE.test(String(d.e))) return go(d?.l || 'pt', 'error');
+  const email = String(d.e).toLowerCase();
+  const saved = await upsertContact(email, true);
+  await sendEmail({
+    from: fromAddress(), to: teamList(),
+    subject: `Inscrição cancelada na newsletter — ${email}`,
+    text: `Um inscrito cancelou a newsletter da CTB Finances.\n\nE-mail: ${email}\nAtualizado em Resend › Contatos: ${saved ? 'sim' : 'NÃO — atualize manualmente'}`,
+  }, 'aviso de cancelamento');
+  return go(d.l, 'unsubscribed');
 }
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  if (url.pathname === '/api/newsletter') {
+    if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return sendJson(res, 405, { ok: false, error: 'method' }); }
+    return void handleNewsletter(req, res);
+  }
+  if (url.pathname === '/api/newsletter/confirm') return void handleNewsletterConfirm(url, res);
+  if (url.pathname === '/api/newsletter/unsubscribe') return void handleNewsletterUnsubscribe(url, res);
   if (url.pathname === '/api/contact') {
     if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return sendJson(res, 405, { ok: false, error: 'method' }); }
     return void handleContact(req, res);

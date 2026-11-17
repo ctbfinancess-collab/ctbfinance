@@ -1,0 +1,54 @@
+---
+/** Página de retorno do link de confirmação da newsletter (?status=ok|expired|error|unsubscribed). */
+import { routes } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const M = lang === 'pt' ? {
+  eyebrow: 'Newsletter',
+  ok: ['Inscrição confirmada', 'Obrigado! A partir de agora você receberá os conteúdos e novidades institucionais da CTB Finances. Você pode cancelar quando quiser pelo link presente em cada envio.'],
+  expired: ['Link expirado', 'O link de confirmação é válido por 7 dias. Inscreva-se novamente pelo formulário no rodapé do site para receber um novo link.'],
+  error: ['Não foi possível confirmar', 'O link parece incompleto ou inválido. Inscreva-se novamente pelo formulário no rodapé do site.'],
+  unsubscribed: ['Inscrição cancelada', 'Você não receberá mais a newsletter da CTB Finances. Se mudar de ideia, é só se inscrever novamente pelo rodapé do site.'],
+  home: 'Voltar ao início',
+} : {
+  eyebrow: 'Newsletter',
+  ok: ['Subscription confirmed', 'Thank you! From now on you will receive institutional content and updates from CTB Finances. You can unsubscribe at any time using the link included in each email.'],
+  expired: ['Link expired', 'The confirmation link is valid for 7 days. Please subscribe again using the form in the website footer to receive a new link.'],
+  error: ['We could not confirm', 'The link seems incomplete or invalid. Please subscribe again using the form in the website footer.'],
+  unsubscribed: ['Unsubscribed', 'You will no longer receive the CTB Finances newsletter. If you change your mind, simply subscribe again in the website footer.'],
+  home: 'Back to home',
+};
+---
+<section class="ns" data-ns>
+  <div class="container ns__box">
+    <p class="eyebrow">{M.eyebrow}</p>
+    {(['ok', 'expired', 'error', 'unsubscribed'] as const).map((k) => (
+      <div class="ns__msg" data-status={k} hidden={k !== 'ok'}>
+        <h1>{M[k][0]}</h1>
+        <span class="gold-rule"></span>
+        <p>{M[k][1]}</p>
+      </div>
+    ))}
+    <a class="btn btn--primary" href={routes.home[lang]}>{M.home}</a>
+  </div>
+</section>
+
+<script>
+  document.addEventListener('astro:page-load', () => {
+    const root = document.querySelector('[data-ns]');
+    if (!root) return;
+    const st = new URLSearchParams(location.search).get('status');
+    const want = st === 'expired' || st === 'error' || st === 'unsubscribed' ? st : 'ok';
+    root.querySelectorAll<HTMLElement>('.ns__msg').forEach((el) => { el.hidden = el.dataset.status !== want; });
+  });
+</script>
+
+<style>
+  .ns { background: var(--color-ivory); color: var(--color-espresso); padding: calc(96px + clamp(4rem, 10vw, 7rem)) 0 clamp(4rem, 10vw, 7rem); }
+  .ns__box { max-width: 40rem; text-align: center; }
+  .ns .eyebrow { color: var(--color-cafe); }
+  h1 { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 400; margin: 0.8rem 0 0; color: var(--color-espresso); }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.5rem auto; }
+  .ns__msg p { color: var(--color-cafe); margin: 0 0 2rem; }
+</style>

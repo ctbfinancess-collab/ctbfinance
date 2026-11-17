@@ -28,6 +28,7 @@ export const routes = {
   contact: { pt: '/contato/', en: '/en/contact/' },
   client: { pt: '/seja-nosso-cliente/', en: '/en/become-a-client/' },
   clientArea: { pt: '/area-do-cliente/', en: '/en/client-area/' },
+  newsletter: { pt: '/newsletter/', en: '/en/newsletter/' },
 } as const;
 export type RouteKey = keyof typeof routes;
 

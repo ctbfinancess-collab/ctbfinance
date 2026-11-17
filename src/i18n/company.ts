@@ -4,7 +4,7 @@ export const company = {
   tradeLicense: '717060',
   phone: '+971 58 882 1694',
   phoneHref: 'tel:+971588821694',
-  email: 'contact@ctb.ae',
+  email: 'contact@ctbfinances.ae',
   /** E-mail confirmado como ativo em 16/11/2026. */
   emailConfirmed: true,
   /**
