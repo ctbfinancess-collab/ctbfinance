@@ -6,7 +6,7 @@
  * Variáveis de ambiente (configurar SOMENTE no Railway, nunca no código):
  *   RESEND_API_KEY      chave da API do Resend (obrigatória para enviar)
  *   CONTACT_EMAIL_TO    caixa que recebe as mensagens (obrigatória para enviar)
- *   CONTACT_EMAIL_FROM  remetente autenticado (padrão: "CTB Finances <noreply@ctbfinances.ae>")
+ *   CONTACT_EMAIL_FROM  remetente autenticado (padrão: "CTB Finances – Site <site@ctbfinances.ae>")
  *   CONTACT_DRY_RUN=1   modo de teste: valida tudo mas NÃO envia e-mail
  */
 import http from 'node:http';
@@ -141,7 +141,7 @@ async function handleContact(req, res) {
 
   const key = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;
-  const from = process.env.CONTACT_EMAIL_FROM || 'CTB Finances <noreply@ctbfinances.ae>';
+  const from = process.env.CONTACT_EMAIL_FROM || 'CTB Finances – Site <site@ctbfinances.ae>';
   if (!key || !to) return sendJson(res, 503, { ok: false, error: 'not_configured' });
 
   const isClient = data.form === 'client';
@@ -152,23 +152,27 @@ async function handleContact(req, res) {
     ['Idioma', data.lang.toUpperCase()],
   ];
   const heading = isClient ? 'Nova solicitação de relacionamento' : 'Nova mensagem pelo site';
+  const footer = 'Mensagem enviada pelo formulário do site ctbfinances.ae. Para responder, use "Responder": a resposta vai direto para o e-mail do remetente.';
   const text = [
     `${heading} — ctbfinances.ae`, '',
     ...rows.map(([k, v]) => `${k}: ${v}`), '',
-    'Mensagem:', data.message, '', 'Consentimento para tratamento dos dados: sim',
+    'Mensagem:', data.message, '', 'Consentimento para tratamento dos dados: sim', '', '—', footer,
   ].join('\n');
-  const html = `<div style="font-family:Arial,sans-serif;color:#35241D;line-height:1.6">
+  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${heading}</title></head><body style="margin:0;padding:24px;background:#F6F0E6">
+<div style="max-width:620px;margin:0 auto;background:#ffffff;padding:28px;border:1px solid #E8D6B7;font-family:Arial,sans-serif;color:#35241D;line-height:1.6">
 <h2 style="font-family:Georgia,serif;font-weight:400">${heading}</h2>
 <table cellpadding="6" style="border-collapse:collapse">
 ${rows.map(([k, v]) => `<tr><td><b>${k}</b></td><td>${escapeHtml(v)}</td></tr>`).join('\n')}
 </table>
 <p style="white-space:pre-wrap;border-left:3px solid #B58B4D;padding-left:12px">${escapeHtml(data.message)}</p>
-<p style="font-size:12px;color:#62483A">Consentimento para tratamento dos dados: sim.</p></div>`;
+<p style="font-size:12px;color:#62483A">Consentimento para tratamento dos dados: sim.</p>
+<hr style="border:0;border-top:1px solid #E8D6B7;margin:20px 0">
+<p style="font-size:12px;color:#62483A">${footer}</p></div></body></html>`;
 
   const payload = {
     from, to: to.split(',').map((s) => s.trim()).filter(Boolean),
     reply_to: data.email,
-    subject: `[Site CTB Finances] ${isClient ? 'Seja nosso cliente' : data.subject} — ${data.name}`,
+    subject: isClient ? `Nova solicitação de relacionamento — ${data.name}` : `Nova mensagem pelo site: ${data.subject} — ${data.name}`,
     text, html,
   };
 
