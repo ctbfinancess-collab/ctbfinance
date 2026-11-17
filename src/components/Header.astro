@@ -59,6 +59,7 @@ const signupUrl = company.appSignupUrl || routes.client[lang];
   <!-- Menu do celular -->
   <nav id="mobile-menu" class="mobile-menu" aria-label="Menu" hidden data-menu>
     {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    <a href={routes.newsletter[lang]}>{t('nav.newsletter')}</a>
     <div class="mobile-menu__account">
       <a href={signupUrl} class="btn btn--secondary">{t('nav.signup')}</a>
       {loginUrl

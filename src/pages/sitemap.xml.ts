@@ -6,7 +6,7 @@ export const GET: APIRoute = ({ site }) => {
   const base = site ?? new URL('https://ctbfinances.ae');
   const abs = (p: string) => new URL(p, base).href;
   const today = new Date().toISOString().slice(0, 10);
-  const urls = Object.entries(routes).filter(([k]) => k !== 'newsletter').map(([, r]) => r).flatMap((r) =>
+  const urls = Object.values(routes).flatMap((r) =>
     (['pt', 'en'] as const).map((lang) => `  <url>
     <loc>${abs(r[lang])}</loc>
     <lastmod>${today}</lastmod>

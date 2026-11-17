@@ -147,22 +147,61 @@ async function sendEmail(payload, label) {
   }
 }
 
-/** Moldura visual dos e-mails da CTB Finances (sem dados enviados pelo visitante: evita uso indevido). */
+/** Moldura visual dos e-mails da CTB Finances (arte aprovada: águia + CTB FINANCES + DUBAI, pergaminho,
+ *  robô com Dubai e onda dourada). PT/EN pelo parâmetro lang. Layout em tabelas (Gmail, Outlook, Apple Mail,
+ *  Hostinger). Imagens servidas em /email/. Sem dados enviados pelo visitante no corpo (evita uso indevido). */
 function brandedHtml(lang, title, paragraphs, button) {
-  const btn = button ? `<p style="margin:28px 0"><a href="${button.href}" style="background:#B58B4D;color:#35241D;text-decoration:none;padding:13px 26px;border-radius:999px;font-weight:bold;display:inline-block">${button.label}</a></p>` : '';
-  const foot = lang === 'en'
-    ? 'CTB FINANCE BROKER L.L.C. · Dubai, United Arab Emirates · ctbfinances.ae'
-    : 'CTB FINANCE BROKER L.L.C. · Dubai, Emirados Árabes Unidos · ctbfinances.ae';
-  return `<!doctype html><html lang="${lang === 'en' ? 'en' : 'pt-BR'}"><head><meta charset="utf-8"><title>${title}</title></head>
-<body style="margin:0;padding:24px;background:#F6F0E6">
-<div style="max-width:600px;margin:0 auto;background:#35241D;padding:22px 32px;text-align:center;font-family:Georgia,serif;letter-spacing:4px;color:#E8D6B7;font-size:18px">CTB FINANCES</div>
-<div style="max-width:600px;margin:0 auto;background:#ffffff;padding:32px;border:1px solid #E8D6B7;border-top:3px solid #B58B4D;font-family:Arial,sans-serif;color:#35241D;line-height:1.65;font-size:15px">
-<h1 style="font-family:Georgia,serif;font-weight:400;font-size:24px;margin:0 0 18px">${title}</h1>
-${paragraphs.map((x) => `<p style="margin:0 0 14px">${x}</p>`).join('')}
-${btn}
-<hr style="border:0;border-top:1px solid #E8D6B7;margin:24px 0 14px">
-<p style="font-size:12px;color:#62483A;margin:0">${foot}</p>
-</div></body></html>`;
+  const en = lang === 'en';
+  const IMG = `${SITE}/email`;
+  const serif = "'Cormorant Garamond', Georgia, 'Times New Roman', serif";
+  const text = "Georgia, 'Times New Roman', serif";
+  const PAPER = '#F7EBDB';
+  const GOLD = '#C9A46A';
+  const rule = (w) => `<td width="${w}" style="width:${w}px;vertical-align:middle"><div style="height:1px;line-height:1px;font-size:0;background:${GOLD}">&nbsp;</div></td>`;
+  const btn = button ? `
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0"><tr>
+<td align="center" bgcolor="#C69B69" style="border-radius:999px;background:#C69B69;background-image:linear-gradient(180deg,#F3D9A4 0%,#D9AE6B 38%,#B9853F 70%,#9C6A2E 100%);box-shadow:0 10px 22px rgba(53,36,29,0.28);border:1px solid #8E5F2A">
+<a href="${button.href}" style="display:inline-block;padding:13px 38px;font-family:${serif};font-size:20px;font-weight:600;color:#2A140D;text-decoration:none;border-radius:999px">${button.label}</a>
+</td></tr></table>` : '';
+  // itens: texto (vira parágrafo) ou { html } (bloco pronto, ex.: tabela de dados)
+  const body = paragraphs.map((x) => (typeof x === 'object' ? x.html : `<p style="margin:0 0 9px;font-family:${text};font-size:16px;line-height:1.4;color:#35241D">${x}</p>`)).join('');
+  return `<!doctype html><html lang="${en ? 'en' : 'pt-BR'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light only"><meta name="supported-color-schemes" content="light"><title>${title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<style>@media (max-width:620px){.side{display:none!important}.main{padding:20px 22px 0!important}.ttl{font-size:28px!important}.fl{padding-top:22px!important}}</style></head>
+<body style="margin:0;padding:0;background:#E9DCC8">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#E9DCC8"><tr><td align="center" style="padding:24px 10px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:${PAPER}">
+  <tr><td style="font-size:0;line-height:0"><a href="${SITE}"><img src="${IMG}/ctb-email-topo.jpg" width="600" alt="CTB Finances Dubai" style="display:block;width:100%;height:auto;border:0"></a></td></tr>
+  <tr><td style="padding:0 1.9%">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-left:1px solid ${GOLD};border-right:1px solid ${GOLD}">
+      <tr>
+        <td class="main" valign="top" style="padding:20px 6px 0 30px">
+          <h1 class="ttl" style="margin:0;font-family:${serif};font-weight:600;font-size:34px;line-height:1.12;color:#4A2A1C">${title}</h1>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:10px 0 14px"><tr>
+            ${rule(120)}
+            <td style="padding:0 7px;font-size:10px;line-height:10px;color:#B58B4D;vertical-align:middle">&#9670;</td>
+            ${rule(120)}
+          </tr></table>
+          ${body}${btn}
+        </td>
+        <td class="side" valign="top" width="185" style="width:185px;padding:6px 0 0;font-size:0;line-height:0"><img src="${IMG}/ctb-email-lateral.jpg" width="185" alt="" style="display:block;width:185px;height:auto;border:0"></td>
+      </tr>
+      <tr><td colspan="2" class="fl" style="padding:6px 24px 0"><div style="border-top:1px solid ${GOLD};font-size:0;line-height:0">&nbsp;</div></td></tr>
+      <tr><td colspan="2" align="center" style="padding:9px 20px 0">
+        <p style="margin:0;font-family:${serif};font-size:14px;font-weight:600;letter-spacing:3px;color:#35241D">CTB FINANCE BROKER L.L.C.</p>
+        <p style="margin:2px 0 6px;font-family:${text};font-size:12px;letter-spacing:1px;color:#4A2A1C">${en ? 'Dubai, United Arab Emirates' : 'Dubai, Emirados Árabes Unidos'}</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 auto"><tr>
+          ${rule(110)}
+          <td style="padding:0 10px;font-family:${text};font-size:14px;white-space:nowrap;vertical-align:middle"><a href="${SITE}" style="color:#35241D;text-decoration:none"><img src="${IMG}/globo.png" width="13" height="13" alt="" style="vertical-align:-2px;border:0">&nbsp;ctbfinances.ae</a></td>
+          ${rule(110)}
+        </tr></table>
+      </td></tr>
+    </table>
+  </td></tr>
+  <tr><td style="font-size:0;line-height:0"><img src="${IMG}/ctb-email-onda.jpg" width="600" alt="" style="display:block;width:100%;height:auto;border:0"></td></tr>
+</table>
+</td></tr></table>
+</body></html>`;
 }
 
 // Limite por destinatário para as confirmações automáticas (no máx. 3 por dia por e-mail)
@@ -252,16 +291,12 @@ async function handleContact(req, res) {
     ...rows.map(([k, v]) => `${k}: ${v}`), '',
     'Mensagem:', data.message, '', 'Consentimento para tratamento dos dados: sim', '', '—', footer,
   ].join('\n');
-  const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${heading}</title></head><body style="margin:0;padding:24px;background:#F6F0E6">
-<div style="max-width:620px;margin:0 auto;background:#ffffff;padding:28px;border:1px solid #E8D6B7;font-family:Arial,sans-serif;color:#35241D;line-height:1.6">
-<h2 style="font-family:Georgia,serif;font-weight:400">${heading}</h2>
-<table cellpadding="6" style="border-collapse:collapse">
-${rows.map(([k, v]) => `<tr><td><b>${k}</b></td><td>${escapeHtml(v)}</td></tr>`).join('\n')}
-</table>
-<p style="white-space:pre-wrap;border-left:3px solid #B58B4D;padding-left:12px">${escapeHtml(data.message)}</p>
-<p style="font-size:12px;color:#62483A">Consentimento para tratamento dos dados: sim.</p>
-<hr style="border:0;border-top:1px solid #E8D6B7;margin:20px 0">
-<p style="font-size:12px;color:#62483A">${footer}</p></div></body></html>`;
+  const html = brandedHtml('pt', heading, [
+    { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 16px;font-family:Georgia,serif;font-size:15px;color:#35241D">${rows.map(([k, v]) => `<tr><td style="padding:5px 14px 5px 0;font-weight:bold;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:5px 0">${escapeHtml(v)}</td></tr>`).join('')}</table>` },
+    { html: `<p style="margin:0 0 16px;padding-left:14px;border-left:3px solid #B58B4D;white-space:pre-wrap;font-family:Georgia,serif;font-size:16px;line-height:1.55;color:#35241D">${escapeHtml(data.message)}</p>` },
+    '<span style="font-size:13px;color:#62483A">Consentimento para tratamento dos dados: sim.</span>',
+    `<span style="font-size:13px;color:#62483A">${footer}</span>`,
+  ]);
 
   const payload = {
     from, to: to.split(',').map((s) => s.trim()).filter(Boolean),
@@ -318,15 +353,15 @@ async function handleNewsletter(req, res) {
   if (!recipientLimited(email)) {
     const link = `${SITE}/api/newsletter/confirm?t=${signToken(email, lang)}`;
     const en = lang === 'en';
-    const title = en ? 'Confirm your subscription' : 'Confirme a sua inscrição';
+    const title = en ? 'Confirm your Subscription' : 'Confirme a sua Inscrição';
     const ps = en
-      ? ['Thank you for your interest in the CTB Finances newsletter.', 'To start receiving our institutional updates, please confirm your email address by clicking the button below. The link is valid for 7 days.', 'If you did not request this subscription, simply ignore this email.']
-      : ['Obrigado pelo interesse na newsletter da CTB Finances.', 'Para começar a receber nossos conteúdos e novidades institucionais, confirme o seu e-mail clicando no botão abaixo. O link é válido por 7 dias.', 'Se você não solicitou esta inscrição, basta ignorar este e-mail.'];
+      ? ['Thank you for your interest in the <b>CTB Finances</b> newsletter.', 'To start receiving our content and institutional updates, please confirm your email by clicking the button below.', 'The link is valid for 7 days.', 'If you did not request this subscription, simply ignore this email.']
+      : ['Obrigado pelo interesse na newsletter da <b>CTB Finances</b>.', 'Para começar a receber nossos conteúdos e novidades institucionais, confirme o seu e-mail clicando no botão abaixo.', 'O link é válido por 7 dias.', 'Se você não solicitou esta inscrição, basta ignorar este e-mail.'];
     await sendEmail({
       from: fromAddress(), to: [email], reply_to: replyToTeam(),
       subject: `${title} · CTB Finances`,
-      html: brandedHtml(lang, title, ps, { href: link, label: en ? 'Confirm subscription' : 'Confirmar inscrição' }),
-      text: [title, '', ...ps, '', link].join('\n'),
+      html: brandedHtml(lang, title, ps, { href: link, label: en ? 'Confirm Subscription' : 'Confirmar Inscrição' }),
+      text: [title, '', ...ps.map((x) => x.replace(/<[^>]+>/g, '')), '', link].join('\n'),
     }, 'confirmação de newsletter');
   }
   return sendJson(res, 200, { ok: true }); // resposta igual sempre (não revela se o e-mail já existe)
@@ -403,6 +438,7 @@ async function handleNewsletterUnsubscribe(url, res) {
     from: fromAddress(), to: teamList(),
     subject: `Inscrição cancelada na newsletter — ${email}`,
     text: `Um inscrito cancelou a newsletter da CTB Finances.\n\nE-mail: ${email}\nAtualizado em Resend › Contatos: ${saved ? 'sim' : 'NÃO — atualize manualmente'}`,
+    html: brandedHtml('pt', 'Inscrição cancelada na newsletter', [`E-mail: <b>${escapeHtml(email)}</b>`, `Atualizado em Resend › Contatos: ${saved ? 'sim' : 'NÃO — atualize manualmente'}`]),
   }, 'aviso de cancelamento');
   return go(d.l, 'unsubscribed');
 }

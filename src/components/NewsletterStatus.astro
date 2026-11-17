@@ -1,6 +1,8 @@
 ---
-/** Página de retorno do link de confirmação da newsletter (?status=ok|expired|error|unsubscribed). */
+/** Página da newsletter: apresentação + formulário; com ?status=... mostra o retorno da confirmação/cancelamento. */
 import { routes } from '../i18n/utils';
+import PageBanner from './PageBanner.astro';
+import NewsletterForm from './NewsletterForm.astro';
 import type { Lang } from '../i18n/ui';
 interface Props { lang: Lang }
 const { lang } = Astro.props;
@@ -11,6 +13,19 @@ const M = lang === 'pt' ? {
   error: ['Não foi possível confirmar', 'O link parece incompleto ou inválido. Inscreva-se novamente pelo formulário no rodapé do site.'],
   unsubscribed: ['Inscrição cancelada', 'Você não receberá mais a newsletter da CTB Finances. Se mudar de ideia, é só se inscrever novamente pelo rodapé do site.'],
   home: 'Voltar ao início',
+  banner: { crumb: 'Newsletter', title: 'A CTB Finances no seu e-mail', lead: 'Novidades institucionais e conteúdos sobre o universo financeiro internacional, com a discrição que orienta todas as nossas relações.' },
+  homeLabel: 'Início',
+  whatEyebrow: 'O que você vai receber',
+  whatTitle: 'Conteúdo selecionado, sem excessos',
+  items: [
+    ['Novidades institucionais', 'Comunicados, eventos e notícias da CTB Finances e do Grupo CTB.'],
+    ['Conteúdos educativos', 'Temas sobre crédito, financiamentos e o mercado financeiro, em linguagem clara.'],
+    ['Dubai e o mundo', 'Perspectivas sobre o ambiente de negócios em Dubai e as conexões internacionais.'],
+  ],
+  formEyebrow: 'Inscreva-se',
+  formTitle: 'Receba a nossa newsletter',
+  notes: ['Envios ocasionais, sem excesso de mensagens.', 'Inscrição ativada somente após a confirmação por e-mail.', 'Cancelamento a qualquer momento, pelo link em cada envio.', 'Seus dados não são vendidos nem compartilhados.'],
+  disclaimer: 'Os conteúdos da newsletter têm caráter informativo e não constituem oferta, recomendação de investimento ou promessa de resultado.',
 } : {
   eyebrow: 'Newsletter',
   ok: ['Subscription confirmed', 'Thank you! From now on you will receive institutional content and updates from CTB Finances. You can unsubscribe at any time using the link included in each email.'],
@@ -18,14 +33,27 @@ const M = lang === 'pt' ? {
   error: ['We could not confirm', 'The link seems incomplete or invalid. Please subscribe again using the form in the website footer.'],
   unsubscribed: ['Unsubscribed', 'You will no longer receive the CTB Finances newsletter. If you change your mind, simply subscribe again in the website footer.'],
   home: 'Back to home',
+  banner: { crumb: 'Newsletter', title: 'CTB Finances in your inbox', lead: 'Institutional updates and content about the international financial landscape, with the discretion that guides all our relationships.' },
+  homeLabel: 'Home',
+  whatEyebrow: 'What you will receive',
+  whatTitle: 'Selected content, never excessive',
+  items: [
+    ['Institutional updates', 'Announcements, events and news from CTB Finances and the CTB Group.'],
+    ['Educational content', 'Topics on credit, financing and financial markets, in clear language.'],
+    ['Dubai and the world', 'Perspectives on the Dubai business environment and international connections.'],
+  ],
+  formEyebrow: 'Subscribe',
+  formTitle: 'Receive our newsletter',
+  notes: ['Occasional emails, never excessive.', 'Subscription activated only after email confirmation.', 'Unsubscribe at any time using the link in each email.', 'Your data is never sold or shared.'],
+  disclaimer: 'Newsletter content is for information only and does not constitute an offer, investment recommendation or promise of results.',
 };
 ---
-<section class="ns" data-ns>
+<section class="ns" data-ns hidden>
   <div class="container ns__box">
     <p class="eyebrow">{M.eyebrow}</p>
     {(['ok', 'expired', 'error', 'unsubscribed'] as const).map((k) => (
-      <div class="ns__msg" data-status={k} hidden={k !== 'ok'}>
-        <h1>{M[k][0]}</h1>
+      <div class="ns__msg" data-status={k} hidden>
+        <h2 class="ns__title">{M[k][0]}</h2>
         <span class="gold-rule"></span>
         <p>{M[k][1]}</p>
       </div>
@@ -34,13 +62,51 @@ const M = lang === 'pt' ? {
   </div>
 </section>
 
+<div data-landing>
+  <PageBanner eyebrow={M.eyebrow} title={M.banner.title} lead={M.banner.lead}
+    crumbs={[{ label: M.homeLabel, href: routes.home[lang] }, { label: M.banner.crumb }]} />
+
+  <section class="nl-what">
+    <div class="container">
+      <header class="nl-head">
+        <p class="eyebrow">{M.whatEyebrow}</p>
+        <h2>{M.whatTitle}</h2>
+        <span class="gold-rule"></span>
+      </header>
+      <ul class="nl-items">
+        {M.items.map(([t, d], i) => (
+          <li><span class="nl-num">{String(i + 1).padStart(2, '0')}</span><h3>{t}</h3><p>{d}</p></li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <section class="nl-sign">
+    <div class="container nl-sign__grid">
+      <div class="nl-card">
+        <p class="eyebrow">{M.formEyebrow}</p>
+        <h2>{M.formTitle}</h2>
+        <span class="gold-rule gold-rule--left"></span>
+        <NewsletterForm variant="light" />
+      </div>
+      <ul class="nl-notes">
+        {M.notes.map((n) => <li>{n}</li>)}
+      </ul>
+    </div>
+    <p class="container nl-disclaimer">{M.disclaimer}</p>
+  </section>
+</div>
+
 <script>
   document.addEventListener('astro:page-load', () => {
-    const root = document.querySelector('[data-ns]');
-    if (!root) return;
+    const root = document.querySelector<HTMLElement>('[data-ns]');
+    const landing = document.querySelector<HTMLElement>('[data-landing]');
+    if (!root || !landing) return;
     const st = new URLSearchParams(location.search).get('status');
-    const want = st === 'expired' || st === 'error' || st === 'unsubscribed' ? st : 'ok';
-    root.querySelectorAll<HTMLElement>('.ns__msg').forEach((el) => { el.hidden = el.dataset.status !== want; });
+    const valid = ['ok', 'expired', 'error', 'unsubscribed'];
+    const show = st !== null && valid.includes(st);
+    root.hidden = !show; landing.hidden = show;
+    if (show) root.querySelectorAll<HTMLElement>('.ns__msg').forEach((el) => { el.hidden = el.dataset.status !== st; });
   });
 </script>
 
@@ -48,7 +114,28 @@ const M = lang === 'pt' ? {
   .ns { background: var(--color-ivory); color: var(--color-espresso); padding: calc(96px + clamp(4rem, 10vw, 7rem)) 0 clamp(4rem, 10vw, 7rem); }
   .ns__box { max-width: 40rem; text-align: center; }
   .ns .eyebrow { color: var(--color-cafe); }
-  h1 { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 400; margin: 0.8rem 0 0; color: var(--color-espresso); }
+  .ns__title { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 400; margin: 0.8rem 0 0; color: var(--color-espresso); }
   .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.5rem auto; }
   .ns__msg p { color: var(--color-cafe); margin: 0 0 2rem; }
+  [data-landing][hidden], .ns[hidden] { display: none; }
+  .nl-what { background: var(--color-espresso); color: var(--color-ivory); padding-block: clamp(4rem, 8vw, 6rem); }
+  .nl-head { text-align: center; max-width: 44rem; margin: 0 auto clamp(2.5rem, 5vw, 3.5rem); }
+  .nl-what .eyebrow { color: var(--color-gold); }
+  .nl-what h2 { color: var(--color-champagne); font-size: clamp(2rem, 3.4vw, 2.8rem); font-weight: 400; margin: 0.8rem 0 0; }
+  .nl-items { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .nl-items li { padding: 2rem 1.6rem; border: 1px solid var(--color-line); background: linear-gradient(160deg, rgba(98, 72, 58, 0.32), rgba(53, 36, 29, 0)); }
+  .nl-num { font-family: var(--font-display); color: var(--color-gold); letter-spacing: 0.2em; }
+  .nl-items h3 { color: var(--color-champagne); font-size: 1.4rem; font-weight: 500; margin: 0.6rem 0; }
+  .nl-items p { margin: 0; opacity: 0.82; font-size: 0.95rem; }
+  .nl-sign { background: var(--color-ivory); color: var(--color-espresso); padding-block: clamp(4rem, 8vw, 6rem); }
+  .nl-sign__grid { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: clamp(2rem, 5vw, 4rem); align-items: center; }
+  .nl-card { padding: clamp(2rem, 4vw, 3rem); background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); box-shadow: 0 24px 50px rgba(53, 36, 29, 0.08); }
+  .nl-card .eyebrow { color: var(--color-cafe); }
+  .nl-card h2 { font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 400; margin: 0.6rem 0 0; color: var(--color-espresso); }
+  .gold-rule--left { margin: 1.3rem 0 1.6rem; }
+  .nl-notes { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; }
+  .nl-notes li { position: relative; padding-left: 1.6rem; color: var(--color-cafe); }
+  .nl-notes li::before { content: ''; position: absolute; left: 0; top: 0.55em; width: 0.6rem; height: 0.6rem; border-radius: 50%; border: 1px solid var(--color-gold); background: rgba(181, 139, 77, 0.25); }
+  .nl-disclaimer { margin-top: 2.5rem; text-align: center; font-size: 0.82rem; font-style: italic; color: var(--color-cafe); }
+  @media (max-width: 900px) { .nl-items, .nl-sign__grid { grid-template-columns: 1fr; } }
 </style>

@@ -2,6 +2,7 @@
 import { getLangFromUrl, useTranslations, routes } from '../i18n/utils';
 import { legalCommon } from '../i18n/legal';
 import { company } from '../i18n/company';
+import NewsletterForm from './NewsletterForm.astro';
 const lang = getLangFromUrl(Astro.url);
 const t = useTranslations(lang);
 const year = new Date().getFullYear();
@@ -10,54 +11,18 @@ const policies = [{ href: routes.privacy[lang], label: lc.privacy }, { href: rou
 const L = lang === 'pt'
   ? { license: 'Licença comercial nº', place: 'Dubai, Emirados Árabes Unidos', phone: 'Telefone', madeBy: 'Site desenvolvido pela' }
   : { license: 'Trade licence no.', place: 'Dubai, United Arab Emirates', phone: 'Phone', madeBy: 'Website developed by' };
-const N = lang === 'pt' ? {
-  title: 'Newsletter CTB Finances',
-  text: 'Receba conteúdos e novidades institucionais da CTB Finances no seu e-mail.',
-  placeholder: 'Seu e-mail',
-  button: 'Inscrever-se',
-  consent: 'Aceito receber a newsletter e li a',
-  privacy: 'Política de Privacidade',
-  sending: 'Enviando…',
-  success: 'Quase lá! Enviamos um e-mail para você confirmar a inscrição.',
-  invalid: 'Informe um e-mail válido e marque o consentimento.',
-  error: 'Não foi possível concluir agora. Tente novamente em instantes.',
-  rate: 'Muitas tentativas em pouco tempo. Aguarde alguns minutos.',
-} : {
-  title: 'CTB Finances Newsletter',
-  text: 'Receive institutional content and updates from CTB Finances in your inbox.',
-  placeholder: 'Your email',
-  button: 'Subscribe',
-  consent: 'I agree to receive the newsletter and have read the',
-  privacy: 'Privacy Policy',
-  sending: 'Sending…',
-  success: 'Almost there! We have sent you an email to confirm your subscription.',
-  invalid: 'Please enter a valid email and tick the consent box.',
-  error: 'We could not complete this right now. Please try again shortly.',
-  rate: 'Too many attempts in a short time. Please wait a few minutes.',
-};
+
+const N = lang === 'pt'
+  ? { title: 'Newsletter CTB Finances', text: 'Receba conteúdos e novidades institucionais da CTB Finances no seu e-mail.', more: 'Saiba mais', nav: 'Newsletter' }
+  : { title: 'CTB Finances Newsletter', text: 'Receive institutional content and updates from CTB Finances in your inbox.', more: 'Learn more', nav: 'Newsletter' };
 ---
 <footer class="footer">
   <div class="container news">
     <div class="news__intro">
       <p class="news__title">{N.title}</p>
-      <p class="news__text">{N.text}</p>
+      <p class="news__text">{N.text} <a class="news__more" href={routes.newsletter[lang]}>{N.more} →</a></p>
     </div>
-    <form class="news__form" action="/api/newsletter" method="post" novalidate data-news-form
-      data-msg-sending={N.sending} data-msg-success={N.success} data-msg-invalid={N.invalid} data-msg-error={N.error} data-msg-rate={N.rate}>
-      <input type="hidden" name="lang" value={lang} />
-      <input type="hidden" name="started_at" value="" data-news-started />
-      <div class="hp" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off" /></label></div>
-      <div class="news__row">
-        <label class="sr-only" for={`news-email-${lang}`}>{N.placeholder}</label>
-        <input id={`news-email-${lang}`} type="email" name="email" required maxlength="160" autocomplete="email" placeholder={N.placeholder} />
-        <button type="submit" class="btn btn--primary btn--sm" data-news-submit>{N.button}</button>
-      </div>
-      <label class="news__consent">
-        <input type="checkbox" name="consent" value="on" required />
-        <span>{N.consent} <a href={routes.privacy[lang]}>{N.privacy}</a>.</span>
-      </label>
-      <p class="news__status" role="status" aria-live="polite" hidden data-news-status></p>
-    </form>
+    <NewsletterForm />
   </div>
   <div class="container footer__inner">
     <div>
@@ -69,6 +34,7 @@ const N = lang === 'pt' ? {
   <div class="container footer__bottom">
     <p class="footer__copy">© {year} CTB Finances Dubai. {t('footer.rights')}</p>
     <nav class="footer__policies" aria-label={lc.nav}>
+      <a href={routes.newsletter[lang]}>{N.nav}</a>
       {policies.map((p) => <a href={p.href}>{p.label}</a>)}
     </nav>
     <p class="credit">
@@ -81,53 +47,13 @@ const N = lang === 'pt' ? {
   </div>
 </footer>
 
-<script>
-  function initNewsletter() {
-    const form = document.querySelector<HTMLFormElement>('[data-news-form]');
-    if (!form || form.dataset.ready) return;
-    form.dataset.ready = '1';
-    const status = form.querySelector<HTMLElement>('[data-news-status]')!;
-    const btn = form.querySelector<HTMLButtonElement>('[data-news-submit]')!;
-    const started = form.querySelector<HTMLInputElement>('[data-news-started]')!;
-    started.value = String(Date.now());
-    const label = btn.textContent;
-    const show = (msg: string, kind: 'ok' | 'err') => { status.hidden = false; status.textContent = msg; status.dataset.kind = kind; };
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!form.checkValidity()) return show(form.dataset.msgInvalid!, 'err');
-      btn.disabled = true; btn.textContent = form.dataset.msgSending!;
-      try {
-        const r = await fetch(form.action, { method: 'POST', body: new URLSearchParams(new FormData(form) as unknown as Record<string, string>), headers: { Accept: 'application/json' } });
-        const j = await r.json().catch(() => ({}));
-        if (r.ok && j.ok) { form.reset(); started.value = String(Date.now()); return show(form.dataset.msgSuccess!, 'ok'); }
-        if (r.status === 422) return show(form.dataset.msgInvalid!, 'err');
-        if (r.status === 429) return show(form.dataset.msgRate!, 'err');
-        show(form.dataset.msgError!, 'err');
-      } catch { show(form.dataset.msgError!, 'err'); }
-      finally { btn.disabled = false; btn.textContent = label; }
-    });
-  }
-  document.addEventListener('astro:page-load', initNewsletter);
-</script>
-
 <style>
   .news { display: grid; grid-template-columns: 1fr 1.1fr; gap: 1.2rem 3rem; align-items: center; padding-bottom: var(--space-4); margin-bottom: var(--space-4); border-bottom: 1px solid var(--color-line); }
   .news__title { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.04em; color: var(--color-ivory); opacity: 1 !important; margin-bottom: 0.4rem !important; }
   .news__text { font-size: 0.9rem; }
-  .news__row { display: flex; gap: 0.6rem; }
-  .news__row input { flex: 1; min-width: 0; font: inherit; font-size: 0.95rem; letter-spacing: 0; color: var(--color-ivory); background: rgba(246, 240, 230, 0.06); border: 1px solid var(--color-line); border-radius: 999px; padding: 0.7rem 1.1rem; }
-  .news__row input::placeholder { color: rgba(232, 214, 183, 0.6); }
-  .news__row input:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.2); }
-  .news__row .btn:disabled { opacity: 0.7; cursor: wait; }
-  .news__consent { display: flex; align-items: flex-start; gap: 0.55rem; margin-top: 0.7rem; font-size: 0.78rem; letter-spacing: 0.02em; opacity: 0.85; }
-  .news__consent input { width: 16px; height: 16px; margin-top: 2px; accent-color: var(--color-gold); flex: none; }
-  .news__consent a { color: var(--color-gold); text-decoration: underline; text-underline-offset: 2px; }
-  .news__status { margin-top: 0.7rem !important; font-size: 0.85rem; padding: 0.6rem 0.9rem; border-left: 2px solid var(--color-gold); background: rgba(181, 139, 77, 0.12); opacity: 1 !important; }
-  .news__status[data-kind='err'] { border-left-color: #c7714f; }
-  .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
-  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .news__more { color: var(--color-gold); white-space: nowrap; }
+  .news__more:hover { color: var(--color-champagne); }
   @media (max-width: 800px) { .news { grid-template-columns: 1fr; } }
-  @media (max-width: 480px) { .news__row { flex-direction: column; } }
 
   .footer { background: var(--color-bg-dark); border-top: 1px solid var(--color-line); padding-block: var(--space-4) var(--space-3); color: var(--color-champagne); font-size: 0.82rem; letter-spacing: 0.04em; }
   .footer p { margin: 0; opacity: 0.85; }
