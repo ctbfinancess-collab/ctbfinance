@@ -1,6 +1,7 @@
 ---
 import PageBanner from './PageBanner.astro';
 import Button from './Button.astro';
+import ClientPortal from './ClientPortal.astro';
 import { clientArea } from '../i18n/clientArea';
 import { routes, useTranslations } from '../i18n/utils';
 import type { Lang } from '../i18n/ui';
@@ -17,33 +18,10 @@ const t = useTranslations(lang);
   crumbs={[{ label: t('nav.home'), href: routes.home[lang] }, { label: c.banner.crumb }]}
 />
 
-<!-- Acesso (desativado) + apresentação -->
+<!-- Acesso (portal autenticado; desativado sem configuração do Firebase) + apresentação -->
 <section class="sec sec--ivory">
   <div class="container access-grid">
-    <div class="access-card">
-      <p class="eyebrow eyebrow--gold">{c.access.eyebrow}</p>
-      <h2>{c.access.title}</h2>
-      <span class="gold-rule"></span>
-      <form class="access-form" aria-disabled="true" onsubmit="return false">
-        <fieldset disabled>
-          <label>
-            <span>{c.access.email}</span>
-            <input type="email" autocomplete="off" />
-          </label>
-          <label>
-            <span>{c.access.password}</span>
-            <input type="password" autocomplete="off" />
-          </label>
-          <button type="button" class="btn btn--primary">{c.access.submit}</button>
-          <span class="forgot">{c.access.forgot}</span>
-        </fieldset>
-      </form>
-      <p class="access-status" role="status">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-        {c.access.status}
-      </p>
-      <p class="access-client">{c.access.notClient} <a href={routes.client[lang]}>{c.access.notClientLink}</a></p>
-    </div>
+    <ClientPortal lang={lang} />
 
     <div class="intro">
       <p class="eyebrow">{c.intro.eyebrow}</p>
@@ -110,6 +88,9 @@ const t = useTranslations(lang);
   .head { text-align: center; max-width: 44rem; margin: 0 auto clamp(2.5rem, 5vw, 4rem); }
 
   /* Acesso */
+  /* com o painel aberto, o portal ocupa a largura toda */
+  .access-grid:has([data-view="dash"]:not([hidden])) .intro { display: none; }
+  .access-grid:has([data-view="dash"]:not([hidden])) { grid-template-columns: 1fr; }
   .access-grid { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: clamp(2.5rem, 6vw, 5.5rem); align-items: center; }
   .access-card { position: relative; padding: clamp(2rem, 3.5vw, 2.8rem); background: var(--color-espresso); color: var(--color-ivory); border: 1px solid var(--color-line); box-shadow: 0 30px 60px rgba(53, 36, 29, 0.18); }
   .access-card::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(181, 139, 77, 0.25); pointer-events: none; }

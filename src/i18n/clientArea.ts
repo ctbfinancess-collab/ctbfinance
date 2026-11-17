@@ -1,6 +1,6 @@
 /**
  * Página institucional da Área do Cliente.
- * Login DESATIVADO até a auditoria do Firebase. Não exibir saldos, contas,
+ * O login (ClientPortal) só é ativado quando a configuração Web do Firebase é informada no build. Não exibir saldos, contas,
  * cartões, transferências nem qualquer funcionalidade fictícia.
  */
 import type { Lang } from './ui';

@@ -1,0 +1,343 @@
+---
+/**
+ * Portal autenticado da Área do Cliente.
+ * Reaproveita o MESMO Firebase do aplicativo (projeto ctb-financess): mesmas contas (Auth),
+ * mesmo perfil (users/{uid}) e mesma pasta de documentos (users/{uid}/uploads).
+ * Só é ativado quando a configuração Web do Firebase é informada no build (PUBLIC_FIREBASE_*);
+ * sem ela, mostra o aviso "acesso em preparação" (é o que vale para o site publicado hoje).
+ */
+import { portal } from '../i18n/portal';
+import { routes } from '../i18n/utils';
+import type { Lang } from '../i18n/ui';
+
+interface Props { lang: Lang }
+const { lang } = Astro.props;
+const p = portal[lang];
+
+const env = import.meta.env;
+const config = {
+  apiKey: env.PUBLIC_FIREBASE_API_KEY ?? '',
+  authDomain: env.PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+  projectId: env.PUBLIC_FIREBASE_PROJECT_ID ?? '',
+  storageBucket: env.PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+  appId: env.PUBLIC_FIREBASE_APP_ID ?? '',
+  emulators: env.PUBLIC_FIREBASE_EMULATORS === '1',
+};
+const enabled = Boolean(config.apiKey && config.projectId);
+const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'] as const;
+const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
+---
+<div class="portal" data-portal data-enabled={enabled ? '1' : '0'} data-config={JSON.stringify(config)} data-lang={lang}
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download })}>
+
+  <!-- Login -->
+  <div class="access-card" data-view="login">
+    <p class="eyebrow eyebrow--gold">{lang === 'pt' ? 'Acesso' : 'Access'}</p>
+    <h2>{p.loginTitle}</h2>
+    <span class="gold-rule"></span>
+    <form class="access-form" data-login novalidate>
+      <fieldset disabled={!enabled}>
+        <label><span>{p.email}</span><input type="email" name="email" autocomplete="username" required /></label>
+        <label><span>{p.password}</span><input type="password" name="password" autocomplete="current-password" required minlength="6" /></label>
+        <button type="submit" class="btn btn--primary" data-login-btn>{p.submit}</button>
+        <button type="button" class="forgot" data-go="reset">{p.forgot}</button>
+      </fieldset>
+      <p class="msg" role="status" aria-live="polite" hidden data-login-msg></p>
+    </form>
+    {!enabled && (
+      <p class="access-status" role="status">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        {p.unavailable}
+      </p>
+    )}
+    <p class="access-client">{lang === 'pt' ? 'Ainda não é cliente?' : 'Not a client yet?'} <a href={routes.client[lang]}>{lang === 'pt' ? 'Seja nosso cliente' : 'Become a client'}</a></p>
+  </div>
+
+  <!-- Recuperar senha -->
+  <div class="access-card" data-view="reset" hidden>
+    <p class="eyebrow eyebrow--gold">{lang === 'pt' ? 'Acesso' : 'Access'}</p>
+    <h2>{p.resetTitle}</h2>
+    <span class="gold-rule"></span>
+    <p class="note">{p.resetText}</p>
+    <form class="access-form" data-reset novalidate>
+      <fieldset>
+        <label><span>{p.email}</span><input type="email" name="email" autocomplete="username" required /></label>
+        <button type="submit" class="btn btn--primary">{p.resetSubmit}</button>
+        <button type="button" class="forgot" data-go="login">{p.backToLogin}</button>
+      </fieldset>
+      <p class="msg" role="status" aria-live="polite" hidden data-reset-msg></p>
+    </form>
+  </div>
+
+  <!-- Painel (somente dados do cliente autenticado) -->
+  <div class="dash" data-view="dash" hidden>
+    <header class="dash__head">
+      <div>
+        <p class="eyebrow eyebrow--gold">{lang === 'pt' ? 'Área do Cliente' : 'Client Area'}</p>
+        <h2>{p.hello}, <span data-name></span></h2>
+        <p class="dash__email" data-email></p>
+      </div>
+      <button type="button" class="btn btn--secondary btn--sm" data-signout>{p.signOut}</button>
+    </header>
+    <p class="banner-warn" hidden data-unverified>{p.unverified} <button type="button" data-resend>{p.resendVerify}</button></p>
+
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="profile">{p.tabs.profile}</button>
+      <button role="tab" aria-selected="false" data-tab="documents">{p.tabs.documents}</button>
+      <button role="tab" aria-selected="false" data-tab="appointments">{p.tabs.appointments}</button>
+    </nav>
+
+    <section data-panel="profile">
+      <form data-profile novalidate>
+        <h3>{p.profileTitle}</h3>
+        <div class="grid">
+          <label class="ro"><span>{p.emailLabel}</span><input type="text" data-ro="email" readonly /></label>
+          <label class="ro"><span>{p.passport}</span><input type="text" data-ro="passport" readonly /></label>
+          {profileFields.map((f) => <label><span>{p.fields[f]}</span><input type="text" name={f} maxlength="200" /></label>)}
+        </div>
+        <div data-company hidden>
+          <h3>{p.companyTitle}</h3>
+          <div class="grid">
+            {companyFields.map((f) => <label><span>{p.fields[f]}</span><input type="text" name={f} maxlength="200" /></label>)}
+          </div>
+        </div>
+        <p class="note">{p.readOnlyNote}</p>
+        <button type="submit" class="btn btn--primary" data-save>{p.save}</button>
+        <p class="msg" role="status" aria-live="polite" hidden data-profile-msg></p>
+      </form>
+    </section>
+
+    <section data-panel="documents" hidden>
+      <h3>{p.docsTitle}</h3>
+      <p class="note">{p.docsText}</p>
+      <label class="btn btn--primary upload">
+        <span data-upload-label>{p.upload}</span>
+        <input type="file" accept="application/pdf,image/jpeg,image/png" data-upload hidden />
+      </label>
+      <p class="msg" role="status" aria-live="polite" hidden data-docs-msg></p>
+      <ul class="list" data-docs></ul>
+    </section>
+
+    <section data-panel="appointments" hidden>
+      <h3>{p.apptTitle}</h3>
+      <ul class="list" data-appts></ul>
+      <p class="note">{p.apptText} <a href={routes.contact[lang]}>{p.contact}</a></p>
+    </section>
+  </div>
+</div>
+
+<script>
+  import { initializeApp, getApps } from 'firebase/app';
+  import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
+  import { getFirestore, connectFirestoreEmulator, doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+  import { getStorage, connectStorageEmulator, ref, listAll, getMetadata, getBlob, uploadBytes } from 'firebase/storage';
+
+  const PROFILE = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'];
+  const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
+  const TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
+  const MAX = 10 * 1024 * 1024;
+
+  function boot() {
+    const root = document.querySelector<HTMLElement>('[data-portal]');
+    if (!root || root.dataset.ready || root.dataset.enabled !== '1') return;
+    root.dataset.ready = '1';
+    const cfg = JSON.parse(root.dataset.config!);
+    const M = JSON.parse(root.dataset.msg!);
+    const lang = root.dataset.lang;
+
+    const app = getApps()[0] ?? initializeApp(cfg);
+    const auth = getAuth(app); auth.languageCode = lang === 'en' ? 'en' : 'pt';
+    const db = getFirestore(app);
+    const st = getStorage(app);
+    if (cfg.emulators && !(window as any).__ctbEmu) {
+      (window as any).__ctbEmu = true;
+      connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+      connectFirestoreEmulator(db, '127.0.0.1', 8181);
+      connectStorageEmulator(st, '127.0.0.1', 9199);
+    }
+    // sessão termina ao fechar o navegador (dados pessoais)
+    const ready = setPersistence(auth, browserSessionPersistence).catch(() => {});
+
+    const $ = <T extends Element = HTMLElement>(s: string) => root.querySelector<T>(s)!;
+    const views = root.querySelectorAll<HTMLElement>('[data-view]');
+    const show = (v: string) => views.forEach((el) => (el.hidden = el.dataset.view !== v));
+    const msg = (el: HTMLElement, text: string, kind: 'ok' | 'err' = 'ok') => { el.hidden = false; el.textContent = text; el.dataset.kind = kind; };
+    root.querySelectorAll<HTMLElement>('[data-go]').forEach((b) => b.addEventListener('click', () => show(b.dataset.go!)));
+
+    // Login
+    const loginForm = $<HTMLFormElement>('[data-login]'); const loginBtn = $<HTMLButtonElement>('[data-login-btn]');
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(loginForm); const lm = $('[data-login-msg]'); lm.hidden = true;
+      loginBtn.disabled = true; loginBtn.textContent = M.signingIn;
+      try { await ready; await signInWithEmailAndPassword(auth, String(f.get('email')).trim(), String(f.get('password'))); loginForm.reset(); }
+      catch (err: any) { msg(lm, err?.code === 'auth/too-many-requests' ? M.tooMany : M.loginError, 'err'); }
+      finally { loginBtn.disabled = false; loginBtn.textContent = M.submit; }
+    });
+
+    // Recuperar senha (mesma mensagem exista ou não a conta)
+    const resetForm = $<HTMLFormElement>('[data-reset]');
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = String(new FormData(resetForm).get('email')).trim(); const rm = $('[data-reset-msg]');
+      try { await sendPasswordResetEmail(auth, email); } catch (err: any) { if (err?.code === 'auth/too-many-requests') return msg(rm, M.tooMany, 'err'); }
+      msg(rm, M.resetSent);
+    });
+
+    $('[data-signout]').addEventListener('click', () => signOut(auth));
+    $('[data-resend]').addEventListener('click', async () => { if (auth.currentUser) { await sendEmailVerification(auth.currentUser).catch(() => {}); msg($('[data-unverified]'), M.verifySent); } });
+
+    // Abas
+    root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.addEventListener('click', () => {
+      root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.tab));
+    }));
+
+    let original: Record<string, string> = {};
+    async function loadProfile(uid: string, email: string) {
+      const snap = await getDoc(doc(db, 'users', uid));
+      const d = (snap.exists() ? snap.data() : {}) as Record<string, any>;
+      $('[data-name]').textContent = d.display_name || email;
+      $('[data-email]').textContent = email;
+      $<HTMLInputElement>('[data-ro="email"]').value = email;
+      const pn = String(d.passportnumber || '');
+      $<HTMLInputElement>('[data-ro="passport"]').value = pn ? '•••• ' + pn.slice(-3) : '—';
+      original = {};
+      for (const k of [...PROFILE, ...COMPANY]) {
+        const v = typeof d[k] === 'string' ? d[k] : '';
+        original[k] = v;
+        const input = root.querySelector<HTMLInputElement>(`[data-profile] [name="${k}"]`); if (input) input.value = v;
+      }
+      $('[data-company]').hidden = !COMPANY.some((k) => original[k]);
+    }
+
+    const profileForm = $<HTMLFormElement>('[data-profile]'); const saveBtn = $<HTMLButtonElement>('[data-save]');
+    profileForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const u = auth.currentUser; if (!u) return;
+      const pm = $('[data-profile-msg]'); const changes: Record<string, string> = {};
+      for (const k of [...PROFILE, ...COMPANY]) {
+        const input = profileForm.querySelector<HTMLInputElement>(`[name="${k}"]`); if (!input) continue;
+        const v = input.value.trim().slice(0, 200);
+        if (v !== original[k]) changes[k] = v;
+      }
+      if (!Object.keys(changes).length) return msg(pm, M.nothingChanged);
+      saveBtn.disabled = true; saveBtn.textContent = M.saving;
+      try { await updateDoc(doc(db, 'users', u.uid), changes); Object.assign(original, changes); msg(pm, M.saved); if (changes.display_name) $('[data-name]').textContent = changes.display_name; }
+      catch { msg(pm, M.genericError, 'err'); }
+      finally { saveBtn.disabled = false; saveBtn.textContent = M.save; }
+    });
+
+    const fmtSize = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+    const fmtDate = (s: string) => new Date(s).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-BR');
+    async function loadDocs(uid: string) {
+      const ul = $('[data-docs]'); ul.innerHTML = '';
+      const res = await listAll(ref(st, `users/${uid}/uploads`));
+      if (!res.items.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.docsEmpty; ul.append(li); return; }
+      const metas = await Promise.all(res.items.map((it) => getMetadata(it).then((m) => ({ it, m }))));
+      metas.sort((a, b) => b.m.timeCreated.localeCompare(a.m.timeCreated));
+      for (const { it, m } of metas) {
+        const li = document.createElement('li');
+        const name = document.createElement('span'); name.className = 'name'; name.textContent = it.name.replace(/^\d{10,}-/, '');
+        const info = document.createElement('span'); info.className = 'info'; info.textContent = `${fmtDate(m.timeCreated)} · ${fmtSize(m.size)}`;
+        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'link'; btn.textContent = M.download;
+        // download pelo SDK (respeita as regras); não gera link público permanente
+        btn.addEventListener('click', async () => {
+          const blob = await getBlob(it); const url = URL.createObjectURL(blob);
+          const a = document.createElement('a'); a.href = url; a.download = name.textContent || it.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+        });
+        li.append(name, info, btn); ul.append(li);
+      }
+    }
+
+    const upInput = $<HTMLInputElement>('[data-upload]'); const upLabel = $('[data-upload-label]');
+    upInput.addEventListener('change', async () => {
+      const u = auth.currentUser; const file = upInput.files?.[0]; const dm = $('[data-docs-msg]'); upInput.value = '';
+      if (!u || !file) return;
+      if (!TYPES.includes(file.type)) return msg(dm, M.badType, 'err');
+      if (file.size > MAX) return msg(dm, M.tooBig, 'err');
+      const safe = file.name.normalize('NFD').replace(/[^\w.-]+/g, '_').slice(-80);
+      upLabel.textContent = M.uploading;
+      try { await uploadBytes(ref(st, `users/${u.uid}/uploads/${Date.now()}-${safe}`), file, { contentType: file.type }); msg(dm, M.uploaded); await loadDocs(u.uid); }
+      catch { msg(dm, M.genericError, 'err'); }
+      finally { upLabel.textContent = M.upload; }
+    });
+
+    async function loadAppts(uid: string) {
+      const ul = $('[data-appts]'); ul.innerHTML = '';
+      const snap = await getDocs(query(collection(db, 'appointments'), where('appointmentPerson', '==', doc(db, 'users', uid))));
+      if (snap.empty) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.apptEmpty; ul.append(li); return; }
+      snap.docs.map((d) => d.data()).sort((a: any, b: any) => (b.appointmentTime?.seconds ?? 0) - (a.appointmentTime?.seconds ?? 0)).forEach((a: any) => {
+        const li = document.createElement('li');
+        const n = document.createElement('span'); n.className = 'name'; n.textContent = a.appointmentType || a.appointmentName || '—';
+        const i = document.createElement('span'); i.className = 'info'; i.textContent = a.appointmentTime ? a.appointmentTime.toDate().toLocaleString(lang === 'en' ? 'en-GB' : 'pt-BR') : '';
+        li.append(n, i); ul.append(li);
+      });
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) { show('login'); return; }
+      show('dash');
+      $('[data-unverified]').hidden = user.emailVerified;
+      try { await Promise.all([loadProfile(user.uid, user.email || ''), loadDocs(user.uid), loadAppts(user.uid)]); }
+      catch { msg($('[data-profile-msg]'), M.genericError, 'err'); }
+    });
+  }
+  document.addEventListener('astro:page-load', boot);
+</script>
+
+<style>
+  .portal [hidden] { display: none !important; }
+  .access-card { position: relative; padding: clamp(2rem, 3.5vw, 2.8rem); background: var(--color-espresso); color: var(--color-ivory); border: 1px solid var(--color-line); box-shadow: 0 30px 60px rgba(53, 36, 29, 0.18); }
+  .access-card::before { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(181, 139, 77, 0.25); pointer-events: none; }
+  .access-card h2 { color: var(--color-champagne); font-size: clamp(2rem, 3.4vw, 2.8rem); font-weight: 400; line-height: 1.1; margin: 0.8rem 0 0; }
+  .eyebrow--gold { color: var(--color-gold); }
+  .gold-rule { display: block; width: 72px; height: 1px; background: var(--color-gold); margin: 1.5rem 0; }
+  .access-form { position: relative; }
+  .access-form fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 1rem; min-width: 0; }
+  .access-form fieldset:disabled { opacity: 0.5; }
+  .access-form label { display: flex; flex-direction: column; gap: 0.4rem; }
+  .access-form label span { font-size: 0.78rem; letter-spacing: 0.06em; color: var(--color-champagne); }
+  .access-form input { font: inherit; font-size: 1rem; color: var(--color-ivory); background: rgba(246, 240, 230, 0.06); border: 1px solid var(--color-line); border-radius: 4px; padding: 0.8rem 0.9rem; min-height: 48px; width: 100%; }
+  .access-form input:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.25); }
+  .access-form .btn { justify-content: center; margin-top: 0.3rem; }
+  .forgot { background: none; border: 0; padding: 0.3rem; font: inherit; font-size: 0.85rem; color: var(--color-champagne); text-decoration: underline; text-decoration-color: var(--color-line); text-underline-offset: 3px; cursor: pointer; }
+  .access-card .note { position: relative; color: var(--color-champagne); opacity: 0.85; font-size: 0.92rem; margin: 0 0 1.2rem; }
+  .access-status { position: relative; display: flex; gap: 0.6rem; margin: 1.6rem 0 0; padding-top: 1.2rem; border-top: 1px solid var(--color-line); font-size: 0.88rem; color: var(--color-champagne); }
+  .access-status svg { flex: none; width: 18px; height: 18px; margin-top: 2px; fill: none; stroke: var(--color-gold); stroke-width: 1.6; stroke-linecap: round; }
+  .access-client { position: relative; margin: 0.9rem 0 0; font-size: 0.88rem; opacity: 0.85; }
+  .access-client a { color: var(--color-gold); }
+  .msg { position: relative; margin: 1rem 0 0; padding: 0.7rem 0.9rem; font-size: 0.88rem; border-left: 2px solid #6f9a72; background: rgba(111, 154, 114, 0.14); }
+  .msg[data-kind='err'] { border-left-color: #c7714f; background: rgba(199, 113, 79, 0.14); }
+
+  .dash { grid-column: 1 / -1; padding: clamp(1.6rem, 3vw, 2.6rem); background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); box-shadow: 0 24px 50px rgba(53, 36, 29, 0.08); color: var(--color-espresso); }
+  .dash__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; padding-bottom: 1.2rem; border-bottom: 1px solid rgba(98, 72, 58, 0.18); }
+  .dash__head h2 { margin: 0.4rem 0 0; font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 400; }
+  .dash__email { margin: 0.2rem 0 0; color: var(--color-cafe); font-size: 0.9rem; }
+  .banner-warn { margin: 1rem 0 0; padding: 0.7rem 0.9rem; background: rgba(181, 139, 77, 0.14); border-left: 2px solid var(--color-gold); font-size: 0.9rem; }
+  .banner-warn button { background: none; border: 0; font: inherit; color: #8a5e2e; text-decoration: underline; cursor: pointer; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1.4rem 0; }
+  .tabs button { font: inherit; font-size: 0.9rem; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(98, 72, 58, 0.3); background: transparent; color: var(--color-espresso); cursor: pointer; }
+  .tabs button[aria-selected='true'] { background: var(--color-espresso); color: var(--color-champagne); border-color: var(--color-espresso); }
+  .dash h3 { font-size: 1.4rem; font-weight: 500; margin: 0.6rem 0 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem 1.1rem; margin-bottom: 1rem; }
+  .dash label { display: flex; flex-direction: column; gap: 0.35rem; }
+  .dash label > span { font-size: 0.78rem; letter-spacing: 0.04em; color: var(--color-cafe); }
+  .dash input[type='text'] { font: inherit; font-size: 0.95rem; color: var(--color-espresso); background: var(--color-ivory); border: 1px solid rgba(98, 72, 58, 0.25); border-radius: 4px; padding: 0.65rem 0.8rem; min-height: 44px; }
+  .dash input[readonly] { background: #efe8dc; color: var(--color-cafe); }
+  .dash input:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.2); }
+  .dash .note { color: var(--color-cafe); font-size: 0.86rem; }
+  .dash .note a { color: #8a5e2e; }
+  .dash .msg { color: var(--color-espresso); }
+  .upload { cursor: pointer; margin: 0.4rem 0 0.6rem; }
+  .dash__head :global(.btn--secondary) { color: var(--color-espresso); border-color: rgba(98, 72, 58, 0.45); }
+  .dash__head :global(.btn--secondary:hover) { background: var(--color-espresso); color: var(--color-champagne); }
+  .list { list-style: none; margin: 1.2rem 0 0; padding: 0; border-top: 1px solid rgba(98, 72, 58, 0.15); }
+  .list :global(li) { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: 0.85rem 0.2rem; border-bottom: 1px solid rgba(98, 72, 58, 0.15); }
+  .list :global(li.empty) { display: block; color: var(--color-cafe); font-style: italic; }
+  .list :global(.name) { font-weight: 500; overflow-wrap: anywhere; }
+  .list :global(.info) { color: var(--color-cafe); font-size: 0.85rem; }
+  .list :global(.link) { background: none; border: 0; font: inherit; color: #8a5e2e; text-decoration: underline; cursor: pointer; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .list :global(li) { grid-template-columns: 1fr auto; } .list :global(.info) { grid-column: 1; } }
+</style>

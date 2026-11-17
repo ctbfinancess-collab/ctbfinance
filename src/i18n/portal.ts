@@ -1,0 +1,69 @@
+/**
+ * Textos do portal autenticado da Área do Cliente (PT/EN).
+ * Somente dados reais do próprio cliente: perfil, documentos e agendamentos.
+ * Nada de saldos, contas, cartões, pagamentos ou operações.
+ */
+import type { Lang } from './ui';
+
+export const portal = {
+  pt: {
+    loginTitle: 'Entrar',
+    email: 'E-mail', password: 'Senha', submit: 'Entrar', signingIn: 'Entrando…',
+    forgot: 'Esqueci minha senha', backToLogin: 'Voltar para o login',
+    resetTitle: 'Recuperar senha',
+    resetText: 'Informe o e-mail cadastrado. Se houver uma conta, enviaremos um link para criar uma nova senha.',
+    resetSubmit: 'Enviar link', resetSent: 'Se o e-mail estiver cadastrado, você receberá o link em instantes.',
+    loginError: 'E-mail ou senha incorretos.', tooMany: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.',
+    genericError: 'Não foi possível concluir agora. Tente novamente em instantes.',
+    unavailable: 'Acesso em preparação. Em breve, nossos clientes poderão entrar por aqui com segurança.',
+    hello: 'Olá', signOut: 'Encerrar sessão',
+    unverified: 'Seu e-mail ainda não foi confirmado.', resendVerify: 'Reenviar confirmação', verifySent: 'Enviamos um novo link de confirmação.',
+    tabs: { profile: 'Meu perfil', documents: 'Documentos', appointments: 'Agendamentos' },
+    profileTitle: 'Dados cadastrais', companyTitle: 'Empresa',
+    fields: {
+      display_name: 'Nome completo', phone_number: 'Telefone', nationality: 'Nacionalidade', dateofbirth: 'Data de nascimento',
+      address: 'Endereço', residencenumber: 'Número', city: 'Cidade', country: 'País', zipcode: 'CEP / Código postal',
+      CompanyName: 'Razão social', Companyregistrationnumber: 'Número de registro', companysadress: 'Endereço da empresa',
+      companyaddressnumber: 'Número', companycity: 'Cidade', companycountry: 'País', companyzipcode: 'CEP / Código postal',
+    },
+    readOnlyNote: 'E-mail e dados de documento de identidade são atualizados somente pela nossa equipe.',
+    passport: 'Passaporte', emailLabel: 'E-mail',
+    save: 'Salvar alterações', saving: 'Salvando…', saved: 'Dados atualizados.', nothingChanged: 'Nenhuma alteração para salvar.',
+    docsTitle: 'Meus documentos',
+    docsText: 'Envie documentos em PDF, JPEG ou PNG, com até 10 MB. Documentos já enviados ficam guardados para análise e não podem ser substituídos ou apagados por aqui; se precisar corrigir algum, envie a nova versão e avise nossa equipe.',
+    docsEmpty: 'Nenhum documento enviado.', upload: 'Enviar documento', uploading: 'Enviando…', uploaded: 'Documento enviado.',
+    download: 'Baixar', badType: 'Formato não aceito. Use PDF, JPEG ou PNG.', tooBig: 'O arquivo passa de 10 MB.',
+    apptTitle: 'Meus agendamentos', apptEmpty: 'Nenhum agendamento registrado.', apptText: 'Para agendar uma conversa, fale com nossa equipe pela página de Contato.',
+    contact: 'Falar com a equipe',
+  },
+  en: {
+    loginTitle: 'Sign in',
+    email: 'Email', password: 'Password', submit: 'Sign in', signingIn: 'Signing in…',
+    forgot: 'Forgot my password', backToLogin: 'Back to sign in',
+    resetTitle: 'Reset password',
+    resetText: 'Enter your registered email. If an account exists, we will send you a link to create a new password.',
+    resetSubmit: 'Send link', resetSent: 'If the email is registered, you will receive the link shortly.',
+    loginError: 'Incorrect email or password.', tooMany: 'Too many attempts. Please wait a few minutes and try again.',
+    genericError: 'We could not complete this right now. Please try again shortly.',
+    unavailable: 'Access in preparation. Our clients will soon be able to sign in here securely.',
+    hello: 'Hello', signOut: 'Sign out',
+    unverified: 'Your email has not been confirmed yet.', resendVerify: 'Resend confirmation', verifySent: 'We have sent a new confirmation link.',
+    tabs: { profile: 'My profile', documents: 'Documents', appointments: 'Appointments' },
+    profileTitle: 'Registration details', companyTitle: 'Company',
+    fields: {
+      display_name: 'Full name', phone_number: 'Phone', nationality: 'Nationality', dateofbirth: 'Date of birth',
+      address: 'Address', residencenumber: 'Number', city: 'City', country: 'Country', zipcode: 'Postal code',
+      CompanyName: 'Company name', Companyregistrationnumber: 'Registration number', companysadress: 'Company address',
+      companyaddressnumber: 'Number', companycity: 'City', companycountry: 'Country', companyzipcode: 'Postal code',
+    },
+    readOnlyNote: 'Email and identity document details can only be updated by our team.',
+    passport: 'Passport', emailLabel: 'Email',
+    save: 'Save changes', saving: 'Saving…', saved: 'Details updated.', nothingChanged: 'No changes to save.',
+    docsTitle: 'My documents',
+    docsText: 'Upload documents as PDF, JPEG or PNG, up to 10 MB. Submitted documents are kept for review and cannot be replaced or deleted here; if you need to correct one, upload the new version and let our team know.',
+    docsEmpty: 'No documents submitted.', upload: 'Upload document', uploading: 'Uploading…', uploaded: 'Document uploaded.',
+    download: 'Download', badType: 'Format not accepted. Use PDF, JPEG or PNG.', tooBig: 'The file exceeds 10 MB.',
+    apptTitle: 'My appointments', apptEmpty: 'No appointments registered.', apptText: 'To schedule a conversation, contact our team through the Contact page.',
+    contact: 'Contact our team',
+  },
+} satisfies Record<Lang, unknown>;
