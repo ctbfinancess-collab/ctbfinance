@@ -28,7 +28,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-enabled={enabled ? '1' : '0'} data-config={JSON.stringify(config)} data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -129,8 +129,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 <script>
   import { initializeApp, getApps } from 'firebase/app';
   import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, signOut, sendPasswordResetEmail, sendEmailVerification, setPersistence, browserSessionPersistence } from 'firebase/auth';
-  import { getFirestore, connectFirestoreEmulator, doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
-  import { getStorage, connectStorageEmulator, ref, listAll, getMetadata, getBlob, uploadBytes } from 'firebase/storage';
+  import { getFirestore, connectFirestoreEmulator, doc, getDoc, updateDoc, collection, query, where, getDocs, onSnapshot } from 'firebase/firestore';
+  import { getStorage, connectStorageEmulator, ref, listAll, getBlob, uploadBytes } from 'firebase/storage';
 
   const PROFILE = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'];
   const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
@@ -229,25 +229,58 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     });
 
     const fmtSize = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
-    const fmtDate = (s: string) => new Date(s).toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-BR');
-    async function loadDocs(uid: string) {
+    // datas por extenso no idioma da página (EN: "17 Nov 2026"; PT: "17 de nov. de 2026")
+    const fmtDate = (d: Date) => d.toLocaleDateString(lang === 'en' ? 'en-GB' : 'pt-BR', { day: 'numeric', month: 'short', year: 'numeric' });
+    const LIBERADOS = ['disponivel_analise', 'aprovado'];
+    let unsubDocs: (() => void) | null = null;
+    let nomesNoStorage: string[] = [];
+    // Estado de cada documento: vem do servidor (coleção documentos); arquivo sem registro = recebido, em validação
+    function renderDocs(uid: string, registros: any[]) {
       const ul = $('[data-docs]'); ul.innerHTML = '';
-      const res = await listAll(ref(st, `users/${uid}/uploads`));
-      if (!res.items.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.docsEmpty; ul.append(li); return; }
-      const metas = await Promise.all(res.items.map((it) => getMetadata(it).then((m) => ({ it, m }))));
-      metas.sort((a, b) => b.m.timeCreated.localeCompare(a.m.timeCreated));
-      for (const { it, m } of metas) {
-        const li = document.createElement('li');
-        const name = document.createElement('span'); name.className = 'name'; name.textContent = it.name.replace(/^\d{10,}-/, '');
-        const info = document.createElement('span'); info.className = 'info'; info.textContent = `${fmtDate(m.timeCreated)} · ${fmtSize(m.size)}`;
-        const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'link'; btn.textContent = M.download;
-        // download pelo SDK (respeita as regras); não gera link público permanente
-        btn.addEventListener('click', async () => {
-          const blob = await getBlob(it); const url = URL.createObjectURL(blob);
-          const a = document.createElement('a'); a.href = url; a.download = name.textContent || it.name; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000);
-        });
-        li.append(name, info, btn); ul.append(li);
+      const porCaminho = new Map(registros.map((r) => [r.caminho, r]));
+      const linhas: any[] = nomesNoStorage.map((n) => porCaminho.get(`users/${uid}/uploads/${n}`) ?? { caminho: `users/${uid}/uploads/${n}`, nome: n.replace(/^\d{10,}[-_]?/, '') || n, status: 'recebido', quando: new Date(Number((n.match(/^(\d{13})/) || [])[1]) || Date.now()) });
+      // rejeitados na validação técnica (arquivo já apagado) continuam visíveis com a orientação
+      registros.filter((r) => !nomesNoStorage.includes(String(r.caminho).split('/').pop())).forEach((r) => linhas.push(r));
+      if (!linhas.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.docsEmpty; ul.append(li); return; }
+      linhas.forEach((r) => { r._t = r.quando ? r.quando.getTime() : (r.recebidoEm?.toMillis?.() ?? 0); });
+      linhas.sort((a, b) => b._t - a._t);
+      for (const r of linhas) {
+        const status = r.status === 'em_validacao' ? 'recebido' : r.status;
+        const li = document.createElement('li'); li.dataset.status = status;
+        const name = document.createElement('span'); name.className = 'name'; name.textContent = r.nome;
+        const info = document.createElement('span'); info.className = 'info';
+        info.textContent = [r._t ? fmtDate(new Date(r._t)) : '', r.tamanho ? fmtSize(r.tamanho) : ''].filter(Boolean).join(' · ');
+        const badge = document.createElement('span'); badge.className = 'badge'; badge.dataset.status = status; badge.textContent = M.st[status] ?? status;
+        li.append(name, info, badge);
+        if (LIBERADOS.includes(status)) {
+          const btn = document.createElement('button'); btn.type = 'button'; btn.className = 'link'; btn.textContent = M.download;
+          // download pelo SDK (respeita as regras); não gera link público permanente
+          btn.addEventListener('click', async () => {
+            try { const blob = await getBlob(ref(st, r.caminho)); const url = URL.createObjectURL(blob);
+              const a = document.createElement('a'); a.href = url; a.download = r.nome; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000); }
+            catch { msg($('[data-docs-msg]'), M.genericError, 'err'); }
+          });
+          li.append(btn);
+        } else { li.append(document.createElement('span')); }
+        if (status === 'rejeitado' && r.orientacao) {
+          const o = document.createElement('p'); o.className = 'orient'; o.textContent = `${r.orientacao[lang === 'en' ? 'en' : 'pt'] || r.orientacao.pt} ${M.resendHint}`;
+          li.append(o);
+        }
+        if (status === 'recebido') { const o = document.createElement('p'); o.className = 'orient orient--info'; o.textContent = M.pendingHint; li.append(o); }
+        ul.append(li);
       }
+    }
+    async function loadDocs(uid: string) {
+      const res = await listAll(ref(st, `users/${uid}/uploads`));
+      nomesNoStorage = res.items.map((it) => it.name);
+      if (unsubDocs) unsubDocs();
+      let ultimos: any[] = [];
+      renderDocs(uid, ultimos);
+      // atualiza sozinho quando o servidor muda o estado (validação, aprovação, rejeição)
+      unsubDocs = onSnapshot(query(collection(db, 'documentos'), where('dono', '==', doc(db, 'users', uid))), (snap) => {
+        ultimos = snap.docs.map((d) => d.data());
+        renderDocs(uid, ultimos);
+      }, () => renderDocs(uid, ultimos));
     }
 
     const upInput = $<HTMLInputElement>('[data-upload]'); const upLabel = $('[data-upload-label]');
@@ -276,7 +309,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     }
 
     onAuthStateChanged(auth, async (user) => {
-      if (!user) { show('login'); return; }
+      if (!user) { if (unsubDocs) { unsubDocs(); unsubDocs = null; } show('login'); return; }
       show('dash');
       // leva o cliente direto ao painel (o banner continua acima)
       requestAnimationFrame(() => root.scrollIntoView({ behavior: 'smooth', block: 'start' }));
@@ -336,10 +369,16 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .dash__head :global(.btn--secondary) { color: var(--color-espresso); border-color: rgba(98, 72, 58, 0.45); }
   .dash__head :global(.btn--secondary:hover) { background: var(--color-espresso); color: var(--color-champagne); }
   .list { list-style: none; margin: 1.2rem 0 0; padding: 0; border-top: 1px solid rgba(98, 72, 58, 0.15); }
-  .list :global(li) { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: 0.85rem 0.2rem; border-bottom: 1px solid rgba(98, 72, 58, 0.15); }
+  .list :global(li) { display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center; padding: 0.85rem 0.2rem; border-bottom: 1px solid rgba(98, 72, 58, 0.15); }
   .list :global(li.empty) { display: block; color: var(--color-cafe); font-style: italic; }
   .list :global(.name) { font-weight: 500; overflow-wrap: anywhere; }
   .list :global(.info) { color: var(--color-cafe); font-size: 0.85rem; }
+  .list :global(.badge) { font-size: 0.74rem; letter-spacing: 0.03em; padding: 0.25rem 0.6rem; border-radius: 999px; background: #efe8dc; color: var(--color-cafe); white-space: nowrap; }
+  .list :global(.badge[data-status='disponivel_analise']) { background: rgba(111, 154, 114, 0.18); color: #3f6b44; }
+  .list :global(.badge[data-status='aprovado']) { background: rgba(111, 154, 114, 0.3); color: #2f5a34; }
+  .list :global(.badge[data-status='rejeitado']) { background: rgba(199, 113, 79, 0.18); color: #9a4a2c; }
+  .list :global(.orient) { grid-column: 1 / -1; margin: 0; font-size: 0.85rem; color: #9a4a2c; }
+  .list :global(.orient--info) { color: var(--color-cafe); }
   .list :global(.link) { background: none; border: 0; font: inherit; color: #8a5e2e; text-decoration: underline; cursor: pointer; }
   @media (max-width: 900px) { .grid { grid-template-columns: 1fr 1fr; } }
   @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } .list :global(li) { grid-template-columns: 1fr auto; } .list :global(.info) { grid-column: 1; } }
