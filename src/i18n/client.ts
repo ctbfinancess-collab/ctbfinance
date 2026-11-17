@@ -9,6 +9,7 @@ export const client = {
     meta: { title: 'Seja nosso cliente · CTB Finances Dubai', description: 'Solicite o início de um relacionamento com a CTB Finances e apresente suas necessidades à nossa equipe.' },
     banner: {
       crumb: 'Seja nosso cliente',
+      caption: 'Conecte-se a um mundo de infinitas possibilidades.',
       eyebrow: 'Seja nosso cliente',
       title: 'Seu próximo passo começa com uma conexão de confiança.',
       lead: 'Conheça nossas áreas de atuação e apresente suas necessidades à nossa equipe.',
@@ -58,6 +59,7 @@ export const client = {
     meta: { title: 'Become a client · CTB Finances Dubai', description: 'Request the start of a relationship with CTB Finances and share your needs with our team.' },
     banner: {
       crumb: 'Become a client',
+      caption: 'Connect to a world of infinite possibilities.',
       eyebrow: 'Become a client',
       title: 'Your next step begins with a trusted connection.',
       lead: 'Explore our areas of activity and share your needs with our team.',

@@ -102,9 +102,10 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   .pb.pb--natural .pb__video { filter: none; object-position: 50% 45%; top: 84px; height: calc(100% - 84px); }
   .pb.pb--whole .pb__video { width: auto; max-width: 78%; aspect-ratio: 16 / 9; -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 18%); mask-image: linear-gradient(to right, transparent 0%, #000 18%); }
   @media (max-width: 700px) { .pb.pb--natural .pb__video { top: 0; height: 100%; } .pb.pb--whole .pb__video { width: 100%; max-width: none; } }
-  .pb__caption { position: absolute; left: clamp(1.25rem, 4vw, 4rem); top: 50%; transform: translateY(-50%); max-width: min(30rem, 38%); margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(1.5rem, 3.6vw, 3.4rem); line-height: 1.1; color: var(--color-ivory); text-shadow: 0 2px 18px rgba(53, 36, 29, 0.75); text-wrap: balance; }
-  .pb__caption span { display: block; width: 3rem; height: 1px; background: var(--color-gold); margin: 1.1rem 0; }
-  @media (max-width: 600px) { .pb__caption { font-size: 1.25rem; max-width: 55%; } .pb__caption span { margin: 0.6rem 0; width: 2rem; } }
+  /* frase sobre o vídeo: fonte do site (títulos), com tamanho/posição/linhas padronizados pela frase do vídeo da robô */
+  .pb__caption { position: absolute; left: 4.1%; top: 44%; transform: translateY(-50%); width: 33%; margin: 0; font-family: var(--font-display); font-weight: 500; font-size: 4.3vw; line-height: 1.08; letter-spacing: 0; color: #F0E7D8; text-shadow: 0 0 1px rgba(30, 15, 10, 0.9), 0 2px 10px rgba(20, 10, 6, 0.45); text-wrap: balance; }
+  .pb__caption span { display: block; width: 5vw; height: 2px; background: #D9BE8C; margin: 1.6vw 0 1.9vw; }
+  .pb__caption span:last-child { width: 7.1vw; margin: 2.2vw 0 0; }
   /* vídeo no modo stacked: original exato, inteiro, sem filtro, recorte ou véu */
   .pb--stacked .pb__video { position: static; display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: contain; filter: none; -webkit-mask-image: none; mask-image: none; }
   .pb--stacked .pb__content { max-width: none; padding-top: clamp(2rem, 4vw, 3rem); padding-bottom: clamp(2.5rem, 5vw, 3.5rem); background: var(--color-espresso); border-top: 1px solid var(--color-line); display: grid; grid-template-columns: auto 1fr; column-gap: clamp(2rem, 6vw, 6rem); align-items: end; }
