@@ -20,7 +20,7 @@ interface Props {
   natural?: boolean;
   /** Mostra o quadro inteiro do vídeo (16:9), sem cortar as laterais */
   whole?: boolean;
-  /** Vídeo de fundo em loop, sem som (ex.: '/video/x' → x.webm + x.mp4 + x-poster.jpg) */
+  /** Vídeo de fundo em loop, sem som (ex.: '/video/x' → x.mp4 + x-poster.jpg) */
   video?: string;
 }
 const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = [], fit, stacked = false, side, video, caption, natural = false, whole = false } = Astro.props;
@@ -29,7 +29,6 @@ const { image, imageSmall, position = '70% 50%', eyebrow, title, lead, crumbs = 
   {video ? (
     <div class="pb__media">
       <video class="pb__video" autoplay muted loop playsinline preload="metadata" poster={`${video}-poster.jpg`} aria-hidden="true">
-        {!stacked && <source src={`${video}.webm`} type="video/webm" />}
         <source src={`${video}.mp4`} type="video/mp4" />
       </video>
       {caption && <p class="pb__caption"><span aria-hidden="true"></span>{caption}<span aria-hidden="true"></span></p>}

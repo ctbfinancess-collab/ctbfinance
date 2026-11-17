@@ -61,6 +61,13 @@ const ogImage = new URL('/brand/ctb-logo.jpg', site).href;
     <MusicToggle />
     <script>
       // Animação discreta de entrada ao rolar (todas as páginas)
+      // garante que os vídeos de banner toquem também ao navegar pelo menu (navegação contínua)
+      document.addEventListener('astro:page-load', () => {
+        document.querySelectorAll<HTMLVideoElement>('video[autoplay]').forEach((v) => {
+          v.muted = true;
+          if (v.paused) v.play().catch(() => {});
+        });
+      });
       document.addEventListener('astro:page-load', () => {
         const els = document.querySelectorAll<HTMLElement>('.reveal');
         if (!('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
