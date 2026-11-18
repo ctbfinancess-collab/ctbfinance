@@ -111,7 +111,7 @@ export function criarAdmin({ db, arquivos, api }) {
     // ---- agendamentos
     /** Pedidos ainda sem horário confirmado (mais próximos primeiro). */
     async listarAgendamentos({ todos = false } = {}) {
-      return (await db.q(`select a.id, u.email, a.tipo, a.descricao, to_char(a.data_solicitada,'YYYY-MM-DD') as data_solicitada, a.horario_confirmado, a.solicitado_pelo_cliente, a.criado_em
+      return (await db.q(`select a.id, u.email, a.tipo, a.formato, a.periodo, a.descricao, to_char(a.data_solicitada,'YYYY-MM-DD') as data_solicitada, a.horario_confirmado, a.solicitado_pelo_cliente, a.criado_em
                             from agendamentos a join usuarios u on u.id=a.usuario_id
                            ${todos ? '' : 'where a.horario_confirmado is null'} order by a.data_solicitada nulls last, a.criado_em`)).rows;
     },

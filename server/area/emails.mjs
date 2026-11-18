@@ -23,10 +23,12 @@ export async function enviarEmailAcesso({ to, finalidade, lang, link, horas }) {
 const ASSUNTOS_PT = { abertura_conta: 'Abertura de conta', investimentos: 'Investimentos', documentos: 'Documentos', outro: 'Outro assunto' };
 const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 /** Aviso INTERNO à equipe (CONTACT_EMAIL_TO): um cliente pediu agendamento pela Área do Cliente. */
-export async function avisarEquipeAgendamento({ email, nome, assunto, data, observacao }) {
+const FORMATOS_PT = { video: 'Vídeo', presencial: 'Presencial' };
+const PERIODOS_PT = { manha: 'Manhã (9h–12h, Dubai)', tarde: 'Tarde (13h–18h, Dubai)', qualquer: 'Qualquer horário' };
+export async function avisarEquipeAgendamento({ email, nome, assunto, data, formato, periodo, observacao }) {
   const para = teamList(); if (!para.length) return;
   const [a, m, d] = data.split('-');
-  const linhas = [['Cliente', nome || '—'], ['E-mail', email], ['Assunto', ASSUNTOS_PT[assunto] || assunto], ['Data desejada', `${d}/${m}/${a}`], ['Observação', observacao || '—']];
+  const linhas = [['Cliente', nome || '—'], ['E-mail', email], ['Assunto', ASSUNTOS_PT[assunto] || assunto], ['Data desejada', `${d}/${m}/${a}`], ['Formato', FORMATOS_PT[formato] || '—'], ['Melhor horário', PERIODOS_PT[periodo] || '—'], ['Observação', observacao || '—']];
   const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px;font-family:Georgia,serif;font-size:15px;color:#35241D">${linhas.map(([k, v]) => `<tr><td style="padding:3px 14px 3px 0;color:#7a5a45;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:3px 0;white-space:pre-wrap">${esc(v)}</td></tr>`).join('')}</table>` };
   const ok = await sendEmail({
     from: fromAddress(), to: para, reply_to: email, subject: `Pedido de agendamento · ${nome || email}`,

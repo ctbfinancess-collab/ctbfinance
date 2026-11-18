@@ -109,6 +109,9 @@ create table if not exists agendamentos (
 create index if not exists agendamentos_usuario on agendamentos(usuario_id);
 -- pedido feito pelo próprio cliente na Área do Cliente (a equipe confirma o horário depois)
 alter table agendamentos add column if not exists solicitado_pelo_cliente boolean not null default false;
+-- preferências escolhidas por clique no pedido: formato (vídeo/presencial) e melhor horário (fuso de Dubai)
+alter table agendamentos add column if not exists formato text;
+alter table agendamentos add column if not exists periodo text;
 
 -- IPs de onde o cliente já entrou com sucesso: isentos do teto geral por conta (o cliente não é bloqueado
 -- por um ataque distribuído quando entra de um lugar conhecido; o limite por conta+IP continua valendo).

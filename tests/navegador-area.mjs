@@ -115,7 +115,10 @@ try {
   await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.data.value='2020-01-01';f.requestSubmit();return 1})()`);
   check('Data no passado → aviso, sem enviar', await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('a partir de amanhã')`));
   await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.assunto.value='investimentos';f.data.value=document.querySelector('[data-appt-date]').min;f.observacao.value='Prefiro por vídeo';f.requestSubmit();return 1})()`);
-  const okPedido = await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('Pedido enviado') && !${vis('[data-appt-form]')} && /Investimentos\\s*Data solicitada: .* · horário a confirmar/.test(document.querySelector('[data-appts]').innerText) && document.querySelector('[data-appts]').innerText.includes('Prefiro por vídeo')`);
+  await shot('3a-pedido');
+  check('Sem escolher formato/horário → aviso', await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('formato e o melhor horário')`));
+  await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.querySelector('[name=formato][value=video]').closest('label').click();f.querySelector('[name=periodo][value=tarde]').closest('label').click();f.requestSubmit();return 1})()`);
+  const okPedido = await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('Pedido enviado') && !${vis('[data-appt-form]')} && /Investimentos\\s*Data solicitada: .* · horário a confirmar/.test(document.querySelector('[data-appts]').innerText) && document.querySelector('[data-appts]').innerText.includes('Vídeo · Tarde · 13h–18h · Prefiro por vídeo')`);
   check('Pedido enviado → mensagem, formulário fecha e o pedido aparece "a confirmar"', okPedido);
   if (!okPedido) console.log('   estado:', JSON.stringify(await ev(`({msg:document.querySelector('[data-appt-msg]').textContent, form:!document.querySelector('[data-appt-form]').hidden, lista:document.querySelector('[data-appts]').innerText})`)));
   check('Equipe recebe o e-mail "Pedido de agendamento"', await (async () => { for (let i = 0; i < 30; i++) { if (emails.some((m) => /Pedido de agendamento/.test(m.subject || ''))) return true; await sleep(100); } return false; })());

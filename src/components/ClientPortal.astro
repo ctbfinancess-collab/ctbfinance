@@ -17,7 +17,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos, formatos: p.formatos, periodos: p.periodos, apptChoose: p.apptChoose })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -145,6 +145,14 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
           </label>
           <label><span>{p.apptDate}</span><input type="date" name="data" required data-appt-date /></label>
         </div>
+        <fieldset class="chips">
+          <legend>{p.apptFormat}</legend>
+          {Object.entries(p.formatos).map(([k, v]) => <label class="chip"><input type="radio" name="formato" value={k} required /><span>{v}</span></label>)}
+        </fieldset>
+        <fieldset class="chips">
+          <legend>{p.apptPeriod}</legend>
+          {Object.entries(p.periodos).map(([k, v]) => <label class="chip"><input type="radio" name="periodo" value={k} required /><span>{v}</span></label>)}
+        </fieldset>
         <label class="full"><span>{p.apptNotes}</span><textarea name="observacao" maxlength="500" rows="3" placeholder={p.apptNotesPh}></textarea></label>
         <div class="appt-actions">
           <button type="submit" class="btn btn--primary" data-appt-send>{p.apptSend}</button>
@@ -400,7 +408,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
           i.textContent = M.apptPending; li.dataset.tipo = 'pendente';
         }
         li.append(n, i);
-        if (a.descricao) { const o = document.createElement('p'); o.className = 'orient orient--info'; o.textContent = a.descricao; li.append(o); }
+        const extra = [M.formatos[a.formato], M.periodos[a.periodo], a.descricao].filter(Boolean).join(' · ');
+        if (extra) { const o = document.createElement('p'); o.className = 'orient orient--info'; o.textContent = extra; li.append(o); }
         ul.append(li);
       }
     }
@@ -421,9 +430,10 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       const f = new FormData(apptForm); const data = String(f.get('data') || '');
       const dt = $<HTMLInputElement>('[data-appt-date]');
       if (!data || data < dt.min || data > dt.max) return msg(am, M.apptBadDate, 'err');
+      if (!f.get('formato') || !f.get('periodo')) return msg(am, M.apptChoose, 'err');
       apptSend.disabled = true; apptSend.textContent = M.apptSending;
       try {
-        const r = await enviarJson('/agendamentos', 'POST', { assunto: f.get('assunto'), data, observacao: String(f.get('observacao') || '').trim() });
+        const r = await enviarJson('/agendamentos', 'POST', { assunto: f.get('assunto'), data, formato: f.get('formato'), periodo: f.get('periodo'), observacao: String(f.get('observacao') || '').trim() });
         if (!vigente(s, email)) return;
         if (r.status === 401) return sessaoCaiu();
         if (r.status === 429) return msg(am, M.apptLimit, 'err');
@@ -536,6 +546,14 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .pass-locked { margin-top: -0.4rem; }
   .pass-locked[data-travado='true'] { color: #3f6b44 !important; }
   .appt-form { margin: 1rem 0 0; padding: 1.2rem 1.2rem 0.6rem; border: 1px solid rgba(98, 72, 58, 0.18); background: #f6f0e6; }
+  .chips { border: 0; margin: 0 0 1rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chips legend { padding: 0; margin-bottom: 0.45rem; font-size: 0.78rem; letter-spacing: 0.04em; color: var(--color-cafe); }
+  .dash .chip { flex-direction: row; gap: 0; cursor: pointer; }
+  .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .chip span { display: inline-block; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(98, 72, 58, 0.3); background: var(--color-ivory); font-size: 0.92rem; color: var(--color-espresso); letter-spacing: 0 !important; transition: background 0.15s, color 0.15s; }
+  .chip:hover span { border-color: var(--color-gold); }
+  .chip input:checked + span { background: var(--color-espresso); color: var(--color-champagne); border-color: var(--color-espresso); }
+  .chip input:focus-visible + span { box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.35); }
   .appt-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; }
   .appt-actions .link { background: none; border: 0; font: inherit; color: #8a5e2e; text-decoration: underline; cursor: pointer; }
   .dash__head :global(.btn--secondary) { color: var(--color-espresso); border-color: rgba(98, 72, 58, 0.45); }

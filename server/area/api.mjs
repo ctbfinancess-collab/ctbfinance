@@ -34,6 +34,8 @@ function validarPassaporte(k, v) {
 }
 // agendamentos pedidos pelo cliente
 export const ASSUNTOS_AGENDAMENTO = ['abertura_conta', 'investimentos', 'documentos', 'outro'];
+export const FORMATOS_AGENDAMENTO = ['video', 'presencial'];
+export const PERIODOS_AGENDAMENTO = ['manha', 'tarde', 'qualquer'];
 const AGENDA_PENDENTES_MAX = 3;      // pedidos em aberto (sem horário confirmado) por cliente
 const AGENDA_DIA_MAX = 5;            // pedidos por cliente em 24 h
 const AGENDA_DIAS_MAX = 180;         // até quantos dias à frente
@@ -352,16 +354,18 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     }
   }
   async function agendamentos(res, u) {
-    const r = await db.q(`select id, tipo, descricao, to_char(data_solicitada, 'YYYY-MM-DD') as data_solicitada, horario_confirmado
+    const r = await db.q(`select id, tipo, descricao, formato, periodo, to_char(data_solicitada, 'YYYY-MM-DD') as data_solicitada, horario_confirmado
                             from agendamentos where usuario_id=$1 order by coalesce(horario_confirmado, data_solicitada::timestamptz) desc nulls last`, [u.id]);
-    return json(res, 200, { agendamentos: r.rows.map((a) => ({ id: a.id, tipo: a.tipo, descricao: a.descricao, dataSolicitada: a.data_solicitada, horarioConfirmado: a.horario_confirmado })) });
+    return json(res, 200, { agendamentos: r.rows.map((a) => ({ id: a.id, tipo: a.tipo, descricao: a.descricao, formato: a.formato, periodo: a.periodo, dataSolicitada: a.data_solicitada, horarioConfirmado: a.horario_confirmado })) });
   }
   /** Pedido de agendamento feito pelo cliente: assunto da lista fixa, data civil futura, observação curta. */
   async function solicitarAgendamento(req, res, u) {
     const b = await lerJson(req, 4000);
-    const assunto = b && b.assunto, data = b && b.data;
+    const assunto = b && b.assunto, data = b && b.data, formato = b && b.formato, periodo = b && b.periodo;
     const obs = typeof (b && b.observacao) === 'string' ? b.observacao.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim() : '';
     if (!ASSUNTOS_AGENDAMENTO.includes(assunto)) return json(res, 400, { erro: 'assunto_invalido' });
+    if (!FORMATOS_AGENDAMENTO.includes(formato)) return json(res, 400, { erro: 'formato_invalido' });
+    if (!PERIODOS_AGENDAMENTO.includes(periodo)) return json(res, 400, { erro: 'periodo_invalido' });
     const hoje = hojeDubai();
     if (!dataCivilValida(data) || data <= hoje || data > somarDias(hoje, AGENDA_DIAS_MAX)) return json(res, 400, { erro: 'data_invalida' });
     if (obs.length > 500 || (b.observacao !== undefined && typeof b.observacao !== 'string')) return json(res, 400, { erro: 'observacao_invalida' });
@@ -371,19 +375,19 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
                                  count(*) filter (where criado_em > now() - interval '24 hours')::int as dia
                             from agendamentos where usuario_id=$1 and solicitado_pelo_cliente`, [u.id, hoje])).rows[0];
       if (c.abertos >= AGENDA_PENDENTES_MAX || c.dia >= AGENDA_DIA_MAX) return null;
-      return (await q(`insert into agendamentos(usuario_id, tipo, descricao, data_solicitada, solicitado_pelo_cliente)
-                       values ($1,$2,$3,$4,true) returning id, tipo, descricao, to_char(data_solicitada,'YYYY-MM-DD') as data_solicitada`, [u.id, assunto, obs || null, data])).rows[0];
+      return (await q(`insert into agendamentos(usuario_id, tipo, descricao, data_solicitada, formato, periodo, solicitado_pelo_cliente)
+                       values ($1,$2,$3,$4,$5,$6,true) returning id, tipo, descricao, formato, periodo, to_char(data_solicitada,'YYYY-MM-DD') as data_solicitada`, [u.id, assunto, obs || null, data, formato, periodo])).rows[0];
     });
     if (!r) return json(res, 429, { erro: 'limite_agendamentos' });
     if (avisarEquipe) {
       setImmediate(async () => {
         try {
           const n = (await db.q(`select dados->>'display_name' as nome from perfis where usuario_id=$1`, [u.id])).rows[0];
-          await avisarEquipe({ email: u.email, nome: (n && n.nome) || '', assunto, data, observacao: obs });
+          await avisarEquipe({ email: u.email, nome: (n && n.nome) || '', assunto, data, formato, periodo, observacao: obs });
         } catch (e) { log.error('[area-cliente] aviso de agendamento à equipe:', e.message); }
       });
     }
-    return json(res, 201, { agendamento: { id: r.id, tipo: r.tipo, descricao: r.descricao, dataSolicitada: r.data_solicitada, horarioConfirmado: null } });
+    return json(res, 201, { agendamento: { id: r.id, tipo: r.tipo, descricao: r.descricao, formato: r.formato, periodo: r.periodo, dataSolicitada: r.data_solicitada, horarioConfirmado: null } });
   }
 
   async function tratar(req, res, url) {
