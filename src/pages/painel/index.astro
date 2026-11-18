@@ -128,7 +128,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -212,7 +212,7 @@ import '../../styles/global.css';
         const botao = form.querySelector('button')!; botao.disabled = true;
         try {
           const r = await chamar('/equipe/clientes', { metodo: 'POST', corpo: { email, nome: String(f.get('nome')).trim(), idioma: f.get('idioma') } });
-          aviso(r.convite === 'convite_enviado' ? `Convite enviado para ${email}.` : `${email} já tinha senha: enviamos um link para redefinir.`);
+          aviso(`Convite enviado para ${email}.`);
           form.reset(); await atualizar();
         } catch (er) { falhou(er); } finally { botao.disabled = false; }
       });
@@ -220,17 +220,22 @@ import '../../styles/global.css';
       // ---- ficha
       const ficha = $<HTMLDialogElement>('[data-ficha]');
       $$('[data-fechar]').forEach((b) => b.addEventListener('click', () => (b.closest('dialog') as HTMLDialogElement).close()));
-      async function abrirFicha(id: string) {
+      // fechou a ficha: uma resposta que ainda estava a caminho não a reabre
+      ficha.addEventListener('close', () => nova('ficha'));
+      let abrindo = false;
+      async function abrirFicha(id: string, nova_ = true) {
+        abrindo = nova_;
         let c: any;
         const v = nova('ficha');
         try { c = await chamar('/equipe/clientes/' + id); } catch (e) { return falhou(e); }
         if (!vigente('ficha', v)) return;
+        if (!ficha.open && !abrindo) return;
         const d = c.dados || {};
         $('[data-ficha-titulo]').textContent = d.display_name || c.email;
         const corpo = $('[data-ficha-corpo]'); corpo.replaceChildren();
         const acao = (rotulo: string, rota: string, confirmar?: string, classe = '') => el('button', { type: 'button', class: 'botao pequeno ' + classe, onclick: async () => {
           if (confirmar && !confirm(confirmar)) return;
-          try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id); await atualizar(); } catch (e) { falhou(e); }
+          try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id, false); await atualizar(); } catch (e) { falhou(e); }
         } }, rotulo);
         const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
         corpo.append(el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])));
@@ -245,12 +250,12 @@ import '../../styles/global.css';
         corpo.append(pass);
         // documentos
         const docs = el('div', { class: 'bloco' }, el('h3', {}, `Documentos (${c.documentos.length})`));
-        for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id)));
+        for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id, false)));
         if (!c.documentos.length) docs.append(el('p', { class: 'nota' }, 'Nenhum documento enviado.'));
         corpo.append(docs);
         // agendamentos
         const ags = el('div', { class: 'bloco' }, el('h3', {}, `Agendamentos (${c.agendamentos.length})`));
-        for (const a of c.agendamentos) ags.append(linhaAgendamento({ ...a, email: c.email, nome: d.display_name }, () => abrirFicha(c.id)));
+        for (const a of c.agendamentos) ags.append(linhaAgendamento({ ...a, email: c.email, nome: d.display_name }, () => abrirFicha(c.id, false)));
         if (!c.agendamentos.length) ags.append(el('p', { class: 'nota' }, 'Nenhum agendamento.'));
         corpo.append(ags);
         // conta
@@ -300,11 +305,14 @@ import '../../styles/global.css';
       // ---- documentos
       const rejeitar = $<HTMLDialogElement>('[data-rejeitar]');
       let rejeitarAtual: { id: string; depois: () => any } | null = null;
+      // ao fechar, a janela esquece o texto e o documento (nunca vai para o cliente errado)
+      rejeitar.addEventListener('close', () => { ($('[data-form-rejeitar]') as HTMLFormElement).reset(); rejeitarAtual = null; });
       $('[data-form-rejeitar]').addEventListener('submit', async (e) => {
         e.preventDefault();
         const f = new FormData(e.target as HTMLFormElement);
         const pt = String(f.get('pt')).trim(); if (!pt) return aviso('Escreva a orientação ao cliente.', 'erro');
-        try { await chamar(`/equipe/documentos/${rejeitarAtual!.id}/decidir`, { metodo: 'POST', corpo: { decisao: 'rejeitado', orientacaoPt: pt, orientacaoEn: String(f.get('en')).trim() } }); rejeitar.close(); (e.target as HTMLFormElement).reset(); aviso('Documento rejeitado; o cliente vê a orientação na Área do Cliente.'); await rejeitarAtual!.depois(); await atualizar(); }
+        const alvo = rejeitarAtual; if (!alvo) return;
+        try { await chamar(`/equipe/documentos/${alvo.id}/decidir`, { metodo: 'POST', corpo: { decisao: 'rejeitado', orientacaoPt: pt, orientacaoEn: String(f.get('en')).trim() } }); rejeitar.close(); aviso('Documento rejeitado; o cliente vê a orientação na Área do Cliente.'); await alvo.depois(); await atualizar(); }
         catch (er) { falhou(er); }
       });
       async function baixar(d: any) {
@@ -330,7 +338,7 @@ import '../../styles/global.css';
         if (d.status === 'disponivel_analise') {
           acoes.append(
             el('button', { type: 'button', class: 'botao pequeno', onclick: async () => { if (!confirm(`Aprovar "${d.arquivo}"?`)) return; try { await chamar(`/equipe/documentos/${d.id}/decidir`, { metodo: 'POST', corpo: { decisao: 'aprovado' } }); aviso('Documento aprovado.'); await depois(); await atualizar(); } catch (e) { falhou(e); } } }, 'Aprovar'),
-            el('button', { type: 'button', class: 'botao pequeno perigo', onclick: () => { rejeitarAtual = { id: d.id, depois }; $('[data-rejeitar-qual]').textContent = `${d.arquivo} — ${d.nome || d.email}`; rejeitar.showModal(); } }, 'Rejeitar'));
+            el('button', { type: 'button', class: 'botao pequeno perigo', onclick: () => { ($('[data-form-rejeitar]') as HTMLFormElement).reset(); rejeitarAtual = { id: d.id, depois }; $('[data-rejeitar-qual]').textContent = `${d.arquivo} — ${d.nome || d.email}`; rejeitar.showModal(); } }, 'Rejeitar'));
         }
         caixa.append(acoes);
         return caixa;
@@ -360,7 +368,7 @@ import '../../styles/global.css';
         if (!r || !r.ok) { vista('entrar'); return; }
         const s = await r.json();
         if (!s.equipe) {
-          await fetch(API + '/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+          // não encerra a sessão: o cliente continua conectado na Área do Cliente
           vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Esta conta não tem acesso ao painel da equipe.'; return;
         }
         eu = { email: s.email }; $('[data-email]').textContent = s.email; $('[data-quem]').hidden = false;

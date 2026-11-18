@@ -121,7 +121,7 @@ export function criarAdmin({ db, arquivos, api, avisarCliente = null }) {
       return (await db.q('insert into agendamentos(usuario_id, tipo, descricao, data_solicitada) values ($1,$2,$3,$4) returning id', [u.id, tipo, descricao, dataSolicitada])).rows[0];
     },
     /** Confirma o horário (data e hora no fuso de Dubai, GST UTC+4, sem horário de verão). */
-    async confirmarAgendamento(id, dataHoraDubai, por, { avisar = true } = {}) {
+    async confirmarAgendamento(id, dataHoraDubai, por, { avisar = true, remarcar = false } = {}) {
       const m = String(dataHoraDubai).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})$/);
       if (!m) throw new Error('use AAAA-MM-DDTHH:MM (horário de Dubai)');
       const [ano, mes, dia, hora, min] = m.slice(1).map(Number);
@@ -130,8 +130,13 @@ export function criarAdmin({ db, arquivos, api, avisarCliente = null }) {
       if (mes < 1 || mes > 12 || dia < 1 || civil.getUTCFullYear() !== ano || civil.getUTCMonth() !== mes - 1 || civil.getUTCDate() !== dia) throw new Error(`data inexistente: ${dataHoraDubai}`);
       if (hora > 23 || min > 59) throw new Error(`hora inválida: ${dataHoraDubai}`);
       const utc = new Date(Date.UTC(ano, mes - 1, dia, hora - 4, min)); // Dubai = UTC+4, sem horário de verão
-      const r = await db.q('update agendamentos set horario_confirmado=$2, confirmado_por=$3 where id=$1 returning id', [id, utc, por || null]);
-      if (!r.rowCount) throw new Error('agendamento não encontrado');
+      // sem "remarcar", só confirma o que ainda não tem horário (duas pessoas não sobrescrevem uma à outra)
+      const r = await db.q(`update agendamentos set horario_confirmado=$2, confirmado_por=$3 where id=$1 ${remarcar ? '' : 'and horario_confirmado is null'} returning id`, [id, utc, por || null]);
+      if (!r.rowCount) {
+        const existe = (await db.q('select horario_confirmado from agendamentos where id=$1', [id])).rows[0];
+        if (!existe) throw new Error('agendamento não encontrado');
+        throw new Error('agendamento já confirmado (use remarcar)');
+      }
       // e-mail automático ao cliente; se falhar, a confirmação continua valendo (o cliente vê na Área do Cliente)
       let emailCliente = 'nao_enviado';
       if (avisar && avisarCliente) {

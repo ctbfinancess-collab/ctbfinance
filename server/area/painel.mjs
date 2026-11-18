@@ -63,9 +63,11 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const email = String(b.email || '').trim().toLowerCase();
     const nome = typeof b.nome === 'string' ? b.nome.trim().slice(0, 120) : '';
     const idioma = b.idioma === 'en' ? 'en' : 'pt';
+    // conta já existente: não mexe em nome/idioma nem reenvia por aqui (use a ficha, que respeita o bloqueio)
+    if ((await db.q('select 1 from usuarios where email=$1', [email])).rowCount) return erro(res, 409, 'ja_existe', 'Este e-mail já tem conta. Abra a ficha do cliente para reenviar o acesso.');
     try {
       const r = await adm.convidar(email, { nome, lang: idioma });
-      await registrar(u, r.convite === 'convite_enviado' ? 'convidar' : 'reenviar_acesso', email, { idioma });
+      await registrar(u, 'convidar', email, { idioma });
       return json(res, 200, r);
     } catch (e) {
       if (/e-mail inválido/.test(e.message)) return erro(res, 400, 'email_invalido', 'E-mail inválido.');
@@ -77,6 +79,8 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const c = await usuarioPorId(id);
     if (!c) return erro(res, 404, 'nao_encontrado');
     if (c.id === u.id && acao === 'bloquear') return erro(res, 409, 'proprio_usuario', 'Você não pode bloquear a sua própria conta.');
+    if (acao === 'bloquear' && (await db.q('select 1 from equipe where usuario_id=$1 and ativo', [c.id])).rowCount)
+      return erro(res, 409, 'conta_equipe', 'Contas da equipe não são bloqueadas pelo painel.');
     let r;
     try {
       if (acao === 'bloquear') r = await adm.bloquear(c.email);
@@ -115,6 +119,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       return json(res, 200, r);
     } catch (e) {
       if (/não encontrado/.test(e.message)) return erro(res, 404, 'nao_encontrado');
+      if (/já confirmado/.test(e.message)) return erro(res, 409, 'ja_confirmado', 'Este agendamento já foi confirmado (por outra pessoa ou em outra aba). Atualize a lista.');
       if (/AAAA|inexistente|inválida/.test(e.message)) return erro(res, 400, 'data_hora_invalida', 'Data ou hora inválida.');
       throw e;
     }

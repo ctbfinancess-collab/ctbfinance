@@ -96,6 +96,10 @@ try {
   await t('PE9', 'Convidar pelo painel: conta criada, convite em INGLÊS enviado, idioma guardado', async () => conv.status === 200 && conv.dados.convite === 'convite_enviado' && eConv && /Client Area/.test(eConv.subject) && (await db.q(`select idioma from usuarios where email='novo@example.com'`)).rows[0].idioma === 'en');
   const ruins = await Promise.all([{ email: 'semarroba' }, { email: '' }, null, [1, 2], 'texto'].map((j) => req('POST', '/api/cliente/equipe/clientes', { cookie: cChefe, corpo: JSON.stringify(j), headers: { 'Content-Type': 'application/json' } })));
   await t('PE10', `E-mail inválido / corpo nulo, lista ou texto → 400 sem derrubar (${ruins.map((r) => r.status)})`, async () => ruins.every((r) => r.status === 400));
+  const nomeAntes = (await db.q(`select dados->>'display_name' n from perfis p join usuarios u on u.id=p.usuario_id where u.email='cli@example.com'`)).rows[0].n;
+  const nX = emails.length;
+  const dupConv = await E('POST', '/clientes', { json: { email: 'cli@example.com', nome: 'Outra Pessoa', idioma: 'en' } }); await sleep(300);
+  await t('PE10b', 'Convidar e-mail que já tem conta → 409; nome e idioma NÃO mudam; nenhum e-mail', async () => dupConv.status === 409 && dupConv.dados.erro === 'ja_existe' && emails.length === nX && (await db.q(`select u.idioma, p.dados->>'display_name' n from perfis p join usuarios u on u.id=p.usuario_id where u.email='cli@example.com'`)).rows[0].n === nomeAntes && (await db.q(`select idioma from usuarios where email='cli@example.com'`)).rows[0].idioma === 'pt');
   const novoId = (await db.q(`select id from usuarios where email='novo@example.com'`)).rows[0].id;
   const n1 = emails.length;
   await t('PE11', 'Reenviar convite → novo e-mail (o link anterior deixa de valer)', async () => (await E('POST', `/clientes/${novoId}/reenviar`, { json: {} })).status === 200 && !!(await esperar(() => emails.length > n1)));
@@ -104,7 +108,11 @@ try {
   const blq = await E('POST', `/clientes/${cli}/bloquear`, { json: {} });
   await t('PE12', 'Bloquear: sessões do cliente caem na hora (401)', async () => blq.status === 200 && (await req('GET', '/api/cliente/perfil', { cookie: cCli })).status === 401);
   await t('PE13', 'A equipe não consegue bloquear a própria conta (409)', async () => (await E('POST', `/clientes/${chefeId}/bloquear`, { json: {} })).status === 409);
-  await t('PE14', 'Reenviar acesso para conta bloqueada → 409 (desbloqueie antes)', async () => (await E('POST', `/clientes/${cli}/reenviar`, { json: {} })).status === 409);
+  const nB = emails.length;
+  await t('PE14', 'Conta bloqueada: reenviar pela ficha OU convidar pelo formulário → 409, nenhum e-mail', async () => (await E('POST', `/clientes/${cli}/reenviar`, { json: {} })).status === 409 && (await E('POST', '/clientes', { json: { email: 'cli@example.com' } })).status === 409 && (await sleep(300), emails.length === nB));
+  await contaComSenha('chefe2@example.com', 'SenhaSegura2026'); await adm.concederEquipe('chefe2@example.com');
+  const chefe2Id = (await db.q(`select id from usuarios where email='chefe2@example.com'`)).rows[0].id;
+  await t('PE14b', 'Painel não bloqueia outra conta da equipe (409) — ela continua sem bloqueio', async () => { const r = await E('POST', `/clientes/${chefe2Id}/bloquear`, { json: {} }); return r.status === 409 && r.dados.erro === 'conta_equipe' && (await db.q('select bloqueado from usuarios where id=$1', [chefe2Id])).rows[0].bloqueado === false; });
   await E('POST', `/clientes/${cli}/desbloquear`, { json: {} });
   const cCli2 = await entrar('cli@example.com', 'SenhaSegura2026');
   await t('PE15', 'Desbloquear: cliente volta a entrar', async () => !!cCli2 && (await req('GET', '/api/cliente/perfil', { cookie: cCli2 })).status === 200);
@@ -125,9 +133,13 @@ try {
   const eConf = await esperar(() => emails.slice(n2).find((m) => m.to.includes('cli@example.com')));
   await t('PE24', 'Confirmar pelo painel: cliente recebe "Agendamento confirmado" (14:30 Dubai) e vê na Área do Cliente', async () => conf.status === 200 && conf.dados.emailCliente === 'enviado' && eConf && /14:30/.test(eConf.html) && (await req('GET', '/api/cliente/agendamentos', { cookie: cCli2 })).dados.agendamentos[0].horarioConfirmado === new Date(`${dias(5)}T10:30:00Z`).toISOString());
   const n3 = emails.length;
-  await E('POST', `/agendamentos/${ag.id}/confirmar`, { json: { dataHora: `${dias(5)}T15:00`, avisar: false } }); await sleep(300);
-  await t('PE25', 'Reconfirmar sem e-mail (caixa desmarcada) → nenhum e-mail', async () => emails.length === n3);
-  await t('PE26', 'Lista de pendentes fica vazia; com "todos" aparece o confirmado', async () => (await E('GET', '/agendamentos')).dados.agendamentos.length === 0 && (await E('GET', '/agendamentos?todos=1')).dados.agendamentos.length === 1);
+  const dup = await E('POST', `/agendamentos/${ag.id}/confirmar`, { json: { dataHora: `${dias(5)}T15:00`, avisar: true } }); await sleep(300);
+  await t('PE25', 'Confirmar de novo (outra pessoa/aba) → 409, horário mantido e nenhum e-mail extra', async () => dup.status === 409 && dup.dados.erro === 'ja_confirmado' && emails.length === n3 && (await req('GET', '/api/cliente/agendamentos', { cookie: cCli2 })).dados.agendamentos[0].horarioConfirmado === new Date(`${dias(5)}T10:30:00Z`).toISOString());
+  const ag2 = (await req('POST', '/api/cliente/agendamentos', { cookie: cCli2, json: { assunto: 'outro', data: dias(6), formato: 'presencial', periodo: 'qualquer' } })).dados.agendamento;
+  const n3b = emails.length;
+  await E('POST', `/agendamentos/${ag2.id}/confirmar`, { json: { dataHora: `${dias(6)}T09:00`, avisar: false } }); await sleep(300);
+  await t('PE25b', 'Confirmar com a caixa "e-mail ao cliente" desmarcada → nenhum e-mail', async () => !emails.slice(n3b).some((m) => m.to.includes('cli@example.com')));
+  await t('PE26', 'Lista de pendentes fica vazia; com "todos" aparecem os confirmados', async () => (await E('GET', '/agendamentos')).dados.agendamentos.length === 0 && (await E('GET', '/agendamentos?todos=1')).dados.agendamentos.length === 2);
 
   console.log('--- Documentos');
   const docs = (await E('GET', '/documentos?status=disponivel_analise')).dados.documentos;
@@ -142,7 +154,7 @@ try {
 
   console.log('--- Registro e sessão da equipe');
   const reg = (await E('GET', '/registro')).dados.acoes.map((a) => a.acao);
-  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
+  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
   await adm.revogarEquipe('chefe@example.com');
   await t('PE35', 'Papel de equipe revogado → painel some na hora (404), mesma sessão', async () => (await E('GET', '/resumo')).status === 404);
   await adm.concederEquipe('chefe@example.com');

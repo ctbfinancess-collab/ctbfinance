@@ -120,7 +120,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const token = lerCookie(req);
     if (!token || token.length > 100) return null;
     const r = await db.q(
-      `select s.id_hash, s.criada_em, s.ultimo_uso_em, u.id, u.email, u.email_verificado_em, u.bloqueado,
+      `select s.id_hash, s.criada_em, s.ultimo_uso_em, (extract(epoch from now() - s.ultimo_uso_em) * 1000)::bigint as ocioso_ms, u.id, u.email, u.email_verificado_em, u.bloqueado,
               coalesce(e.ativo, false) as equipe
          from sessoes s join usuarios u on u.id = s.usuario_id left join equipe e on e.usuario_id = u.id
         where s.id_hash = $1 and s.revogada_em is null and s.expira_em > now()
@@ -128,11 +128,11 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const s = r.rows[0];
     if (!s || s.bloqueado) return null;
     // contas da equipe (acesso a dados de todos os clientes): sessão encerra após 30 min parada
-    if (s.equipe === true && Date.now() - new Date(s.ultimo_uso_em).getTime() > EQUIPE_OCIOSA_MS) {
+    if (s.equipe === true && Number(s.ocioso_ms) > EQUIPE_OCIOSA_MS) {   // calculado no banco (sem diferença de relógio)
       await db.q('update sessoes set revogada_em=now() where id_hash=$1 and revogada_em is null', [s.id_hash]);
       return null;
     }
-    if (Date.now() - new Date(s.ultimo_uso_em).getTime() > 60_000) await db.q('update sessoes set ultimo_uso_em=now() where id_hash=$1', [s.id_hash]);
+    if (Number(s.ocioso_ms) > 60_000) await db.q('update sessoes set ultimo_uso_em=now() where id_hash=$1', [s.id_hash]);
     return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true, sessao: s.id_hash };
   }
   async function criarSessao(res, req, usuarioId) {
@@ -345,6 +345,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     try {
       const { size } = await fh.stat();
       await db.q('insert into acessos_documentos(documento_id, usuario_id, papel) values ($1,$2,$3)', [d.id, u.id, d.usuario_id === u.id ? 'dono' : 'equipe']);
+      if (d.usuario_id !== u.id) await db.q('insert into acoes_equipe(por_usuario, por_email, acao, alvo) values ($1,$2,$3,$4)', [u.id, u.email, 'baixar_documento', d.id]);
       res.writeHead(200, {
         ...SEG, 'Content-Type': d.tipo, 'Content-Length': size, 'Cache-Control': 'private, no-store',
         'Content-Disposition': `attachment; filename="${d.nome.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(d.nome)}`,

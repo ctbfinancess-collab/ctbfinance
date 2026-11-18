@@ -20,7 +20,8 @@
  *   docs:aprovar <id>                docs:rejeitar <id> "<orientação PT>" ["<orientação EN>"]
  *   agenda:listar [--todos]          (padrão: só os pedidos sem horário confirmado)
  *   agenda:registrar <email> <AAAA-MM-DD> "<tipo>" ["descrição"]
- *   agenda:confirmar <id> <AAAA-MM-DDTHH:MM> [--sem-email]   (horário de Dubai; avisa o cliente por e-mail)
+ *   agenda:confirmar <id> <AAAA-MM-DDTHH:MM> [--sem-email] [--remarcar]   (horário de Dubai; avisa o cliente por e-mail;
+ *                                       --remarcar troca um horário já confirmado)
  *   arquivos:reconciliar [--aplicar]           (padrão: simulação)
  */
 import { criarBanco, criarArquivos } from '../server/area/nucleo.mjs';
@@ -57,7 +58,7 @@ const C = {
   'docs:rejeitar': () => adm.decidir(a[0], 'rejeitado', { orientacaoPt: a[1], orientacaoEn: a[2], por: quem }),
   'agenda:listar': () => adm.listarAgendamentos({ todos: a.includes('--todos') }),
   'agenda:registrar': () => adm.registrarAgendamento(a[0], a[1], a[2], a[3]),
-  'agenda:confirmar': () => adm.confirmarAgendamento(a[0], a[1], quem, { avisar: !a.includes('--sem-email') }),
+  'agenda:confirmar': () => adm.confirmarAgendamento(a[0], a[1], quem, { avisar: !a.includes('--sem-email'), remarcar: a.includes('--remarcar') }),
   'arquivos:reconciliar': () => adm.reconciliarArquivos({ aplicar: a.includes('--aplicar') }),
 };
 try {

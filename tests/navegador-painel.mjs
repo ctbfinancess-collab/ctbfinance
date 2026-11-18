@@ -73,7 +73,8 @@ try {
   check('Sem sessão: tela "Painel da equipe" para entrar', await waitFor(vis('[data-vista="entrar"]')));
   check('Página fora dos buscadores (noindex)', await ev(`document.querySelector('meta[name=robots]').content.includes('noindex')`));
   await entrarPainel('bruno@example.com', 'Outra2026Conta');
-  check('Cliente comum entra → "Esta conta não tem acesso" e a sessão é encerrada', await waitFor(`(document.querySelector('[data-msg-entrar]')||{}).textContent?.includes('não tem acesso')`) && (await ev(`fetch('/api/cliente/sessao').then(r=>r.status)`)) === 401);
+  check('Cliente comum entra → "Esta conta não tem acesso"; o painel não abre e a Área do Cliente dele continua conectada', await waitFor(`(document.querySelector('[data-msg-entrar]')||{}).textContent?.includes('não tem acesso')`) && !(await ev(`!document.querySelector('[data-vista="painel"]').hidden`)) && (await ev(`fetch('/api/cliente/equipe/resumo').then(r=>r.status)`)) === 404 && (await ev(`fetch('/api/cliente/sessao').then(r=>r.status)`)) === 200);
+  await ev(`fetch('/api/cliente/sair',{method:'POST'}).then(()=>1)`);
   await entrarPainel('chefe@example.com', 'errada12345');
   check('Senha errada → mensagem', await waitFor(`(document.querySelector('[data-msg-entrar]')||{}).textContent?.includes('incorretos')`));
   await entrarPainel('chefe@example.com', 'Painel2026Seguro');
@@ -132,6 +133,9 @@ try {
   await ev(`[...document.querySelectorAll('[data-documentos] .item')][0].querySelector('.perigo').click(),1`);
   check('Rejeitar abre a janela de orientação para o documento certo', await waitFor(`document.querySelector('[data-rejeitar]').open && document.querySelector('[data-rejeitar-qual]').textContent.startsWith('comprovante.pdf')`));
   await shot('p5-rejeitar');
+  await ev(`(()=>{const f=document.querySelector('[data-form-rejeitar]');f.pt.value='TEXTO PARA OUTRO CLIENTE';document.querySelector('[data-rejeitar] .link[data-fechar]').click();return 1})()`);
+  await ev(`[...document.querySelectorAll('[data-documentos] .item')][0].querySelector('.perigo').click(),1`);
+  check('Cancelar e reabrir "Rejeitar": a orientação digitada antes NÃO sobra', await waitFor(`document.querySelector('[data-rejeitar]').open`) && await ev(`document.querySelector('[data-form-rejeitar]').pt.value===''`));
   await ev(`(()=>{const f=document.querySelector('[data-form-rejeitar]');f.requestSubmit();return 1})()`);
   check('Sem orientação → o navegador pede o preenchimento, a janela continua aberta e nada é rejeitado', await ev(`(()=>{const t=document.querySelector('[data-form-rejeitar] textarea[name=pt]');return !t.checkValidity() && document.querySelector('[data-rejeitar]').open})()`) && (await db.q(`select count(*)::int n from documentos where status='rejeitado'`)).rows[0].n === 0);
   await ev(`(()=>{const f=document.querySelector('[data-form-rejeitar]');f.pt.value='Comprovante desatualizado: envie um dos últimos 3 meses.';f.requestSubmit();return 1})()`);
@@ -139,7 +143,7 @@ try {
 
   console.log('--- Registro, celular e saída');
   await clicar('[data-aba=registro]');
-  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
+  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
   await shot('p6-registro');
   await clicar('[data-aba=clientes]');
   await waitFor(`document.querySelector('[data-clientes]').innerText.includes('ana@example.com')`);

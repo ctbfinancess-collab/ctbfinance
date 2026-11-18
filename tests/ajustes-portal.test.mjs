@@ -122,7 +122,7 @@ try {
   const eEn = emails.slice(n1).find((m) => m.to.includes('ingles@example.com'));
   await t('EC2', 'Cliente convidado em inglês recebe em inglês ("Appointment confirmed", 18 December, 15:30, in person)', async () => eEn && /Appointment confirmed/.test(eEn.subject) && /18 December 2026/.test(eEn.html) && /15:30/.test(eEn.html) && /in person/.test(eEn.html) && /client-area/.test(eEn.html));
   const n2 = emails.length;
-  const rSem = await admE.confirmarAgendamento(pedidoPt.dados.agendamento.id, '2026-12-17T11:00', 'teste', { avisar: false });
+  const rSem = await admE.confirmarAgendamento(pedidoPt.dados.agendamento.id, '2026-12-17T11:00', 'teste', { avisar: false, remarcar: true });
   await sleep(300);
   await t('EC3', 'Com --sem-email: confirma sem enviar nada', async () => rSem.emailCliente === 'nao_enviado' && emails.length === n2);
 } catch (e) {

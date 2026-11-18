@@ -145,16 +145,16 @@ try {
   const ag = await adm.registrarAgendamento('r4@example.com', '2026-11-27', 'Teste');
   const valor = async () => (await db.q('select horario_confirmado from agendamentos where id=$1', [ag.id])).rows[0].horario_confirmado;
   for (const [entrada, desc] of [['2026-02-31T14:00', '31 de fevereiro'], ['2026-11-27T99:99', 'hora 99:99'], ['2026-13-01T14:00', 'mês 13'], ['2026-02-29T10:00', '29/02 em ano NÃO bissexto'], ['2026-11-27T24:00', 'hora 24:00'], ['2026-04-31T09:00', '31 de abril'], ['2026-11-00T10:00', 'dia 0']]) {
-    let erro = null; try { await adm.confirmarAgendamento(ag.id, entrada, 'teste'); } catch (e) { erro = e.message; }
+    let erro = null; try { await adm.confirmarAgendamento(ag.id, entrada, 'teste', { remarcar: true }); } catch (e) { erro = e.message; }
     await t(`R4 ${entrada}`, `${desc} é recusado e NADA é gravado`, async () => Boolean(erro) && (await valor()) === null);
   }
-  await adm.confirmarAgendamento(ag.id, '2026-11-27T14:00', 'teste');
+  await adm.confirmarAgendamento(ag.id, '2026-11-27T14:00', 'teste', { remarcar: true });
   await t('R4-ok1', 'Controle válido: 27/11/2026 14:00 Dubai = 10:00 UTC', async () => (await valor()).toISOString() === '2026-11-27T10:00:00.000Z');
-  await adm.confirmarAgendamento(ag.id, '2028-02-29T09:30', 'teste');
+  await adm.confirmarAgendamento(ag.id, '2028-02-29T09:30', 'teste', { remarcar: true });
   await t('R4-ok2', 'Controle válido: 29/02/2028 (bissexto) 09:30 Dubai = 05:30 UTC', async () => (await valor()).toISOString() === '2028-02-29T05:30:00.000Z');
-  await adm.confirmarAgendamento(ag.id, '2026-12-31T23:59', 'teste');
+  await adm.confirmarAgendamento(ag.id, '2026-12-31T23:59', 'teste', { remarcar: true });
   await t('R4-ok3', 'Controle válido: 31/12/2026 23:59 Dubai = 19:59 UTC', async () => (await valor()).toISOString() === '2026-12-31T19:59:00.000Z');
-  await adm.confirmarAgendamento(ag.id, '2026-11-28T00:30', 'teste');
+  await adm.confirmarAgendamento(ag.id, '2026-11-28T00:30', 'teste', { remarcar: true });
   await t('R4-ok4', 'Controle válido: 28/11 00:30 Dubai = 27/11 20:30 UTC (virada do dia)', async () => (await valor()).toISOString() === '2026-11-27T20:30:00.000Z');
   }
 } finally {
