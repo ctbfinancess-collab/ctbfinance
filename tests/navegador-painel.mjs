@@ -112,6 +112,18 @@ try {
   check('Bloquear: ficha mostra "Bloqueado" e a sessão da Ana cai', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Desbloquear acesso')`) && (await fetch(`${BASE}/api/cliente/perfil`, { headers: { Cookie: cAna } })).status === 401);
   await clicarTexto('Desbloquear acesso', "document.querySelector('[data-ficha]')");
   check('Desbloquear', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Bloquear acesso')`));
+  check('Ficha mostra o bloco Financeiro vazio', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Contas e saldos') && document.querySelector('[data-ficha]').innerText.includes('Nenhuma conta lançada')`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.tipo.value='digital';f.moeda.value='AED';f.saldo.value='28.750,00';f.requestSubmit();return 1})()`);
+  check('Lançar saldo AED 28.750,00 pela ficha', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('AED 28.750,00')`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];f.descricao.value='Transferência SWIFT';f.sentido.value='debito';f.valor.value='8.000,00';f.requestSubmit();return 1})()`);
+  check('Lançar débito no extrato', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('− AED 8.000,00')`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][2];f.classe.value='renda_fixa';f.descricao.value='Bond 2030';f.moeda.value='USD';f.valor.value='300.000,00';f.requestSubmit();return 1})()`);
+  check('Lançar posição de investimento', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('USD 300.000,00')`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][3];f.final.value='3478';f.fatura.value='5.420,00';f.requestSubmit();return 1})()`);
+  check('Cadastrar cartão', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('•••• 3478')`));
+  const finAna = await (await fetch(`${BASE}/api/cliente/financeiro`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json();
+  check('A cliente recebe exatamente o que a equipe lançou', finAna.contas[0]?.saldo === '2875000' && finAna.movimentos[0]?.valor === '-800000' && finAna.posicoes[0]?.valor === '30000000' && finAna.cartao?.final === '3478');
+  await shot('p3b-financeiro');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
   check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));
   await ev(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');f.display_name.value='Ana Corrigida';f.city.value='Sharjah';f.requestSubmit();return 1})()`);
@@ -167,7 +179,7 @@ try {
 
   console.log('--- Registro, celular e saída');
   await clicar('[data-aba=registro]');
-  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
+  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
   await shot('p6-registro');
   await clicar('[data-aba=clientes]');
   await waitFor(`document.querySelector('[data-clientes]').innerText.includes('ana@example.com')`);

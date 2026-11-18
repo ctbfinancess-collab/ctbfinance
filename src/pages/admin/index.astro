@@ -52,8 +52,6 @@ import '../../styles/global.css';
         </nav>
         <p class="menu-titulo">Em breve</p>
         <ul class="menu breve" aria-label="Módulos em preparação">
-          <li><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg><span>Contas e Saldos</span></li>
-          <li><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16v-4M10 16V9M14 16v-6M18 16V6"/></svg><span>Investimentos</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Operações</span></li>
           <li><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/></svg><span>Crédito e Financiamento</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Compliance (KYC/AML)</span></li>
@@ -205,7 +203,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -378,6 +376,10 @@ import '../../styles/global.css';
           else pass.append(el('p', { class: 'nota' }, 'Compare com a cópia do passaporte em Documentos antes de conferir.'), acao('Marcar como conferido', 'passaporte-conferir', 'Confirmar que o número e a validade conferem com o documento? O campo ficará travado para o cliente.'));
         }
         corpo.append(pass);
+        // financeiro (lançado pela equipe; o cliente só consulta)
+        const fin = el('div', { class: 'bloco' }, el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Carregando…'));
+        corpo.append(fin);
+        blocoFinanceiro(c, fin);
         // documentos
         const docs = el('div', { class: 'bloco' }, el('h3', {}, `Documentos (${c.documentos.length})`));
         for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id, false)));
@@ -394,6 +396,80 @@ import '../../styles/global.css';
         if (eu && c.email !== eu.email) conta.append(c.bloqueado ? acao('Desbloquear acesso', 'desbloquear') : acao('Bloquear acesso', 'bloquear', 'Bloquear o acesso deste cliente? As sessões abertas dele terminam na hora.', 'perigo'));
         corpo.append(conta);
         if (!ficha.open) ficha.showModal();
+      }
+
+      // ---- financeiro do cliente: contas, movimentações, investimentos e cartão (somente a equipe lança)
+      const TIPOS_CONTA: Record<string, string> = { digital: 'Conta Digital', global: 'Conta Global', investimentos: 'Conta Investimentos' };
+      const MOEDAS = ['AED', 'USD', 'EUR', 'GBP', 'BRL'];
+      const CLASSES: Record<string, string> = { renda_fixa: 'Renda fixa', renda_variavel: 'Renda variável', fundos: 'Fundos', alternativos: 'Alternativos', exterior: 'Exterior' };
+      const SIT_CARTAO: Record<string, string> = { ativo: 'Ativo', bloqueado: 'Bloqueado', em_emissao: 'Em emissão' };
+      const dinheiro = (c: string, moeda: string) => { const n = BigInt(c); const neg = n < 0n; const a = neg ? -n : n; return `${neg ? '− ' : ''}${moeda} ${(a / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(a % 100n).toString().padStart(2, '0')}`; };
+      const opcoes = (sel: HTMLSelectElement, itens: [string, string][]) => { for (const [v, t] of itens) sel.append(el('option', { value: v }, t)); return sel; };
+      const centavosTexto = (c: string | null) => { if (c == null) return ''; const n = BigInt(c); return `${(n / 100n).toString()},${(n % 100n).toString().padStart(2, '0')}`; };
+      async function blocoFinanceiro(c: any, box: HTMLElement) {
+        let f: any;
+        try { f = await chamar(`/equipe/clientes/${c.id}/financeiro`); } catch (e) { box.replaceChildren(el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Não foi possível carregar.')); return; }
+        const recarregar = () => blocoFinanceiro(c, box);
+        const enviar = async (metodo: string, rota: string, corpo?: any, ok = 'Salvo.') => { try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo, corpo }); aviso(ok); await recarregar(); } catch (e) { falhou(e); } };
+        box.replaceChildren(el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'O cliente vê estes dados nas abas Início, Conta, Investimentos e Cartões (site e app). Valores como 28.750,00; débito com sinal de menos.'));
+        // contas
+        const contas = el('div', { class: 'fin-sec' }, el('h4', {}, 'Contas e saldos'));
+        if (!f.contas.length) contas.append(el('p', { class: 'nota' }, 'Nenhuma conta lançada.'));
+        for (const k of f.contas) contas.append(el('div', { class: 'fin-linha' }, el('span', {}, `${TIPOS_CONTA[k.tipo] || k.tipo} · ${k.moeda}`), el('b', {}, dinheiro(k.saldo, k.moeda)), el('small', {}, `por ${k.atualizado_por || '—'} em ${dataHora(k.atualizado_em)}`),
+          el('button', { type: 'button', class: 'link', onclick: () => { if (confirm(`Excluir a ${TIPOS_CONTA[k.tipo]} (${k.moeda}) e as movimentações dela?`)) enviar('DELETE', `contas/${k.id}`, undefined, 'Conta excluída.'); } }, 'Excluir')));
+        const fc = el('form', { class: 'fin-form' }) as HTMLFormElement;
+        const tipoSel = opcoes(el('select', { name: 'tipo' }) as HTMLSelectElement, Object.entries(TIPOS_CONTA));
+        const moedaSel = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
+        fc.append(el('label', {}, el('span', {}, 'Conta'), tipoSel), el('label', {}, el('span', {}, 'Moeda'), moedaSel), el('label', {}, el('span', {}, 'Saldo'), el('input', { name: 'saldo', inputmode: 'decimal', placeholder: '28.750,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Salvar saldo'));
+        fc.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fc); enviar('PUT', 'contas', { tipo: d.get('tipo'), moeda: d.get('moeda'), saldo: String(d.get('saldo') || '') }, 'Saldo salvo.'); });
+        contas.append(fc);
+        // movimentações
+        const movs = el('div', { class: 'fin-sec' }, el('h4', {}, 'Movimentações (extrato)'));
+        if (f.contas.length) {
+          const fm = el('form', { class: 'fin-form' }) as HTMLFormElement;
+          const contaSel = opcoes(el('select', { name: 'contaId' }) as HTMLSelectElement, f.contas.map((k: any) => [k.id, `${TIPOS_CONTA[k.tipo]} · ${k.moeda}`]));
+          const sentido = opcoes(el('select', { name: 'sentido' }) as HTMLSelectElement, [['debito', 'Débito (saída)'], ['credito', 'Crédito (entrada)']]);
+          fm.append(el('label', {}, el('span', {}, 'Conta'), contaSel), el('label', {}, el('span', {}, 'Data'), el('input', { name: 'data', type: 'date', value: new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10) })),
+            el('label', { class: 'largo' }, el('span', {}, 'Descrição'), el('input', { name: 'descricao', maxlength: 140, placeholder: 'Ex.: Transferência internacional (SWIFT)' })),
+            el('label', {}, el('span', {}, 'Tipo'), sentido), el('label', {}, el('span', {}, 'Valor'), el('input', { name: 'valor', inputmode: 'decimal', placeholder: '8.000,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Lançar'));
+          fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada.'); });
+          movs.append(fm);
+        } else movs.append(el('p', { class: 'nota' }, 'Lance uma conta antes das movimentações.'));
+        if (!f.movimentos.length) movs.append(el('p', { class: 'nota' }, 'Nenhuma movimentação.'));
+        for (const m of f.movimentos.slice(0, 30)) movs.append(el('div', { class: 'fin-linha' }, el('span', {}, `${dataCivil(m.data)} · ${m.descricao}`), el('b', {}, dinheiro(m.valor, m.moeda)), el('small', {}, `${TIPOS_CONTA[m.conta_tipo] || ''} · por ${m.criado_por || '—'}`),
+          el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Excluir esta movimentação?')) enviar('DELETE', `movimentos/${m.id}`, undefined, 'Movimentação excluída.'); } }, 'Excluir')));
+        // investimentos
+        const inv = el('div', { class: 'fin-sec' }, el('h4', {}, 'Investimentos (posições)'));
+        if (!f.posicoes.length) inv.append(el('p', { class: 'nota' }, 'Nenhuma posição.'));
+        const fp = el('form', { class: 'fin-form' }) as HTMLFormElement;
+        const idPos = el('input', { type: 'hidden', name: 'id' }) as HTMLInputElement;
+        const classeSel = opcoes(el('select', { name: 'classe' }) as HTMLSelectElement, Object.entries(CLASSES));
+        const moedaPos = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
+        const descPos = el('input', { name: 'descricao', maxlength: 120, placeholder: 'Ex.: Bond 2030' }) as HTMLInputElement;
+        const valPos = el('input', { name: 'valor', inputmode: 'decimal', placeholder: '400.000,00' }) as HTMLInputElement;
+        const btnPos = el('button', { type: 'submit', class: 'botao pequeno' }, 'Adicionar posição') as HTMLButtonElement;
+        fp.append(idPos, el('label', {}, el('span', {}, 'Classe'), classeSel), el('label', { class: 'largo' }, el('span', {}, 'Descrição'), descPos), el('label', {}, el('span', {}, 'Moeda'), moedaPos), el('label', {}, el('span', {}, 'Valor'), valPos), btnPos);
+        fp.addEventListener('submit', (e) => { e.preventDefault(); enviar('PUT', 'posicoes', { id: idPos.value || undefined, classe: classeSel.value, descricao: descPos.value, moeda: moedaPos.value, valor: valPos.value }, idPos.value ? 'Posição atualizada.' : 'Posição adicionada.'); });
+        for (const ps of f.posicoes) inv.append(el('div', { class: 'fin-linha' }, el('span', {}, `${CLASSES[ps.classe]} · ${ps.descricao}`), el('b', {}, dinheiro(ps.valor, ps.moeda)), el('small', {}, `por ${ps.atualizado_por || '—'} em ${dataHora(ps.atualizado_em)}`),
+          el('span', {}, el('button', { type: 'button', class: 'link', onclick: () => { idPos.value = ps.id; classeSel.value = ps.classe; descPos.value = ps.descricao; moedaPos.value = ps.moeda; valPos.value = centavosTexto(ps.valor); btnPos.textContent = 'Salvar correção'; descPos.focus(); } }, 'Corrigir'),
+            el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Excluir esta posição?')) enviar('DELETE', `posicoes/${ps.id}`, undefined, 'Posição excluída.'); } }, 'Excluir'))));
+        inv.append(fp);
+        // cartão
+        const cart = el('div', { class: 'fin-sec' }, el('h4', {}, 'Cartão'));
+        const k = f.cartao;
+        if (k) cart.append(el('p', { class: 'nota' }, `•••• ${k.final} · ${SIT_CARTAO[k.situacao]} · atualizado por ${k.atualizado_por || '—'} em ${dataHora(k.atualizado_em)}`));
+        const fk = el('form', { class: 'fin-form' }) as HTMLFormElement;
+        const sit = opcoes(el('select', { name: 'situacao' }) as HTMLSelectElement, Object.entries(SIT_CARTAO));
+        const moedaK = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
+        if (k) { sit.value = k.situacao; moedaK.value = k.moeda; }
+        fk.append(el('label', {}, el('span', {}, 'Final (4 dígitos)'), el('input', { name: 'final', maxlength: 4, inputmode: 'numeric', value: k?.final || '' })), el('label', {}, el('span', {}, 'Bandeira'), el('input', { name: 'bandeira', maxlength: 30, value: k?.bandeira || '', placeholder: 'Visa' })),
+          el('label', {}, el('span', {}, 'Situação'), sit), el('label', {}, el('span', {}, 'Moeda'), moedaK), el('label', {}, el('span', {}, 'Limite'), el('input', { name: 'limite', inputmode: 'decimal', value: centavosTexto(k?.limite ?? null) })),
+          el('label', {}, el('span', {}, 'Fatura atual'), el('input', { name: 'fatura', inputmode: 'decimal', value: centavosTexto(k?.fatura ?? null) })), el('label', {}, el('span', {}, 'Vencimento'), el('input', { name: 'vencimento', type: 'date', value: k?.vencimento || '' })),
+          el('button', { type: 'submit', class: 'botao pequeno' }, k ? 'Salvar cartão' : 'Cadastrar cartão'));
+        fk.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fk); enviar('PUT', 'cartao', { final: d.get('final'), bandeira: d.get('bandeira'), situacao: d.get('situacao'), moeda: d.get('moeda'), limite: String(d.get('limite') || ''), fatura: String(d.get('fatura') || ''), vencimento: String(d.get('vencimento') || '') }, 'Cartão salvo.'); });
+        cart.append(fk);
+        if (k) cart.append(el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Remover o cartão deste cliente?')) enviar('PUT', 'cartao', { remover: true }, 'Cartão removido.'); } }, 'Remover cartão'));
+        box.append(contas, movs, inv, cart);
       }
 
       // ---- edição dos dados cadastrais pela equipe
@@ -734,6 +810,13 @@ import '../../styles/global.css';
       .bloco { border-top: 1px solid var(--borda); padding-top: 0.8rem; margin-top: 0.8rem; }
       .bloco h3 { font-size: 1.25rem; margin: 0 0 0.5rem; color: var(--ouro-claro); }
       .bloco .item { background: rgba(14, 7, 4, 0.4); }
+      .fin-sec { margin: 0.8rem 0 1.1rem; }
+      .fin-sec h4 { margin: 0 0 0.5rem; font-size: 1rem; color: var(--texto); }
+      .fin-linha { display: grid; grid-template-columns: 1.6fr 1fr 1.4fr auto; gap: 0.6rem; align-items: center; padding: 0.45rem 0; border-bottom: 1px solid rgba(201, 164, 106, 0.12); font-size: 0.88rem; }
+      .fin-linha b { color: var(--ouro-claro); font-variant-numeric: tabular-nums; }
+      .fin-linha small { color: var(--texto-2); }
+      .fin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem 0.7rem; align-items: end; margin: 0.6rem 0; padding: 0.8rem; border: 1px dashed rgba(201, 164, 106, 0.35); border-radius: 10px; }
+      .fin-form .largo { grid-column: span 2; }
       .bloco.acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
       .bloco.acoes h3 { width: 100%; }
       dialog form { display: grid; gap: 0.8rem; }
@@ -756,6 +839,8 @@ import '../../styles/global.css';
         .linha-t, .linha-t.reg { grid-template-columns: 1fr 1fr; }
         .linha-t.cab { display: none; }
         .dados { grid-template-columns: 1fr; }
+        .fin-linha { grid-template-columns: 1fr 1fr; }
+        .fin-form .largo { grid-column: auto; }
         .edicao__grade { grid-template-columns: 1fr; }
         .voltar { position: static; margin-top: 0.6rem; }
         .dados dt { margin-top: 0.4rem; }

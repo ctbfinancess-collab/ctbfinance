@@ -66,7 +66,7 @@ const login = (e, s) => ev(`(()=>{const f=document.querySelector('[data-login]')
 const sair = () => ev(`document.querySelector('[data-signout]').click(),1`);
 const nav = async (u) => { await send('Page.navigate', { url: u }); await waitFor(`document.querySelector('[data-portal]')?.dataset.ready==='1' && !document.querySelector('[data-login-fs]').disabled || ${vis('[data-view="senha"]')}`, 20000); };
 const linha = (n) => `[...document.querySelectorAll('[data-docs] li')].find(l=>l.querySelector('.name')?.textContent==='${n}')`;
-const MARCAS_ANA = ['Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
+const MARCAS_ANA = ['28.750,00', 'Bond 2030', 'Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
 const temAna = `(()=>{const r=document.querySelector('[data-portal]');const txt=r.textContent+' '+[...r.querySelectorAll('input')].map(i=>i.value).join(' ');return ${JSON.stringify(MARCAS_ANA)}.filter(m=>txt.includes(m))})()`;
 async function vigiar(ms) { const v = new Set(); const t0 = Date.now(); while (Date.now() - t0 < ms) { (await ev(temAna) || []).forEach((m) => v.add(m)); await sleep(40); } return [...v]; }
 
@@ -81,7 +81,9 @@ try {
   check('Senha curta → mensagem clara', await waitFor(`(document.querySelector('[data-senha-msg]')||{}).textContent?.includes('10 caracteres')`));
   await ev(`(()=>{const f=document.querySelector('[data-senha]');f.senha.value='SenhaForte2026';f.confirma.value='SenhaForte2026';f.requestSubmit();return 1})()`);
   check('Senha criada → painel da Ana abre', await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste' && ${vis('[data-view="dash"]')}`));
-  check('Passaporte conferido: mascarado, travado e com aviso; empresa visível; nenhum saldo/conta', await ev(`(()=>{const n=document.querySelector('[data-pass="numero"]');return n.value==='•••• 456' && n.readOnly && document.querySelector('[data-pass="validade"]').readOnly && ${vis('[data-pass-locked]')} && /conferido pela equipe/.test(document.querySelector('[data-pass-locked]').textContent)})() && ${vis('[data-company]')} && !/saldo|balance|PL-0/i.test(document.querySelector('[data-portal]').innerText)`));
+  check('Abre na aba Início; sem dados lançados → aviso, sem número inventado', await waitFor(`document.querySelector('[data-tab=inicio]').getAttribute('aria-selected')==='true' && document.querySelector('[data-fin-saldo]').textContent==='—' && document.querySelector('[data-fin-contas-resumo]').innerText.includes('assim que a nossa equipe registrar')`));
+  await ev(`document.querySelector('[data-tab=profile]').click(),1`);
+  check('Passaporte conferido: mascarado, travado e com aviso; empresa visível', await ev(`(()=>{const n=document.querySelector('[data-pass="numero"]');return n.value==='•••• 456' && n.readOnly && document.querySelector('[data-pass="validade"]').readOnly && ${vis('[data-pass-locked]')} && /conferido pela equipe/.test(document.querySelector('[data-pass-locked]').textContent)})() && ${vis('[data-company]')}`));
   await ev(`(()=>{const i=document.querySelector('[data-profile] [name=city]');i.value='Abu Dhabi';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
   check('Salvar cidade → "Dados atualizados."', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.'`));
   await adm.liberarPassaporte('ana@example.com');
@@ -93,6 +95,22 @@ try {
   check('Cliente grava número e validade → "Dados atualizados.", dica vira •••• 543', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.' && document.querySelector('[data-pass="numero"]').placeholder==='•••• 543' && document.querySelector('[data-pass="validade"]').value==='2032-03-15'`));
   await adm.conferirPassaporte('ana@example.com', 'analista');
   await shot('1-perfil');
+  console.log('--- Financeiro (lançado pela equipe)');
+  const uAna = (await db.q(`select id from usuarios where email='ana@example.com'`)).rows[0].id;
+  const cAED = (await db.q(`insert into contas_cliente(usuario_id, tipo, moeda, saldo_centavos, atualizado_por) values ($1,'digital','AED',2875000,'analista') returning id`, [uAna])).rows[0].id;
+  await db.q(`insert into contas_cliente(usuario_id, tipo, moeda, saldo_centavos, atualizado_por) values ($1,'global','USD',1248000,'analista')`, [uAna]);
+  await db.q(`insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por) values ($1,$2,'2026-11-14','Transferência internacional <b>SWIFT</b>',-800000,'analista'),($1,$2,'2026-11-12','Rendimento',135000,'analista')`, [uAna, cAED]);
+  await db.q(`insert into posicoes_cliente(usuario_id, classe, descricao, moeda, valor_centavos, atualizado_por) values ($1,'renda_fixa','Bond 2030','USD',30000000,'analista'),($1,'fundos','Fundo Global','USD',10000000,'analista')`, [uAna]);
+  await db.q(`insert into cartoes_cliente(usuario_id, final, bandeira, situacao, moeda, fatura_centavos, vencimento) values ($1,'3478','Visa','ativo','AED',542000,'2026-12-05')`, [uAna]);
+  await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  check('Início: saldo real "AED 28.750,00" e as duas contas', await waitFor(`document.querySelector('[data-fin-saldo]').textContent==='AED 28.750,00' && document.querySelector('[data-fin-contas-resumo]').innerText.includes('USD 12.480,00')`));
+  await ev(`document.querySelector('[data-ir-aba=conta]').click(),1`);
+  check('Conta: extrato com débito e crédito; descrição maliciosa vira texto', await waitFor(`(()=>{const t=document.querySelector('[data-fin-mov]').innerText;return t.includes('− AED 8.000,00') && t.includes('+ AED 1.350,00') && t.includes('<b>SWIFT</b>') && !document.querySelector('[data-fin-mov] b')})()`));
+  await ev(`document.querySelector('[data-tab=investimentos]').click(),1`);
+  check('Investimentos: total USD 400.000,00 e distribuição 75% / 25%', await waitFor(`(()=>{const t=document.querySelector('[data-fin-inv]').innerText;return t.includes('USD 400.000,00') && t.includes('75%') && t.includes('25%') && t.includes('Bond 2030')})()`));
+  await ev(`document.querySelector('[data-tab=cartoes]').click(),1`);
+  check('Cartões: final 3478, fatura e vencimento', await waitFor(`(()=>{const t=document.querySelector('[data-fin-cartao]').innerText;return t.includes('3478') && t.includes('AED 5.420,00') && t.includes('Ativo')})()`));
+  await shot('2a-financeiro');
   console.log('--- Documentos');
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   const { root } = await send('DOM.getDocument', { depth: -1, pierce: true });
@@ -158,6 +176,7 @@ try {
   for (const r of retidos.splice(0)) await send('Fetch.continueRequest', { requestId: r });
   const v2 = await vigiar(2500);
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
+  check('Bruno não vê o financeiro da Ana (saldo vazio)', await waitFor(`document.querySelector('[data-fin-saldo]').textContent==='—'`));
   check(`S2 Resposta atrasada da Ana descartada (vistos: ${JSON.stringify(v2)}); lista do Bruno só com o dele`, v2.length === 0 && await waitFor(`document.querySelector('[data-docs]').innerText.includes('contrato-bruno') && !document.querySelector('[data-docs]').innerText.includes('comprovante')`));
   await sair(); await waitFor(vis('[data-view="login"]'));
   // S3: Ana usa o painel; depois a leitura de documentos do Bruno FALHA

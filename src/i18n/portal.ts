@@ -18,7 +18,7 @@ export const portal = {
     unavailable: 'Acesso em preparação. Em breve, nossos clientes poderão entrar por aqui com segurança.',
     hello: 'Olá', signOut: 'Encerrar sessão',
     unverified: 'Seu e-mail ainda não foi confirmado.', resendVerify: 'Reenviar confirmação', verifySent: 'Enviamos um novo link de confirmação.',
-    tabs: { profile: 'Meu perfil', documents: 'Documentos', appointments: 'Agendamentos' },
+    tabs: { inicio: 'Início', conta: 'Conta', investimentos: 'Investimentos', cartoes: 'Cartões', operacoes: 'Operações', profile: 'Meu perfil', documents: 'Documentos', appointments: 'Agendamentos' },
     profileTitle: 'Dados cadastrais', companyTitle: 'Empresa',
     fields: {
       display_name: 'Nome completo', phone_number: 'Telefone', nationality: 'Nacionalidade', dateofbirth: 'Data de nascimento',
@@ -78,7 +78,7 @@ export const portal = {
     unavailable: 'Access in preparation. Our clients will soon be able to sign in here securely.',
     hello: 'Hello', signOut: 'Sign out',
     unverified: 'Your email has not been confirmed yet.', resendVerify: 'Resend confirmation', verifySent: 'We have sent a new confirmation link.',
-    tabs: { profile: 'My profile', documents: 'Documents', appointments: 'Appointments' },
+    tabs: { inicio: 'Home', conta: 'Account', investimentos: 'Investments', cartoes: 'Cards', operacoes: 'Transactions', profile: 'My profile', documents: 'Documents', appointments: 'Appointments' },
     profileTitle: 'Registration details', companyTitle: 'Company',
     fields: {
       display_name: 'Full name', phone_number: 'Phone', nationality: 'Nationality', dateofbirth: 'Date of birth',

@@ -6,6 +6,7 @@
  * /api/cliente/status (banco e volume configurados); senão mostra "acesso em preparação".
  */
 import { portal } from '../i18n/portal';
+import ClientPortalFinanceiro from './ClientPortalFinanceiro.astro';
 import { routes } from '../i18n/utils';
 import type { Lang } from '../i18n/ui';
 
@@ -91,12 +92,19 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     </header>
 
     <nav class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-tab="profile">{p.tabs.profile}</button>
+      <button role="tab" aria-selected="true" data-tab="inicio">{p.tabs.inicio}</button>
+      <button role="tab" aria-selected="false" data-tab="conta">{p.tabs.conta}</button>
+      <button role="tab" aria-selected="false" data-tab="investimentos">{p.tabs.investimentos}</button>
+      <button role="tab" aria-selected="false" data-tab="cartoes">{p.tabs.cartoes}</button>
+      <button role="tab" aria-selected="false" data-tab="operacoes">{p.tabs.operacoes}</button>
       <button role="tab" aria-selected="false" data-tab="documents">{p.tabs.documents}</button>
       <button role="tab" aria-selected="false" data-tab="appointments">{p.tabs.appointments}</button>
+      <button role="tab" aria-selected="false" data-tab="profile">{p.tabs.profile}</button>
     </nav>
 
-    <section data-panel="profile">
+    <ClientPortalFinanceiro lang={lang} />
+
+    <section data-panel="profile" hidden>
       <form data-profile novalidate>
         <h3>{p.profileTitle}</h3>
         <div class="grid">
@@ -211,8 +219,10 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false;
       passNum.readOnly = false; passVal.readOnly = false; passNum.placeholder = ''; $('[data-pass-locked]').hidden = true;
       upInput.value = ''; upLabel.textContent = M.upload; saveBtn.disabled = false; saveBtn.textContent = M.save;
-      root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'profile')));
-      root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== 'profile'));
+      root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'inicio')));
+      root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== 'inicio'));
+      root.querySelectorAll<HTMLElement>('[data-inicio-agenda], [data-inicio-docs]').forEach((e) => (e.textContent = '—'));
+      window.dispatchEvent(new CustomEvent('ctb:financeiro', { detail: null }));
     }
 
     // ---- Login
@@ -268,6 +278,20 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
       root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== b.dataset.tab));
     }));
+    root.querySelectorAll<HTMLElement>('[data-ir-aba]').forEach((b) => b.addEventListener('click', () => {
+      root.querySelector<HTMLButtonElement>(`[data-tab="${b.dataset.irAba}"]`)?.click();
+      root.querySelector('.tabs')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }));
+    function preencherInicio(docs: any[], ags: any[]) {
+      const hoje = new Date(Date.now() + 4 * 3600 * 1000).toISOString().slice(0, 10);
+      const prox = (ags || []).filter((a) => (a.horarioConfirmado ? new Date(a.horarioConfirmado) > new Date() : a.dataSolicitada && a.dataSolicitada >= hoje))
+        .sort((x, y) => String(x.horarioConfirmado || x.dataSolicitada).localeCompare(String(y.horarioConfirmado || y.dataSolicitada)))[0];
+      const ag = root.querySelector<HTMLElement>('[data-inicio-agenda]');
+      if (ag) ag.textContent = prox ? `${M.assuntos[prox.tipo] || prox.tipo} · ${prox.horarioConfirmado ? `${M.apptConfirmed}: ${new Date(prox.horarioConfirmado).toLocaleString(locale, { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' })} (Dubai)` : `${M.apptRequested}: ${dataCivil(prox.dataSolicitada)} · ${M.apptToConfirm}`}` : M.apptEmpty;
+      const dc = root.querySelector<HTMLElement>('[data-inicio-docs]');
+      const emAnalise = (docs || []).filter((d) => d.status === 'disponivel_analise').length;
+      if (dc) dc.textContent = (docs || []).length ? `${docs.length} · ${M.st.disponivel_analise}: ${emAnalise}` : M.docsEmpty;
+    }
     // sessão encerrada no servidor (expirada/revogada): volta ao login
     const sessaoCaiu = () => { sessao++; usuarioAtual = null; limparTudo(); show('login'); msg($('[data-login-msg]'), M.sessionEnded, 'err'); };
 
@@ -459,16 +483,19 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       const { email } = await r.json();
       if (s !== sessao) return;
       usuarioAtual = email;
-      const [perfil, docs, agend] = await Promise.allSettled([
+      const [perfil, docs, agend, fin] = await Promise.allSettled([
         api('/perfil').then((x) => (x.ok ? x.json() : Promise.reject(x.status))),
         lerDocs(),
         api('/agendamentos').then((x) => (x.ok ? x.json() : Promise.reject(x.status))),
+        api('/financeiro').then((x) => (x.ok ? x.json() : Promise.reject(x.status))),
       ]);
       if (!vigente(s, email)) return;                       // resposta de sessão anterior: descartada
       if ([perfil, docs, agend].some((x) => x.status === 'rejected' && ((x as PromiseRejectedResult).reason === 401 || (x as any).reason?.sessao))) return sessaoCaiu();
       if (perfil.status === 'fulfilled') mostrarPerfil(perfil.value, email); else { $('[data-email]').textContent = email; msg($('[data-profile-msg]'), M.genericError, 'err'); }
       if (docs.status === 'fulfilled') renderDocs(docs.value, s, email); else msg($('[data-docs-msg]'), M.genericError, 'err');
       mostrarAgendamentos(agend.status === 'fulfilled' ? agend.value.agendamentos : []);
+      window.dispatchEvent(new CustomEvent('ctb:financeiro', { detail: fin.status === 'fulfilled' ? fin.value : { contas: [], movimentos: [], posicoes: [], cartao: null } }));
+      preencherInicio(docs.status === 'fulfilled' ? docs.value : [], agend.status === 'fulfilled' ? agend.value.agendamentos : []);
       show('dash');
       requestAnimationFrame(() => root.scrollIntoView({ behavior: 'smooth', block: 'start' }));
     }
