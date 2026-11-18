@@ -40,6 +40,19 @@ export const paisEn = (v) => PAISES_EN[String(v || '').trim().toLowerCase()] || 
 
 const NOMES_INSTRUMENTO = { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee', RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' };
 
+/** Valor por extenso em inglês (ex.: 1,000,000.00 USD → "ONE MILLION UNITED STATES DOLLARS"). */
+const UNID = ['', 'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN', 'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN'];
+const DEZ = ['', '', 'TWENTY', 'THIRTY', 'FORTY', 'FIFTY', 'SIXTY', 'SEVENTY', 'EIGHTY', 'NINETY'];
+const ate999 = (n) => { const c = Math.floor(n / 100), r = n % 100; const p = []; if (c) p.push(UNID[c] + ' HUNDRED'); if (r) p.push(r < 20 ? UNID[r] : DEZ[Math.floor(r / 10)] + (r % 10 ? '-' + UNID[r % 10] : '')); return p.join(' '); };
+const MOEDAS_EN = { USD: 'UNITED STATES DOLLARS', EUR: 'EUROS', AED: 'UAE DIRHAMS', GBP: 'POUNDS STERLING', BRL: 'BRAZILIAN REAIS' };
+export function valorPorExtenso(centavos, moeda) {
+  let n = centavos / 100n; const cents = Number(centavos % 100n);
+  if (n === 0n) return `ZERO ${MOEDAS_EN[moeda] || moeda}`;
+  const esc = ['', ' THOUSAND', ' MILLION', ' BILLION', ' TRILLION']; const p = []; let i = 0;
+  while (n > 0n) { const g = Number(n % 1000n); if (g) p.unshift(ate999(g) + esc[i]); n /= 1000n; i++; }
+  return `${p.join(' ')} ${MOEDAS_EN[moeda] || moeda}${cents ? ` AND ${ate999(cents)} CENTS` : ''}`;
+}
+
 /** Número da conta do cliente nos contratos: fixo por cliente (derivado do id), 12 dígitos com prefixo CTB. */
 export const numeroConta = (usuarioId) => { const h = String(usuarioId).replace(/[^0-9a-f]/gi, '').slice(0, 12); return 'CTB' + (BigInt('0x' + (h || '0')) % 1000000000000n).toString().padStart(12, '0'); };
 
@@ -57,7 +70,7 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
   /** Preenchimento automático: cadastro do cliente + solicitação (se houver) + quem assina pela CTB. */
   async function preencher(usuarioId, modelo, solicitacaoId = null) {
     const p = (await db.q('select dados from perfis where usuario_id=$1', [usuarioId])).rows[0]?.dados || {};
-    const s = solicitacaoId ? (await db.q('select ordenante, beneficiario, instrumento, moeda, valor_centavos::text as valor, referencia from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [solicitacaoId, usuarioId])).rows[0] : null;
+    const s = solicitacaoId ? (await db.q('select ordenante, beneficiario, instrumento, moeda, valor_centavos::text as valor, referencia, banco_emissor, banco_avisador, validade from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [solicitacaoId, usuarioId])).rows[0] : null;
     const cfg = (await db.q(`select valor from configuracoes where chave='assinatura_ctb'`)).rows[0]?.valor || {};
     const s_ = (v) => (typeof v === 'string' ? v.trim() : '');
     const pais = paisEn(s_(p.companycountry));   // contratos são em inglês
@@ -81,6 +94,15 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
       valor: s?.valor ? `${s.moeda} ${(BigInt(s.valor) / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${(BigInt(s.valor) % 100n).toString().padStart(2, '0')}` : '',
       beneficiario: s_(s?.beneficiario?.nome),
       refSolicitacao: s_(s?.referencia),
+      // minuta para o banco: dados do instrumento e das partes
+      bancoEmissor: s_(s?.banco_emissor), bancoAvisador: s_(s?.banco_avisador),
+      moedaValor: s?.valor ? `${s.moeda} ${(BigInt(s.valor) / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${(BigInt(s.valor) % 100n).toString().padStart(2, '0')}` : '',
+      valorExtenso: s?.valor ? valorPorExtenso(BigInt(s.valor), s.moeda) : '',
+      validade: s?.validade ? String(s.validade).slice(0, 10).split('-').reverse().join('/') : '',
+      benefEndereco: [s_(s?.beneficiario?.endereco), paisEn(s_(s?.beneficiario?.pais))].filter(Boolean).join(', '),
+      benefBanco: s_(s?.beneficiario?.banco),
+      requerente: o.tipo === 'pf' ? s_(p.display_name) : (s_(p.CompanyName) || s_(o.nome) || s_(p.display_name)),
+      requerenteEndereco: o.tipo === 'pf' ? [[s_(p.address), s_(p.residencenumber)].filter(Boolean).join(', '), s_(p.city), paisEn(s_(p.country))].filter(Boolean).join(', ') : endereco,
       // contratos anteriores do cliente (para cartas como a de Cease & Desist)
       ...(await datasContratos(usuarioId)),
     };
@@ -126,7 +148,7 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
 
   async function enviarPdf(res, c, u, papel, baixar) {
     const m = MODELOS[c.modelo];
-    const pdf = await gerarPdf({ rotulo: m.rotulo, titulo: m.titulo, referencia: c.referencia, rascunho: c.status === 'rascunho', texto: textoAtual(c), assinaturas: assinaturasDe(c.modelo, c.campos) });
+    const pdf = await gerarPdf({ rotulo: m.rotulo, titulo: m.titulo, referencia: c.referencia, rascunho: c.status === 'rascunho', texto: textoAtual(c), assinaturas: assinaturasDe(c.modelo, c.campos), marcaDagua: m.marcaDagua });
     await db.q('insert into contratos_acessos(contrato_id, usuario_id, papel) values ($1,$2,$3)', [c.id, u.id, papel]);
     res.writeHead(200, {
       'Content-Type': 'application/pdf', 'Content-Length': pdf.length, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',

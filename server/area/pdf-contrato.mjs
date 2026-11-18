@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PDFDocument, rgb } from 'pdf-lib';
+import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 
 const AQUI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'modelos');
@@ -58,7 +58,7 @@ export function blocos(texto) {
 }
 
 /**
- * @param {{ rotulo: string, referencia: string, rascunho: boolean, texto: string, assinaturas: string[][], titulo?: string }} c
+ * @param {{ rotulo: string, referencia: string, rascunho: boolean, texto: string, assinaturas: string[][], titulo?: string, marcaDagua?: string }} c
  * @returns {Promise<Uint8Array>}
  */
 export async function gerarPdf(c) {
@@ -134,6 +134,12 @@ export async function gerarPdf(c) {
   paginas.forEach((p, i) => {
     const num = `${i + 1} / ${paginas.length}`;
     p.drawText(num, { x: L - MARGEM_D - fonte.widthOfTextAtSize(num, 7.5), y: TOPO, size: 7.5, font: fonte, color: BRONZE });
+    // marca d'água diagonal em todas as páginas (ex.: minuta "DRAFT — NOT AN ISSUED INSTRUMENT")
+    if (c.marcaDagua) {
+      const tam = 30, w = negrito.widthOfTextAtSize(c.marcaDagua, tam), ang = 35 * Math.PI / 180;
+      const cx = L / 2, cy = A / 2;
+      p.drawText(c.marcaDagua, { x: cx - (w / 2) * Math.cos(ang), y: cy - (w / 2) * Math.sin(ang), size: tam, font: negrito, color: BRONZE, opacity: 0.22, rotate: degrees(35) });
+    }
   });
   return doc.save();
 }

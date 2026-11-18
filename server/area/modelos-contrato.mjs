@@ -501,7 +501,78 @@ In accessing our website or communication through email, phone, fax, or any othe
   ],
 };
 
-export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO, cease_desist: CEASE_DESIST };
+/** Minuta para o banco (Proposed Wording) de SBLC — texto do modelo da titular, preenchido com a solicitação.
+ *  NÃO é instrumento: marca d'água em todas as páginas, sem assinatura da CTB como emissora, sem "Money Market Security"
+ *  e sem afirmações de validação/autenticação. Quem emite (se quiser) é o banco emissor, pelos canais dele. */
+const MINUTA_SBLC = {
+  titulo: 'SBLC — Proposed Wording for the Issuing Bank (draft)',
+  rotulo: 'PW',
+  marcaDagua: 'DRAFT — NOT AN ISSUED INSTRUMENT',
+  campos: [
+    { k: 'data', rotulo: 'Data da minuta (DD/MM/AAAA)', origem: 'hoje (Dubai)' },
+    { k: 'refSolicitacao', rotulo: 'Referência da solicitação', origem: 'solicitação' },
+    { k: 'bancoEmissor', rotulo: 'Banco emissor (destinatário da minuta)', origem: 'solicitação: banco emissor proposto' },
+    { k: 'bancoAvisador', rotulo: 'Banco avisador', padrao: 'To be advised by the Issuing Bank', origem: 'solicitação' },
+    { k: 'moedaValor', rotulo: 'Valor (ex.: USD 1,000,000.00)', origem: 'solicitação' },
+    { k: 'valorExtenso', rotulo: 'Valor por extenso (inglês)', origem: 'gerado a partir do valor' },
+    { k: 'validade', rotulo: 'Validade solicitada', padrao: 'One (1) year plus thirty (30) days from the date of issuance', origem: 'solicitação' },
+    { k: 'beneficiario', rotulo: 'Beneficiário — nome', origem: 'solicitação' },
+    { k: 'benefEndereco', rotulo: 'Beneficiário — endereço e país', origem: 'solicitação' },
+    { k: 'benefBanco', rotulo: 'Beneficiário — banco / conta', origem: 'solicitação' },
+    { k: 'requerente', rotulo: 'Ordenante (Applicant)', origem: 'ordenante da solicitação (PF ou PJ)' },
+    { k: 'requerenteEndereco', rotulo: 'Ordenante — endereço', origem: 'Meu perfil' },
+  ],
+  texto: (c) => `# STANDBY LETTER OF CREDIT
+# PROPOSED WORDING FOR THE ISSUING BANK'S REVIEW
+
+This document is a draft of the wording requested by the Applicant, prepared by ${CTB.razao} as intermediary for submission to the Issuing Bank. It is NOT an issued instrument, does not create any obligation of ${CTB.razao}, and has no value as a guarantee. Any Standby Letter of Credit can only be issued by the Issuing Bank, at its sole discretion, through its own authenticated channels.
+
+Draft date: ${c.data} · Request reference: ${c.refSolicitacao}
+
+## PROPOSED TERMS
+
+• Issuing institution: ${c.bancoEmissor}
+• Advising bank: ${c.bancoAvisador}
+• Currency and amount: ${c.moedaValor} (${c.valorExtenso})
+• Validity: ${c.validade}
+• Issue date / Expiration date / Letter of credit No.: to be assigned by the Issuing Bank
+
+## BENEFICIARY
+
+• Name: ${c.beneficiario}
+• Address: ${c.benefEndereco}
+• Bank / account: ${c.benefBanco}
+
+## APPLICANT
+
+• Name: ${c.requerente}
+• Address: ${c.requerenteEndereco}
+
+## PROPOSED TEXT
+
+FOR VALUE RECEIVED, WE, THE UNDERSIGNED ISSUING BANK, HEREBY IRREVOCABLY AND UNCONDITIONALLY UNDERTAKE, WITHOUT PROTEST, NOTICE, OR DEMAND OF ANY KIND, TO HONOR AND PAY THIS STANDBY LETTER OF CREDIT NO. [TO BE ASSIGNED BY THE ISSUING BANK], ISSUED IN FAVOR OF THE BENEFICIARY ${c.beneficiario}, AT THE REQUEST OF THE APPLICANT ${c.requerente}, IN THE MAXIMUM AMOUNT OF ${c.moedaValor} (${c.valorExtenso}).
+
+THIS STANDBY LETTER OF CREDIT SHALL REMAIN VALID AND EFFECTIVE FOR THE PERIOD OF: ${c.validade}.
+
+PAYMENT SHALL BE EFFECTED UPON THE BENEFICIARY'S FIRST WRITTEN DEMAND, ACCOMPANIED BY THE PRESENTATION OF THIS STANDBY LETTER OF CREDIT AND A STATEMENT OF CLAIM DECLARING THAT THE AMOUNT DEMANDED IS DUE AND PAYABLE UNDER THE TERMS HEREOF. SUCH PRESENTATION SHALL BE MADE AT OUR DESIGNATED OFFICE/BRANCH ON OR BEFORE THE EXPIRY DATE, OR WITHIN A MAXIMUM PERIOD OF FIFTEEN (15) CALENDAR DAYS FOLLOWING THE EXPIRY DATE, PROVIDED THAT THE CLAIM IS PRESENTED IN ACCORDANCE WITH THE TERMS OF THIS INSTRUMENT.
+
+ALL PAYMENTS MADE UNDER THIS STANDBY LETTER OF CREDIT SHALL BE MADE IN FULL, WITHOUT SET-OFF, COUNTERCLAIM, DEDUCTION, OR WITHHOLDING OF ANY KIND, INCLUDING BUT NOT LIMITED TO TAXES, DUTIES, FEES, CHARGES, OR OTHER IMPOSTS OF ANY NATURE, WHETHER PRESENT OR FUTURE, IMPOSED, LEVIED, OR COLLECTED BY THE GOVERNMENT OF THE UNITED ARAB EMIRATES (UAE) OR ANY POLITICAL SUBDIVISION, AGENCY, AUTHORITY, OR INSTRUMENTALITY THEREOF.
+
+THIS STANDBY LETTER OF CREDIT IS SUBJECT TO THE INTERNATIONAL STANDBY PRACTICES (ISP98), INTERNATIONAL CHAMBER OF COMMERCE (ICC) PUBLICATION NO. 590, UNLESS OTHERWISE EXPRESSLY STATED HEREIN.
+
+WE HEREBY CONFIRM THAT THIS STANDBY LETTER OF CREDIT IS SUPPORTED BY LAWFUL FUNDS, DERIVED FROM LEGITIMATE SOURCES, AND THAT SUCH FUNDS ARE FREE AND CLEAR OF ANY LIENS, ENCUMBRANCES, OR CLAIMS OF ILLEGAL OR CRIMINAL ORIGIN.
+
+THIS STANDBY LETTER OF CREDIT IS ISSUED AS AN IRREVOCABLE AND UNCONDITIONAL UNDERTAKING OF THE ISSUING BANK AND SHALL BE AVAILABLE FOR PRESENTATION AND HONOR IN ACCORDANCE WITH ITS TERMS. ANY ASSIGNMENT, TRANSFER, OR OTHER DISPOSITION OF RIGHTS ARISING HEREUNDER SHALL BE SUBJECT TO THE APPLICABLE RULES GOVERNING THIS INSTRUMENT AND THE CONSENT REQUIREMENTS, IF ANY, OF THE ISSUING BANK.
+
+ALL ISSUANCE-RELATED COSTS, FEES, AND CHARGES ASSOCIATED WITH THIS STANDBY LETTER OF CREDIT SHALL BE FOR THE ACCOUNT OF THE APPLICANT, UNLESS OTHERWISE AGREED IN WRITING BETWEEN THE PARTIES.
+
+THE ORIGINAL INSTRUMENT AND ANY RELATED BANK COMMUNICATIONS SHALL BE TRANSMITTED THROUGH SECURE BANKING CHANNELS OR OTHER AUTHORIZED DELIVERY METHODS AS DETERMINED BY THE ISSUING BANK.
+
+[SIGNATURES OF THE ISSUING BANK'S AUTHORIZED OFFICERS — TO BE COMPLETED BY THE ISSUING BANK]`,
+  assinaturas: () => [],
+};
+
+export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO, cease_desist: CEASE_DESIST, minuta_sblc: MINUTA_SBLC };
 
 /** Quais modelos o sistema cria SOZINHO (como rascunho, para a equipe revisar e liberar) em cada evento. */
 export const AUTOMATICOS = {
