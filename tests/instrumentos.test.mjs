@@ -206,6 +206,8 @@ try {
     const apDireto = await E('POST', `/instrumentos/${e1.id}/status`, { json: { status: 'aprovada' } });
     await t('IN45', 'Aprovadora pode marcar "Aprovada" direto de "Em análise documental" (com comprovante)', async () => apDireto.status === 200 && (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === e1.id).status === 'aprovada');
   }
+  { const b1 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('teste ANA'))).dados.solicitacoes; const b2 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('ánã'))).dados.solicitacoes; const b3 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('ana xyz123'))).dados.solicitacoes;
+    await t('IN46', 'Busca da equipe: palavras em qualquer ordem, sem acento/maiúscula ("teste ANA", "ánã" acham Ana Teste; termo inexistente não)', async () => b1.length > 0 && b1.every((x) => x.email === 'ana@example.com') && b2.length > 0 && b3.length === 0); }
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);

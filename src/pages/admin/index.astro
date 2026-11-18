@@ -876,7 +876,9 @@ import '../../styles/global.css';
         const busca = $<HTMLInputElement>('[data-inst-busca]').value.trim(); if (busca) q.set('q', busca);
         const v = nova('instrumentos'); const { solicitacoes } = await chamar('/equipe/instrumentos?' + q); if (!vigente('instrumentos', v)) return;
         const box = $('[data-instrumentos]'); box.replaceChildren();
-        if (!solicitacoes.length) box.append(el('p', { class: 'vazio' }, 'Nenhuma solicitação de instrumento.'));
+        const comFiltro = !!(tipo || moeda || busca || $<HTMLSelectElement>('[data-inst-status]').value !== 'abertas');
+        if (!solicitacoes.length) box.append(el('p', { class: 'vazio' }, comFiltro ? 'Nenhuma solicitação com esses filtros. ' : 'Nenhuma solicitação de instrumento.',
+          comFiltro ? el('button', { type: 'button', class: 'link', onclick: () => { $<HTMLSelectElement>('[data-inst-status]').value = 'todas'; $<HTMLSelectElement>('[data-inst-tipo]').value = ''; $<HTMLSelectElement>('[data-inst-moeda]').value = ''; carregar.instrumentos().catch(falhou); } }, 'Limpar filtros (manter a busca)') : ''));
         for (const s of solicitacoes) box.append(linhaInstrumento(s));
       };
       ['[data-inst-status]', '[data-inst-tipo]', '[data-inst-moeda]'].forEach((x) => $(x).addEventListener('change', () => carregar.instrumentos().catch(falhou)));

@@ -5,6 +5,7 @@
  * As regras de negócio são as mesmas dos comandos da equipe (admin.mjs): o painel só as expõe com segurança.
  */
 import { EDITAVEIS, CAMPOS_PASSAPORTE, validarPassaporte } from './api.mjs';
+import { filtroBusca } from './busca.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const STATUS_DOC = ['disponivel_analise', 'aprovado', 'rejeitado'];
 const STATUS_INT = ['novo', 'respondido', 'convidado', 'arquivado'];
@@ -67,15 +68,16 @@ export function criarPainel({ db, adm, json, lerJson, avisarAcessoEquipe = null,
   }
 
   async function listarClientes(res, url) {
-    const q = String(url.searchParams.get('q') || '').trim().toLowerCase().slice(0, 80);
+    const where = ['true']; const vals = [];
+    filtroBusca(url.searchParams.get('q'), ['u.email', "p.dados->>'display_name'", "p.dados->>'CompanyName'", "p.dados->>'phone_number'"], where, vals);
     const r = await db.q(`select u.id, u.email, u.idioma, u.bloqueado, u.criado_em, (u.senha_hash is not null) as ativo,
              coalesce(e.ativo, false) as equipe, p.dados->>'display_name' as nome,
              coalesce(p.dados->>'passportnumber','')<>'' as tem_passaporte, p.passaporte_conferido_em,
              (select count(*) from documentos d where d.usuario_id=u.id and d.status='disponivel_analise' and d.origem is null)::int as docs_em_analise,
              (select count(*) from agendamentos a where a.usuario_id=u.id and a.horario_confirmado is null)::int as agend_pendentes
         from usuarios u left join perfis p on p.usuario_id=u.id left join equipe e on e.usuario_id=u.id
-       where $1 = '' or u.email like '%' || $1 || '%' or lower(coalesce(p.dados->>'display_name','')) like '%' || $1 || '%'
-       order by u.criado_em desc limit 200`, [q]);
+       where ${where.join(' and ')}
+       order by u.criado_em desc limit 200`, vals);
     return json(res, 200, { clientes: r.rows });
   }
 

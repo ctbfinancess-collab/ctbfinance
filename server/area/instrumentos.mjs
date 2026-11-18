@@ -9,6 +9,7 @@
  * Equipe:   /api/cliente/equipe/instrumentos[...]    (via painel.mjs; tudo registrado em acoes_equipe)
  */
 import { valorCentavos } from './api.mjs';
+import { filtroBusca } from './busca.mjs';
 
 export const GARANTIAS = { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee' };
 export const DECLARACOES = { RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' };
@@ -321,8 +322,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     if (moeda && MOEDAS_INSTRUMENTO.includes(moeda)) { vals.push(moeda); where.push(`s.moeda=$${vals.length}`); }
     const uid = url.searchParams.get('usuario');   // ficha do cliente: só as dele
     if (uid && UUID.test(uid)) { vals.push(uid); where.push(`s.usuario_id=$${vals.length}`); }
-    const busca = String(url.searchParams.get('q') || '').trim().toLowerCase().slice(0, 80);
-    if (busca) { vals.push(busca); where.push(`(u.email like '%' || $${vals.length} || '%' or lower(coalesce(p.dados->>'display_name','')) like '%' || $${vals.length} || '%' or lower(coalesce(s.referencia,'')) like '%' || $${vals.length} || '%')`); }
+    filtroBusca(url.searchParams.get('q'), ['u.email', "p.dados->>'display_name'", "p.dados->>'CompanyName'", 's.referencia', "s.beneficiario->>'nome'", "s.ordenante->>'nome'"], where, vals);
     const r = await db.q(`select ${COLS}, s.usuario_id, s.responsavel_email, s.instituicao, u.email, p.dados->>'display_name' as nome
                             from instrumentos_solicitacoes s join usuarios u on u.id=s.usuario_id left join perfis p on p.usuario_id=u.id
                            where ${where.join(' and ')} order by s.atualizado_em desc limit 300`, vals);
