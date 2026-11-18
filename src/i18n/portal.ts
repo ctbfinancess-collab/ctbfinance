@@ -18,7 +18,7 @@ export const portal = {
     unavailable: 'Acesso em preparação. Em breve, nossos clientes poderão entrar por aqui com segurança.',
     hello: 'Olá', signOut: 'Encerrar sessão',
     unverified: 'Seu e-mail ainda não foi confirmado.', resendVerify: 'Reenviar confirmação', verifySent: 'Enviamos um novo link de confirmação.',
-    tabs: { inicio: 'Início', conta: 'Conta', investimentos: 'Investimentos', cartoes: 'Cartões', operacoes: 'Operações', profile: 'Meu perfil', documents: 'Documentos', appointments: 'Agendamentos' },
+    tabs: { inicio: 'Início', conta: 'Conta', investimentos: 'Investimentos', cartoes: 'Cartões', operacoes: 'Instrumentos', transferencias: 'Transferências', profile: 'Meu perfil', documents: 'Documentos', appointments: 'Agendamentos' },
     profileTitle: 'Pessoa física — dados pessoais', companyTitle: 'Pessoa jurídica — sua empresa (opcional)',
     companyNote: 'Preencha se for fazer solicitações em nome da sua empresa. Estes dados preenchem automaticamente as solicitações e os contratos.',
     fields: {
@@ -80,7 +80,7 @@ export const portal = {
     unavailable: 'Access in preparation. Our clients will soon be able to sign in here securely.',
     hello: 'Hello', signOut: 'Sign out',
     unverified: 'Your email has not been confirmed yet.', resendVerify: 'Resend confirmation', verifySent: 'We have sent a new confirmation link.',
-    tabs: { inicio: 'Home', conta: 'Account', investimentos: 'Investments', cartoes: 'Cards', operacoes: 'Transactions', profile: 'My profile', documents: 'Documents', appointments: 'Appointments' },
+    tabs: { inicio: 'Home', conta: 'Account', investimentos: 'Investments', cartoes: 'Cards', operacoes: 'Instruments', transferencias: 'Transfers', profile: 'My profile', documents: 'Documents', appointments: 'Appointments' },
     profileTitle: 'Individual — personal details', companyTitle: 'Company — your business (optional)',
     companyNote: 'Fill in if you will make requests on behalf of your company. These details automatically fill in requests and contracts.',
     fields: {

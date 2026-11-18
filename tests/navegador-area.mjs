@@ -113,8 +113,8 @@ try {
   check('Cartões: final 3478, fatura e vencimento', await waitFor(`(()=>{const t=document.querySelector('[data-fin-cartao]').innerText;return t.includes('3478') && t.includes('AED 5.420,00') && t.includes('Ativo')})()`));
   await shot('2a-financeiro');
   console.log('--- Operações (solicitação da cliente)');
-  await ev(`document.querySelector('[data-ir-aba=operacoes][data-op-pre=cambio]').click(),1`);
-  check('Atalho "Câmbio" abre Operações já com Câmbio escolhido', await waitFor(`!document.querySelector('[data-panel=operacoes]').hidden && document.querySelector('[data-op-tipo=cambio]').getAttribute('aria-checked')==='true' && !document.querySelector('[data-op-cambio]').hidden && document.querySelector('[data-op-benef]').hidden`));
+  await ev(`document.querySelector('[data-ir-aba=transferencias][data-op-pre=cambio]').click(),1`);
+  check('Atalho "Câmbio" abre a aba Transferências já com Câmbio escolhido; Instrumentos fica separado', await waitFor(`!document.querySelector('[data-panel=transferencias]').hidden && document.querySelector('[data-panel=operacoes]').hidden && !document.querySelector('[data-panel=operacoes] [data-op-form]') && document.querySelector('[data-op-tipo=cambio]').getAttribute('aria-checked')==='true' && !document.querySelector('[data-op-cambio]').hidden && document.querySelector('[data-op-benef]').hidden`));
   check('Formulário com as contas reais e lista vazia', await waitFor(`document.querySelector('[data-op-form]').contaId.options.length===2 && document.querySelector('[data-op-lista]').innerText.includes('ainda não fez')`));
   await ev(`(()=>{document.querySelector('[data-op-tipo=transferencia_swift]').click();const f=document.querySelector('[data-op-form]');f.valor.value='8.000,00';f.nome.value='Maria Silva';f.iban.value='AE07 0331 2345';f.swift.value='12';f.querySelector('[data-op-enviar]').click();return 1})()`);
   check('SWIFT inválido → aviso claro na tela', await waitFor(`(()=>{const m=document.querySelector('[data-op-msg]');return !m.hidden && m.textContent.includes('SWIFT')})()`));
@@ -123,6 +123,8 @@ try {
   check('Nada debitado: saldo continua AED 28.750,00 e nenhum lançamento novo', (await db.q(`select saldo_centavos::text s from contas_cliente where id=$1`, [cAED])).rows[0].s === '2875000' && (await db.q(`select count(*)::int n from movimentos_cliente where usuario_id=$1`, [uAna])).rows[0].n === 2);
   await shot('2b-operacoes');
   console.log('--- Instrumentos financeiros (cliente)');
+  await ev(`document.querySelector('[data-tab=operacoes]').click(),1`);
+  check('Aba "Instrumentos" separada: sem formulário de transferência, com aviso dos contratos em Documentos', await waitFor(`document.querySelector('[data-tab=operacoes]').textContent==='Instrumentos' && document.querySelector('[data-tab=transferencias]').textContent==='Transferências' && !document.querySelector('[data-panel=operacoes] [data-op-form]') && document.querySelector('[data-panel=operacoes] .inst-contratos').innerText.includes('Meus contratos')`));
   check('Seção Instrumentos visível com o aviso de que o envio não é emissão', await waitFor(`${vis('[data-inst]')} && document.querySelector('[data-inst-aviso]').textContent.includes('não representa aprovação nem emissão') && document.querySelector('[data-inst-lista]').innerText.includes('Nenhuma solicitação de instrumento')`));
   await ev(`document.querySelector('[data-inst-nova]').click(),1`);
   check('Nova solicitação abre o formulário (SBLC/USD por padrão; declarações em grupo separado)', await waitFor(`${vis('[data-inst-form]')} && document.querySelector('[data-inst-form]').instrumento.value==='SBLC' && document.querySelector('[data-inst-form]').moeda.value==='USD' && [...document.querySelectorAll('[data-inst-form] optgroup')].length===2`));

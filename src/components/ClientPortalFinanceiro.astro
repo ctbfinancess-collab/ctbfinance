@@ -32,7 +32,7 @@ const T = en ? {
   classes: { renda_fixa: 'Fixed income', renda_variavel: 'Equities', fundos: 'Funds', alternativos: 'Alternatives', exterior: 'International' },
   situacoes: { ativo: 'Active', bloqueado: 'Locked', em_emissao: 'Being issued' },
   inst: {
-    titulo: 'International financial instruments', intro: 'Request SBLC, LC, bank guarantees and other instruments and follow each step here. You can save a draft and send it when it is complete.',
+    contratosNota: 'Contracts released by our team are in', contratosIr: 'Documents → My contracts', titulo: 'International financial instruments', intro: 'Request SBLC, LC, bank guarantees and other instruments and follow each step here. You can save a draft and send it when it is complete.',
     aviso: 'Sending a request does not represent approval or issuance of the instrument. Issuance is carried out exclusively by a licensed financial institution.',
     nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
     instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
@@ -67,7 +67,7 @@ const T = en ? {
   classes: { renda_fixa: 'Renda fixa', renda_variavel: 'Renda variável', fundos: 'Fundos', alternativos: 'Alternativos', exterior: 'Exterior' },
   situacoes: { ativo: 'Ativo', bloqueado: 'Bloqueado', em_emissao: 'Em emissão' },
   inst: {
-    titulo: 'Instrumentos financeiros internacionais', intro: 'Solicite SBLC, LC, garantias bancárias e outros instrumentos e acompanhe cada etapa aqui. Você pode salvar um rascunho e enviar quando estiver completo.',
+    contratosNota: 'Os contratos liberados pela nossa equipe ficam em', contratosIr: 'Documentos → Meus contratos', titulo: 'Instrumentos financeiros internacionais', intro: 'Solicite SBLC, LC, garantias bancárias e outros instrumentos e acompanhe cada etapa aqui. Você pode salvar um rascunho e enviar quando estiver completo.',
     aviso: 'O envio da solicitação não representa aprovação nem emissão do instrumento. A emissão é feita exclusivamente por instituição financeira habilitada.',
     nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
     instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
@@ -98,9 +98,9 @@ const I = T.inst;
     <h3>{T.atalhos}</h3>
     <div class="atalhos">
       <button type="button" data-ir-aba="conta"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></svg>{T.extrato}</button>
-      <button type="button" data-ir-aba="operacoes" data-op-pre="transferencia_swift"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>{T.transferencias}</button>
+      <button type="button" data-ir-aba="transferencias" data-op-pre="transferencia_swift"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>{T.transferencias}</button>
       <button type="button" data-ir-aba="investimentos"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16v-4M10 16V9M14 16v-6M18 16V6"/></svg>{T.investimentos}</button>
-      <button type="button" data-ir-aba="operacoes" data-op-pre="cambio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6v12"/></svg>{T.cambio}</button>
+      <button type="button" data-ir-aba="transferencias" data-op-pre="cambio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6v12"/></svg>{T.cambio}</button>
       <button type="button" data-ir-aba="cartoes"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>{T.cartoes}</button>
     </div>
     <div class="duas">
@@ -197,6 +197,15 @@ const I = T.inst;
       <h4 class="sub">{I.minhas}</h4>
       <ul class="op-lista inst-lista" data-inst-lista></ul>
     </div>
+    <p class="inst-contratos">{I.contratosNota} <button type="button" class="link" data-ir-aba="documents">{I.contratosIr}</button></p>
+    <div class="ops-acoes">
+      <button type="button" class="btn-ouro" data-ir-aba="appointments">{T.agendar}</button>
+      <a class="btn-linha" href={routes.contact[lang]}>{T.falar}</a>
+    </div>
+  </section>
+
+  <!-- Transferências e câmbio (aba própria) -->
+  <section data-panel="transferencias" hidden>
     <div class="transf" data-transf>
       <h3>{T.opsTitulo}</h3>
       <p class="real">{T.opsIntro}</p>
@@ -651,7 +660,8 @@ const I = T.inst;
   .op-lista :global(.op-status[data-s='recusada']) { background: rgba(98, 72, 58, 0.6); color: #e8d6b7; border-color: rgba(168, 116, 47, 0.7); }
   .btn-ouro { font: inherit; font-weight: 600; border: 1px solid #f0d39c; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550 60%, #a8742f); }
   .btn-linha { display: inline-flex; align-items: center; font-weight: 500; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.7rem 1.4rem; color: #f3e6d2; text-decoration: none; }
-  .transf { margin-top: 2.2rem; padding-top: 0.4rem; border-top: 1px solid rgba(201, 164, 106, 0.28); }
+  .inst-contratos { margin: 1.4rem 0 0; font-size: 0.9rem; color: #e8d6b7; }
+  .inst-contratos .link { font: inherit; background: none; border: 0; padding: 0; color: #f0d39c; text-decoration: underline; cursor: pointer; }
   .inst[hidden] { display: none; }
   .inst-aviso { margin: 0.8rem 0; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(240, 211, 156, 0.6); background: rgba(181, 139, 77, 0.16); color: #f0d39c; font-size: 0.9rem; line-height: 1.45; }
   .inst-aviso.pequeno { font-size: 0.82rem; margin: 0; }
