@@ -433,5 +433,13 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
   let painel = null;
   /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson). */
   const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson }); };
-  return { tratar, enviarLinkSenha, ligarPainel };
+  /** Guarda um pedido dos formulários do site (já validado pelo servidor do site) para a equipe ver no Admin. */
+  async function registrarInteressado(d) {
+    const t = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
+    await db.q(`insert into interessados(formulario, nome, email, telefone, tipo, empresa, pais, area, assunto, idioma, mensagem)
+                values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+      [d.form === 'client' ? 'cliente' : 'contato', t(d.name, 120), String(d.email || '').trim().toLowerCase().slice(0, 160), t(d.phone, 25),
+       t(d.clientType, 20), t(d.company, 160), t(d.country, 80), t(d.area, 80), t(d.subject, 160), d.lang === 'en' ? 'en' : 'pt', t(d.message, 3000)]);
+  }
+  return { tratar, enviarLinkSenha, ligarPainel, registrarInteressado };
 }

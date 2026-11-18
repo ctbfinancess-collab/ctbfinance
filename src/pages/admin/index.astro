@@ -44,6 +44,7 @@ import '../../styles/global.css';
         <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="64" height="30" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /></a>
         <nav class="menu" role="tablist" aria-label="Admin">
           <button role="tab" data-aba="geral" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Dashboard</span></button>
+          <button role="tab" data-aba="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Interessados</span><b data-cont="interessados_novos"></b></button>
           <button role="tab" data-aba="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9.3 5.5 2.6 5.5 5.8"/></svg><span>Clientes</span></button>
           <button role="tab" data-aba="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Agendamentos</span><b data-cont="agendamentos_pendentes"></b></button>
           <button role="tab" data-aba="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Documentos</span><b data-cont="documentos_em_analise"></b></button>
@@ -94,6 +95,7 @@ import '../../styles/global.css';
               <section class="quadro">
                 <h2>Ações rápidas</h2>
                 <div class="rapidas">
+                  <button type="button" data-ir="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Ver interessados</span></button>
                   <button type="button" data-rapida="convidar"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.2"/><path d="M4 20c0-3.3 2.7-6 6-6 1.2 0 2.3.3 3.2.9M18 14v6M15 17h6"/></svg><span>Cadastrar cliente</span></button>
                   <button type="button" data-ir="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Confirmar agendamentos</span></button>
                   <button type="button" data-ir="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Analisar documentos</span></button>
@@ -114,6 +116,20 @@ import '../../styles/global.css';
               </section>
             </div>
             <p class="nota rodape">Somente dados reais do sistema. A sessão do Admin encerra após 30 minutos sem uso.</p>
+          </div>
+
+          <div data-painel="interessados" hidden>
+            <div class="filtro">
+              <select data-int-status>
+                <option value="novo">Novos</option>
+                <option value="respondido">Respondidos</option>
+                <option value="convidado">Convidados</option>
+                <option value="arquivado">Arquivados</option>
+                <option value="">Todos</option>
+              </select>
+              <span class="nota">Pedidos recebidos pelos formulários "Seja nosso cliente" e "Contato" do site.</span>
+            </div>
+            <div data-interessados></div>
           </div>
 
           <div data-painel="clientes" hidden>
@@ -189,7 +205,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -225,9 +241,9 @@ import '../../styles/global.css';
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
-      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
+      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
       // histórico: cada aba e cada ficha viram um passo; "Voltar" (e o botão do navegador) retornam ao anterior
-      const ABAS = ['geral', 'clientes', 'agendamentos', 'documentos', 'registro'];
+      const ABAS = ['geral', 'interessados', 'clientes', 'agendamentos', 'documentos', 'registro'];
       let passos = 0;
       const btnVoltar = $('[data-voltar]');
       const marcarVoltar = () => (btnVoltar.hidden = passos <= 0 && abaAtual === 'geral' && !ficha.open);
@@ -280,7 +296,7 @@ import '../../styles/global.css';
         $$('[data-k]').forEach((e) => { e.textContent = String(r[e.dataset.k!] ?? 0); e.closest('.kpi')!.classList.toggle('alerta', e.dataset.k !== 'clientes' && r[e.dataset.k!] > 0); });
         const sub = $('[data-k-sub]'); sub.textContent = `${r.clientes_ativos} com acesso ativo`;
         $('[data-grafico]').replaceChildren(grafico(r.clientes_mes || []));
-        const dem: [string, number, string][] = [['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
+        const dem: [string, number, string][] = [['Novos interessados', r.interessados_novos, 'interessados'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
         $('[data-demandas]').replaceChildren(...dem.map(([t, n, aba]) => el('button', { type: 'button', class: 'demanda' + (n ? ' tem' : ''), onclick: () => abrirAba(aba) }, el('span', {}, t), el('b', {}, String(n)))));
         const at = $('[data-atividade]');
         at.replaceChildren(...(r.atividade.length ? r.atividade.map((a: any) => el('div', { class: 'mini-linha' }, el('span', { class: 'quando' }, dataHora(a.em)), el('span', {}, ACOES[a.acao] || a.acao), el('small', {}, a.por_email))) : [el('p', { class: 'vazio' }, 'Nenhuma ação registrada ainda.')]));
@@ -407,6 +423,45 @@ import '../../styles/global.css';
         });
         return f;
       }
+
+      // ---- interessados (formulários do site)
+      const ST_INT: Record<string, [string, string]> = { novo: ['Novo', 'erro'], respondido: ['Respondido', 'aviso'], convidado: ['Convidado', 'ok'], arquivado: ['Arquivado', ''] };
+      function linhaInteressado(i: any) {
+        const det = [i.formulario === 'cliente' ? 'Seja nosso cliente' : 'Contato', i.tipo === 'company' ? 'Pessoa jurídica' : i.tipo === 'individual' ? 'Pessoa física' : '', i.empresa, i.pais, i.area || i.assunto, i.idioma === 'en' ? 'Inglês' : 'Português'].filter(Boolean).join(' · ');
+        const st = ST_INT[i.status] || [i.status, ''];
+        const caixa = el('div', { class: 'item' + (i.status === 'arquivado' ? ' feito' : '') },
+          el('div', { class: 'item__txt' },
+            el('strong', {}, i.nome),
+            el('span', {}, `${i.email}${i.telefone ? ' · ' + i.telefone : ''}`),
+            el('span', {}, `Recebido em ${dataHora(i.recebido_em)} · ${det}`),
+            el('em', { class: 'mensagem' }, i.mensagem),
+            i.atualizado_por ? el('small', {}, `Atualizado por ${i.atualizado_por} em ${dataHora(i.atualizado_em)}`) : null),
+          el('span', { class: 'etiqueta', dataset: { t: st[1] } }, st[0]));
+        const mudar = (status: string, txt: string) => el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => {
+          try { await chamar(`/equipe/interessados/${i.id}/status`, { metodo: 'POST', corpo: { status } }); aviso(txt); await atualizar(); } catch (e) { falhou(e); } } }, '');
+        const acoes = el('div', { class: 'item__acao' });
+        const assunto = encodeURIComponent(i.idioma === 'en' ? 'CTB Finances — your request' : 'CTB Finances — seu pedido de contato');
+        acoes.append(el('a', { class: 'botao pequeno claro', href: `mailto:${encodeURIComponent(i.email).replace(/%40/g, '@')}?subject=${assunto}` }, 'Responder por e-mail'));
+        if (i.status !== 'convidado') {
+          acoes.append(el('button', { type: 'button', class: 'botao pequeno', onclick: async () => {
+            if (!confirm(`Enviar convite da Área do Cliente para ${i.email} (${i.idioma === 'en' ? 'em inglês' : 'em português'})?`)) return;
+            try { await chamar(`/equipe/interessados/${i.id}/convidar`, { metodo: 'POST', corpo: {} }); aviso(`Convite enviado para ${i.email}. Ele já aparece em Clientes.`); await atualizar(); }
+            catch (e: any) { falhou(e); if (e.status === 409) await atualizar(); } } }, i.tem_conta ? 'Já tem conta — vincular' : 'Convidar para a Área do Cliente'));
+        }
+        if (i.status === 'novo') { const b = mudar('respondido', 'Marcado como respondido.'); b.textContent = 'Marcar como respondido'; acoes.append(b); }
+        if (i.status !== 'arquivado' && i.status !== 'convidado') { const b = mudar('arquivado', 'Interessado arquivado.'); b.textContent = 'Arquivar'; acoes.append(b); }
+        if (i.status === 'arquivado' || i.status === 'respondido') { const b = mudar('novo', 'Interessado reaberto.'); b.textContent = 'Reabrir'; acoes.append(b); }
+        caixa.append(acoes);
+        return caixa;
+      }
+      carregar.interessados = async () => {
+        const st = $<HTMLSelectElement>('[data-int-status]').value;
+        const v = nova('interessados'); const { interessados } = await chamar('/equipe/interessados' + (st ? '?status=' + st : '')); if (!vigente('interessados', v)) return;
+        const box = $('[data-interessados]'); box.replaceChildren();
+        if (!interessados.length) box.append(el('p', { class: 'vazio' }, st === 'novo' ? 'Nenhum interessado novo.' : 'Nenhum interessado.'));
+        for (const i of interessados) box.append(linhaInteressado(i));
+      };
+      $('[data-int-status]').addEventListener('change', () => carregar.interessados().catch(falhou));
 
       // ---- agendamentos
       const inicioPeriodo = (p: string) => (p === 'tarde' ? '14:00' : '10:00');
@@ -650,6 +705,10 @@ import '../../styles/global.css';
       .etiqueta[data-t='aviso'] { background: rgba(217, 174, 107, 0.22); color: var(--ouro-claro); }
       .filtro { margin-bottom: 0.9rem; font-size: 0.9rem; color: var(--texto-2); }
       .filtro label { flex-direction: row; align-items: center; gap: 0.4rem; }
+      .filtro { display: flex; flex-wrap: wrap; align-items: center; gap: 0.8rem; }
+      .filtro .nota { margin: 0; }
+      .item__txt .mensagem { white-space: pre-wrap; margin-top: 0.3rem; padding-left: 0.7rem; border-left: 2px solid var(--borda-forte); font-style: normal; }
+      a.botao { text-decoration: none; display: inline-block; }
       .item { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem 1rem; align-items: start; padding: 1rem 1.1rem; margin-bottom: 0.7rem; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; }
       .item.feito { opacity: 0.75; }
       .item__txt { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; color: var(--texto-2); min-width: 0; }

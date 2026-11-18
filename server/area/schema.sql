@@ -63,6 +63,28 @@ create table if not exists equipe (
   concedido_em timestamptz,
   revogado_em timestamptz
 );
+-- Interessados: pedidos recebidos pelos formulários do site (Seja nosso cliente / Contato). Só a equipe vê.
+create table if not exists interessados (
+  id uuid primary key default gen_random_uuid(),
+  formulario text not null check (formulario in ('cliente', 'contato')),
+  nome text not null,
+  email text not null,
+  telefone text,
+  tipo text,
+  empresa text,
+  pais text,
+  area text,
+  assunto text,
+  idioma text not null default 'pt',
+  mensagem text not null,
+  status text not null default 'novo' check (status in ('novo', 'respondido', 'convidado', 'arquivado')),
+  recebido_em timestamptz not null default now(),
+  atualizado_em timestamptz,
+  atualizado_por text,
+  usuario_id uuid references usuarios(id) on delete set null
+);
+create index if not exists interessados_status on interessados(status, recebido_em desc);
+
 -- Registro das ações feitas pelo painel da equipe (quem, o quê, sobre quem, quando). Só inserções.
 create table if not exists acoes_equipe (
   id bigserial primary key,

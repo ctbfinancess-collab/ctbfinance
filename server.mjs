@@ -194,6 +194,8 @@ async function handleContact(req, res) {
 
   const { data, errors } = validate(fields);
   if (errors.length) return sendJson(res, 422, { ok: false, error: 'validation', fields: errors });
+  // guarda o pedido para o Admin (aba Interessados); falha aqui não impede o e-mail à equipe
+  if (areaCliente) await areaCliente.registrarInteressado(data).catch((e) => console.error('[interessados] não gravou:', e.message));
 
   const key = process.env.RESEND_API_KEY;
   const to = process.env.CONTACT_EMAIL_TO;

@@ -45,6 +45,7 @@ await put(cAna, '/api/cliente/documentos', 'POST', Buffer.from('%PDF-1.4 passapo
 await put(cAna, '/api/cliente/documentos', 'POST', Buffer.from('%PDF-1.4 comprovante\n%%EOF\n'), 'application/pdf', { 'X-Nome-Arquivo': 'comprovante.pdf' });
 await put(cAna, '/api/cliente/agendamentos', 'POST', { assunto: 'abertura_conta', data: dias(4), formato: 'video', periodo: 'manha', observacao: 'Aguardo contato' });
 await conta('bruno@example.com', 'Outra2026Conta');
+await fetch(`${BASE}/api/contact`, { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: BASE, 'X-Real-IP': '198.51.100.60' }, body: JSON.stringify({ form: 'client', name: 'Diego <b>Lead</b>', email: 'diego@example.com', phone: '+55 11 99999-0000', client_type: 'individual', country: 'Brasil', area: 'Intermediação Bancária', message: 'Quero abrir conta.\nPode me ligar à tarde?', consent: true, lang: 'pt' }) });
 
 const ch = spawn('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--remote-debugging-port=${CDP}`, `--user-data-dir=${fs.mkdtempSync(path.join(TMP, 'chrome-'))}`, 'about:blank'], { stdio: 'ignore' });
 let alvo; for (let i = 0; i < 150; i++) { try { alvo = await (await fetch(`http://127.0.0.1:${CDP}/json`)).json(); break; } catch { await sleep(200); } }
@@ -82,6 +83,13 @@ try {
   check('Números: 2 clientes, 1 agendamento, 2 documentos, 1 passaporte a conferir; contadores nas abas', await waitFor(`(()=>{const t=document.querySelector('[data-numeros]').innerText.replace(/\\s+/g,' ');return /2 Clientes/.test(t)&&/1 Agendamentos a confirmar/.test(t)&&/2 Documentos em análise/.test(t)&&/1 Passaportes a conferir/.test(t)&&document.querySelector('[data-cont=documentos_em_analise]').textContent==='2'})()`));
   await shot('p1-visao-geral');
 
+  console.log('--- Interessados');
+  await clicar('[data-aba=interessados]');
+  check('Aba Interessados: pedido do formulário com nome como TEXTO, e-mail, telefone e mensagem', await waitFor(`(()=>{const t=document.querySelector('[data-interessados]').innerText;return t.includes('Diego <b>Lead</b>') && t.includes('diego@example.com') && t.includes('+55 11 99999-0000') && t.includes('Pode me ligar à tarde?') && !document.querySelector('[data-interessados] b')})()`));
+  check('"Responder por e-mail" abre o e-mail endereçado ao interessado', await ev(`(()=>{const a=[...document.querySelectorAll('[data-interessados] a')].find(x=>x.textContent==='Responder por e-mail');return !!a && a.getAttribute('href').startsWith('mailto:diego@example.com?subject=')})()`));
+  await shot('p0-interessados');
+  await clicarTexto('Convidar para a Área do Cliente');
+  check('Convidar → convite enviado, sai da lista de novos e aparece em Clientes', await waitFor(`${msg}.includes('Convite enviado para diego@example.com') && document.querySelector('[data-interessados]').innerText.includes('Nenhum interessado novo')`) && emails.some((m) => m.to.includes('diego@example.com')));
   console.log('--- Clientes');
   await clicar('[data-aba=clientes]');
   check('Lista de clientes com situação e "A conferir"', await waitFor(`document.querySelector('[data-clientes]').innerText.includes('ana@example.com') && document.querySelector('[data-clientes]').innerText.includes('A conferir')`));

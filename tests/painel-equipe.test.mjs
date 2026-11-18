@@ -165,6 +165,28 @@ try {
   const regEd = (await db.q(`select detalhes from acoes_equipe where acao='editar_dados' order by em`)).rows;
   await t('PE43', 'Registro guarda QUAIS campos mudaram (sem os valores)', async () => regEd.length === 1 && regEd[0].detalhes.campos.includes('city') && !JSON.stringify(regEd[0].detalhes).includes('Abu Dhabi') && !JSON.stringify(regEd[0].detalhes).includes('7654321'));
 
+  console.log('--- Interessados (formulários do site)');
+  const formCliente = { form: 'client', name: 'Lucas Interessado', email: 'Lucas@Example.com', phone: '+971 50 111 2222', client_type: 'company', company: 'Lucas Trading', country: 'Brasil', area: 'Análise de Crédito', message: 'Gostaria de conversar <script>alert(1)</script> sobre crédito.', consent: true, lang: 'en' };
+  const env1 = await req('POST', '/api/contact', { json: formCliente, headers: { 'X-Real-IP': '198.51.100.50' } });
+  const lead = (await db.q(`select * from interessados where email='lucas@example.com'`)).rows[0];
+  await t('PE44', 'Formulário "Seja nosso cliente" enviado → 200 e o pedido fica guardado como "novo" (e-mail normalizado, mensagem intacta)', async () => env1.status === 200 && lead && lead.status === 'novo' && lead.formulario === 'cliente' && lead.idioma === 'en' && lead.empresa === 'Lucas Trading' && lead.mensagem.includes('<script>'));
+  const envC = await req('POST', '/api/contact', { json: { name: 'Maria Contato', email: 'maria@example.com', subject: 'Outro assunto', message: 'Pergunta geral sobre a empresa.', consent: true, lang: 'pt' }, headers: { 'X-Real-IP': '198.51.100.51' } });
+  await t('PE45', 'Formulário "Contato" também fica guardado (formulário "contato", com assunto)', async () => envC.status === 200 && (await db.q(`select formulario, assunto from interessados where email='maria@example.com'`)).rows[0]?.assunto === 'Outro assunto');
+  const antesSpam = (await db.q('select count(*)::int n from interessados')).rows[0].n;
+  const spam = await req('POST', '/api/contact', { json: { ...formCliente, email: 'robo@example.com', website: 'http://spam' }, headers: { 'X-Real-IP': '198.51.100.52' } });
+  const invalido = await req('POST', '/api/contact', { json: { ...formCliente, email: 'sem-arroba', consent: false }, headers: { 'X-Real-IP': '198.51.100.53' } });
+  await t('PE46', 'Robô (campo armadilha) e formulário inválido NÃO são guardados', async () => spam.status === 200 && invalido.status === 422 && (await db.q('select count(*)::int n from interessados')).rows[0].n === antesSpam);
+  const li = (await E('GET', '/interessados?status=novo')).dados.interessados;
+  await t('PE47', 'Admin lista os novos (2) e o resumo conta "interessados_novos"', async () => li.length === 2 && (await E('GET', '/resumo')).dados.interessados_novos === 2);
+  await t('PE48', 'Cliente comum não vê interessados (404)', async () => (await req('GET', '/api/cliente/equipe/interessados', { cookie: cOutro })).status === 404);
+  const maria = li.find((x) => x.email === 'maria@example.com');
+  await t('PE49', 'Marcar como respondido → status muda; status inválido → 400', async () => (await E('POST', `/interessados/${maria.id}/status`, { json: { status: 'respondido' } })).status === 200 && (await E('POST', `/interessados/${maria.id}/status`, { json: { status: 'convidado' } })).status === 400 && (await db.q('select status, atualizado_por from interessados where id=$1', [maria.id])).rows[0].atualizado_por === 'chefe@example.com');
+  const nL = emails.length;
+  const conv2 = await E('POST', `/interessados/${lead.id}/convidar`, { json: {} });
+  const eL = await esperar(() => emails.slice(nL).find((m) => m.to.includes('lucas@example.com') && /Client Area/.test(m.subject || '')));
+  await t('PE50', 'Convidar interessado → conta criada com nome e idioma do pedido (convite em inglês), status "convidado"', async () => conv2.status === 200 && !!eL && (await db.q(`select u.idioma, p.dados->>'display_name' n from usuarios u left join perfis p on p.usuario_id=u.id where u.email='lucas@example.com'`)).rows[0].n === 'Lucas Interessado' && (await db.q('select status, usuario_id from interessados where id=$1', [lead.id])).rows[0].status === 'convidado');
+  await t('PE51', 'Convidar de novo → 409 "já tem conta", sem novo e-mail', async () => { const n = emails.length; const r = await E('POST', `/interessados/${lead.id}/convidar`, { json: {} }); await sleep(300); return r.status === 409 && emails.length === n; });
+
   console.log('--- Registro e sessão da equipe');
   const reg = (await E('GET', '/registro')).dados.acoes.map((a) => a.acao);
   await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento', 'editar_dados'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);

@@ -7,6 +7,7 @@
 import { EDITAVEIS, CAMPOS_PASSAPORTE, validarPassaporte } from './api.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const STATUS_DOC = ['disponivel_analise', 'aprovado', 'rejeitado'];
+const STATUS_INT = ['novo', 'respondido', 'convidado', 'arquivado'];
 
 export function criarPainel({ db, adm, json, lerJson, log = console }) {
   const registrar = (u, acao, alvo, detalhes = {}) =>
@@ -26,6 +27,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
         (select count(*) from documentos where status='disponivel_analise')::int as documentos_em_analise,
         (select count(*) from agendamentos where horario_confirmado is null)::int as agendamentos_pendentes,
         (select count(*) from perfis where coalesce(dados->>'passportnumber','')<>'' and passaporte_conferido_em is null)::int as passaportes_a_conferir`)).rows[0];
+    r.interessados_novos = (await db.q(`select count(*)::int n from interessados where status='novo'`)).rows[0].n;
     // painel inicial: só dados reais do sistema
     r.clientes_ativos = (await db.q(`select count(*)::int n from usuarios u where senha_hash is not null and not bloqueado
                                        and not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo)`)).rows[0].n;
@@ -148,6 +150,38 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     return json(res, 200, { alterados: mudou });
   }
 
+  // ---- interessados (formulários do site)
+  async function listarInteressados(res, url) {
+    const st = url.searchParams.get('status');
+    const status = STATUS_INT.includes(st) ? st : null;
+    const r = await db.q(`select i.*, exists (select 1 from usuarios u where u.email = i.email) as tem_conta
+                            from interessados i ${status ? 'where i.status=$1' : ''} order by i.recebido_em desc limit 300`, status ? [status] : []);
+    return json(res, 200, { interessados: r.rows });
+  }
+  async function statusInteressado(req, res, u, id) {
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 2000);
+    if (!['novo', 'respondido', 'arquivado'].includes(b.status)) return erro(res, 400, 'status_invalido');
+    const r = await db.q('update interessados set status=$2, atualizado_em=now(), atualizado_por=$3 where id=$1 returning email', [id, b.status, u.email]);
+    if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
+    await registrar(u, 'interessado_' + b.status, r.rows[0].email);
+    return json(res, 200, { status: b.status });
+  }
+  async function convidarInteressado(req, res, u, id) {
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const i = (await db.q('select * from interessados where id=$1', [id])).rows[0];
+    if (!i) return erro(res, 404, 'nao_encontrado');
+    const existente = (await db.q('select id from usuarios where email=$1', [i.email])).rows[0];
+    if (existente) {
+      await db.q(`update interessados set status='convidado', usuario_id=$2, atualizado_em=now(), atualizado_por=$3 where id=$1`, [id, existente.id, u.email]);
+      return erro(res, 409, 'ja_existe', 'Este e-mail já tem conta na Área do Cliente. Abra a ficha em Clientes.');
+    }
+    const r = await adm.convidar(i.email, { nome: i.nome, lang: i.idioma });
+    await db.q(`update interessados set status='convidado', usuario_id=$2, atualizado_em=now(), atualizado_por=$3 where id=$1`, [id, r.id, u.email]);
+    await registrar(u, 'convidar', i.email, { idioma: i.idioma, origem: 'interessado' });
+    return json(res, 200, r);
+  }
+
   async function listarAgendamentos(res, url) {
     const todos = url.searchParams.get('todos') === '1';
     const r = await db.q(`select a.id, u.id as cliente_id, u.email, p.dados->>'display_name' as nome, a.tipo, a.descricao, a.formato, a.periodo,
@@ -224,6 +258,11 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     if (p[0] === 'documentos') {
       if (p.length === 1 && m === 'GET') return listarDocumentos(res, url);
       if (p.length === 3 && p[2] === 'decidir' && m === 'POST') return decidirDocumento(req, res, u, p[1]);
+    }
+    if (p[0] === 'interessados') {
+      if (p.length === 1 && m === 'GET') return listarInteressados(res, url);
+      if (p.length === 3 && p[2] === 'status' && m === 'POST') return statusInteressado(req, res, u, p[1]);
+      if (p.length === 3 && p[2] === 'convidar' && m === 'POST') return convidarInteressado(req, res, u, p[1]);
     }
     if (p[0] === 'registro' && p.length === 1 && m === 'GET') return registro(res);
     return json(res, 404, { erro: 'rota' });
