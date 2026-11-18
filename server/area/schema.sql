@@ -10,6 +10,9 @@ create table if not exists usuarios (
   criado_em timestamptz not null default now()
 );
 
+-- idioma dos e-mails automáticos ao cliente (definido no convite)
+alter table usuarios add column if not exists idioma text not null default 'pt';
+
 -- Sessões: só o HASH do identificador fica no banco; o valor vai num cookie HttpOnly.
 create table if not exists sessoes (
   id_hash text primary key,

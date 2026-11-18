@@ -27,7 +27,7 @@ A Área do Cliente roda **no próprio servidor do site** (`server.mjs`), com ban
 | `equipe:conceder` / `equipe:revogar` / `equipe:listar` — revogação vale na hora | banco | `railway ssh` ou `railway run` |
 | `docs:listar [status]`, `docs:aprovar <id>`, `docs:rejeitar <id> "PT" ["EN"]` | banco | `railway ssh` ou `railway run` |
 | `docs:baixar <id> <pasta>` — salva como `<id>.<extensão>`, nunca com o nome enviado pelo cliente, e não sobrescreve | **volume** | **`railway ssh`** (o arquivo fica no container; copie depois pelo próprio shell/ferramenta autorizada) |
-| `agenda:registrar <email> <AAAA-MM-DD> "tipo"`, `agenda:confirmar <id> <AAAA-MM-DDTHH:MM>` (Dubai; datas/horas impossíveis são recusadas) | banco | `railway ssh` ou `railway run` |
+| `agenda:registrar <email> <AAAA-MM-DD> "tipo"`, `agenda:confirmar <id> <AAAA-MM-DDTHH:MM> [--sem-email]` (Dubai; datas/horas impossíveis são recusadas; envia e-mail de confirmação ao cliente no idioma do convite) | banco | `railway ssh` ou `railway run` |
 | `agenda:listar [--todos]` (pedidos sem horário confirmado; os pedidos feitos pelo cliente também chegam por e-mail em CONTACT_EMAIL_TO) | banco | `railway ssh` ou `railway run` |
 | `arquivos:reconciliar [--aplicar]` — volume × banco (padrão: simulação) | **volume** + banco | **`railway ssh`** |
 

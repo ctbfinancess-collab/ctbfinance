@@ -20,14 +20,14 @@
  *   docs:aprovar <id>                docs:rejeitar <id> "<orientação PT>" ["<orientação EN>"]
  *   agenda:listar [--todos]          (padrão: só os pedidos sem horário confirmado)
  *   agenda:registrar <email> <AAAA-MM-DD> "<tipo>" ["descrição"]
- *   agenda:confirmar <id> <AAAA-MM-DDTHH:MM>   (horário de Dubai)
+ *   agenda:confirmar <id> <AAAA-MM-DDTHH:MM> [--sem-email]   (horário de Dubai; avisa o cliente por e-mail)
  *   arquivos:reconciliar [--aplicar]           (padrão: simulação)
  */
 import { criarBanco, criarArquivos } from '../server/area/nucleo.mjs';
 const COMANDOS_DE_ARQUIVOS = new Set(['docs:baixar', 'arquivos:reconciliar']);
 import { criarApi } from '../server/area/api.mjs';
 import { criarAdmin } from '../server/area/admin.mjs';
-import { enviarEmailAcesso } from '../server/area/emails.mjs';
+import { enviarEmailAcesso, enviarConfirmacaoAgendamento } from '../server/area/emails.mjs';
 
 const [cmd, ...a] = process.argv.slice(2);
 const db = criarBanco();
@@ -42,7 +42,7 @@ if (COMANDOS_DE_ARQUIVOS.has(cmd) && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !
 }
 await db.migrar();
 const api = criarApi({ db, arquivos, origens: new Set(), enviarEmail: enviarEmailAcesso });
-const adm = criarAdmin({ db, arquivos, api });
+const adm = criarAdmin({ db, arquivos, api, avisarCliente: enviarConfirmacaoAgendamento });
 const quem = process.env.USER || 'equipe';
 const C = {
   'usuarios:convidar': () => adm.convidar(a[0], { nome: a[1] || '', lang: a[2] === 'en' ? 'en' : 'pt' }),
@@ -57,7 +57,7 @@ const C = {
   'docs:rejeitar': () => adm.decidir(a[0], 'rejeitado', { orientacaoPt: a[1], orientacaoEn: a[2], por: quem }),
   'agenda:listar': () => adm.listarAgendamentos({ todos: a.includes('--todos') }),
   'agenda:registrar': () => adm.registrarAgendamento(a[0], a[1], a[2], a[3]),
-  'agenda:confirmar': () => adm.confirmarAgendamento(a[0], a[1], quem),
+  'agenda:confirmar': () => adm.confirmarAgendamento(a[0], a[1], quem, { avisar: !a.includes('--sem-email') }),
   'arquivos:reconciliar': () => adm.reconciliarArquivos({ aplicar: a.includes('--aplicar') }),
 };
 try {

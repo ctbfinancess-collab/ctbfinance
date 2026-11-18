@@ -105,6 +105,26 @@ try {
   await t('AG7', 'Equipe lista os pendentes (agenda:listar) e confirma; o cliente vê o horário', async () => { const l = (await ana('GET', '/api/cliente/agendamentos')).dados.agendamentos; return pend.length === 3 && pend.every((x) => x.solicitado_pelo_cliente) && l.find((x) => x.id === a1.dados.agendamento.id).horarioConfirmado === new Date(`${dias(3)}T11:00:00Z`).toISOString(); });
   await t('AG8', 'Confirmado deixa de contar como "em aberto": novo pedido aceito', async () => (await ana('POST', '/api/cliente/agendamentos', { json: { assunto: 'documentos', data: dias(10) , formato: 'presencial', periodo: 'qualquer'} })).status === 201);
   await t('AG9', 'Limite diário: 5 pedidos em 24 h (o 6º é recusado mesmo com os anteriores confirmados)', async () => { for (const x of await adm.listarAgendamentos()) await adm.confirmarAgendamento(x.id, `${dias(20)}T10:00`, 't'); const quinto = (await ana('POST', '/api/cliente/agendamentos', { json: { assunto: 'outro', data: dias(11) , formato: 'presencial', periodo: 'qualquer'} })).status; for (const x of await adm.listarAgendamentos()) await adm.confirmarAgendamento(x.id, `${dias(20)}T11:00`, 't'); const sexto = (await ana('POST', '/api/cliente/agendamentos', { json: { assunto: 'outro', data: dias(12) , formato: 'presencial', periodo: 'qualquer'} })).status; return quinto === 201 && sexto === 429; });
+
+  console.log('--- E-mail de confirmação ao cliente');
+  const { enviarConfirmacaoAgendamento } = await import('../server/area/emails.mjs');
+  const admE = criarAdmin({ db, arquivos, api: criarApi({ db, arquivos, origens: new Set(), enviarEmail: enviarEmailAcesso, siteUrl: BASE }), avisarCliente: enviarConfirmacaoAgendamento });
+  await admE.convidar('ingles@example.com', { lang: 'en' });
+  const cEn = await (async () => { const r = await req('POST', '/api/cliente/redefinir', { json: { token: tok('ingles@example.com'), senha: 'SenhaSegura2026' } }); return r.cookie; })();
+  const pedidoPt = await req('POST', '/api/cliente/agendamentos', { cookie: c2, json: { assunto: 'abertura_conta', data: dias(30), formato: 'video', periodo: 'manha' } });
+  const pedidoEn = await req('POST', '/api/cliente/agendamentos', { cookie: cEn, json: { assunto: 'investimentos', data: dias(30), formato: 'presencial', periodo: 'tarde' } });
+  const n0 = emails.length;
+  const rPt = await admE.confirmarAgendamento(pedidoPt.dados.agendamento.id, '2026-12-17T10:00', 'teste');
+  const ePt = emails.slice(n0).find((m) => m.to.includes('outro@example.com'));
+  await t('EC1', 'Confirmar → cliente recebe "Agendamento confirmado" em PT, com dia/hora de Dubai, formato e botão', async () => rPt.emailCliente === 'enviado' && ePt && /Agendamento confirmado/.test(ePt.subject) && /17 de dezembro de 2026/.test(ePt.html) && /10:00/.test(ePt.html) && /por vídeo/.test(ePt.html) && /Abertura de conta/.test(ePt.html) && /area-do-cliente/.test(ePt.html) && ePt.reply_to === 'equipe@exemplo.invalid');
+  const n1 = emails.length;
+  await admE.confirmarAgendamento(pedidoEn.dados.agendamento.id, '2026-12-18T15:30', 'teste');
+  const eEn = emails.slice(n1).find((m) => m.to.includes('ingles@example.com'));
+  await t('EC2', 'Cliente convidado em inglês recebe em inglês ("Appointment confirmed", 18 December, 15:30, in person)', async () => eEn && /Appointment confirmed/.test(eEn.subject) && /18 December 2026/.test(eEn.html) && /15:30/.test(eEn.html) && /in person/.test(eEn.html) && /client-area/.test(eEn.html));
+  const n2 = emails.length;
+  const rSem = await admE.confirmarAgendamento(pedidoPt.dados.agendamento.id, '2026-12-17T11:00', 'teste', { avisar: false });
+  await sleep(300);
+  await t('EC3', 'Com --sem-email: confirma sem enviar nada', async () => rSem.emailCliente === 'nao_enviado' && emails.length === n2);
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);
 } finally {

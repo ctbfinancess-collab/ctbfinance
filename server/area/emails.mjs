@@ -1,5 +1,5 @@
 /** E-mails de acesso da Área do Cliente (convite e redefinição de senha), na moldura visual aprovada. */
-import { sendEmail, brandedHtml, fromAddress, teamList } from '../email-base.mjs';
+import { sendEmail, brandedHtml, fromAddress, teamList, replyToTeam, SITE } from '../email-base.mjs';
 
 export async function enviarEmailAcesso({ to, finalidade, lang, link, horas }) {
   const en = lang === 'en';
@@ -36,4 +36,24 @@ export async function avisarEquipeAgendamento({ email, nome, assunto, data, form
     text: `Pedido de agendamento (Área do Cliente)\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nConfirme o horário com agenda:confirmar.`,
   }, 'aviso-agendamento');
   if (!ok) throw new Error('falha ao enviar aviso de agendamento');
+}
+
+const ASSUNTOS_EN = { abertura_conta: 'Account opening', investimentos: 'Investments', documentos: 'Documents', outro: 'Other subject' };
+/** E-mail automático ao CLIENTE quando a equipe confirma o horário (dia e hora em Dubai, formato). */
+export async function enviarConfirmacaoAgendamento({ email, lang, tipo, formato, horario }) {
+  const en = lang === 'en';
+  const quando = new Date(horario).toLocaleString(en ? 'en-GB' : 'pt-BR', { timeZone: 'Asia/Dubai', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const assunto = (en ? ASSUNTOS_EN : ASSUNTOS_PT)[tipo] || tipo || '';
+  const fmt = formato ? (en ? { video: 'video call', presencial: 'in person' } : { video: 'por vídeo', presencial: 'presencial' })[formato] : '';
+  const titulo = en ? 'Appointment confirmed' : 'Agendamento confirmado';
+  const linhas = en
+    ? [`Your appointment${assunto ? ` (${esc(assunto)})` : ''} has been confirmed:`, `<strong>${esc(quando)}</strong> — Dubai time (GST, UTC+4)${fmt ? `, ${fmt}` : ''}.`, 'If you need to reschedule, simply reply to this email or contact our team.']
+    : [`Seu agendamento${assunto ? ` (${esc(assunto)})` : ''} foi confirmado:`, `<strong>${esc(quando)}</strong> — horário de Dubai (GST, UTC+4)${fmt ? `, ${fmt}` : ''}.`, 'Se precisar remarcar, basta responder a este e-mail ou falar com nossa equipe.'];
+  const botao = { href: `${SITE}${en ? '/en/client-area/' : '/area-do-cliente/'}`, label: en ? 'View in Client Area' : 'Ver na Área do Cliente' };
+  const ok = await sendEmail({
+    from: fromAddress(), to: [email], reply_to: replyToTeam(), subject: `${titulo} · CTB Finances`,
+    html: brandedHtml(en ? 'en' : 'pt', titulo, linhas, botao),
+    text: `${titulo}\n\n${linhas.map((l) => l.replace(/<[^>]+>/g, '')).join('\n\n')}\n\n${botao.label}: ${botao.href}\n\nCTB Finance Broker L.L.C. · Dubai`,
+  }, 'agendamento-confirmado');
+  if (!ok) throw new Error('falha ao enviar e-mail de confirmação');
 }

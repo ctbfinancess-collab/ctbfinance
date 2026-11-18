@@ -10,7 +10,7 @@ import { FORMATOS } from './nucleo.mjs';
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 const norm = (e) => String(e || '').trim().toLowerCase();
 
-export function criarAdmin({ db, arquivos, api }) {
+export function criarAdmin({ db, arquivos, api, avisarCliente = null }) {
   const usuarioPorEmail = async (email) => {
     const u = (await db.q('select * from usuarios where email=$1', [norm(email)])).rows[0];
     if (!u) throw new Error(`usuário não encontrado: ${email}`);
@@ -23,7 +23,7 @@ export function criarAdmin({ db, arquivos, api }) {
     async convidar(email, { nome = '', lang = 'pt' } = {}) {
       const e = norm(email);
       if (!EMAIL_RE.test(e)) throw new Error('e-mail inválido');
-      const u = (await db.q(`insert into usuarios(email) values ($1) on conflict (email) do update set email=excluded.email returning *`, [e])).rows[0];
+      const u = (await db.q(`insert into usuarios(email, idioma) values ($1, $2) on conflict (email) do update set idioma=excluded.idioma returning *`, [e, lang === 'en' ? 'en' : 'pt'])).rows[0];
       if (nome) await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados`, [u.id, JSON.stringify({ display_name: nome })]);
       await api.enviarLinkSenha(u, u.senha_hash ? 'redefinir' : 'convite', lang);
       return { id: u.id, email: e, convite: u.senha_hash ? 'redefinicao_enviada' : 'convite_enviado' };
@@ -121,7 +121,7 @@ export function criarAdmin({ db, arquivos, api }) {
       return (await db.q('insert into agendamentos(usuario_id, tipo, descricao, data_solicitada) values ($1,$2,$3,$4) returning id', [u.id, tipo, descricao, dataSolicitada])).rows[0];
     },
     /** Confirma o horário (data e hora no fuso de Dubai, GST UTC+4, sem horário de verão). */
-    async confirmarAgendamento(id, dataHoraDubai, por) {
+    async confirmarAgendamento(id, dataHoraDubai, por, { avisar = true } = {}) {
       const m = String(dataHoraDubai).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})$/);
       if (!m) throw new Error('use AAAA-MM-DDTHH:MM (horário de Dubai)');
       const [ano, mes, dia, hora, min] = m.slice(1).map(Number);
@@ -132,7 +132,14 @@ export function criarAdmin({ db, arquivos, api }) {
       const utc = new Date(Date.UTC(ano, mes - 1, dia, hora - 4, min)); // Dubai = UTC+4, sem horário de verão
       const r = await db.q('update agendamentos set horario_confirmado=$2, confirmado_por=$3 where id=$1 returning id', [id, utc, por || null]);
       if (!r.rowCount) throw new Error('agendamento não encontrado');
-      return { id, horarioConfirmado: utc.toISOString() };
+      // e-mail automático ao cliente; se falhar, a confirmação continua valendo (o cliente vê na Área do Cliente)
+      let emailCliente = 'nao_enviado';
+      if (avisar && avisarCliente) {
+        const a = (await db.q('select a.tipo, a.formato, u.email, u.idioma from agendamentos a join usuarios u on u.id=a.usuario_id where a.id=$1', [id])).rows[0];
+        try { await avisarCliente({ email: a.email, lang: a.idioma, tipo: a.tipo, formato: a.formato, horario: utc }); emailCliente = 'enviado'; }
+        catch (e) { emailCliente = 'falhou: ' + e.message; }
+      }
+      return { id, horarioConfirmado: utc.toISOString(), emailCliente };
     },
 
     /** Confere volume x banco: apaga temporários e arquivos sem registro com mais de 1 h; relata registros sem arquivo. */
