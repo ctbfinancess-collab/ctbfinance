@@ -130,10 +130,8 @@ export async function gerarPdf(c) {
     });
     y -= h;
   }
-  // selo no topo de cada página + numeração
-  const selo = `${c.rotulo}${c.rascunho ? ' — DRAFT' : ''} · ${c.referencia}`;
+  // só a numeração no topo de cada página (sem selo de rótulo/rascunho, a pedido da titular)
   paginas.forEach((p, i) => {
-    p.drawText(selo, { x: MARGEM_E, y: TOPO, size: 7.5, font: negrito, color: BRONZE });
     const num = `${i + 1} / ${paginas.length}`;
     p.drawText(num, { x: L - MARGEM_D - fonte.widthOfTextAtSize(num, 7.5), y: TOPO, size: 7.5, font: fonte, color: BRONZE });
   });

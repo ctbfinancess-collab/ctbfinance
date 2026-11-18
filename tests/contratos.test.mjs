@@ -85,8 +85,8 @@ try {
   await t('CT4', 'Texto do contrato já vem com os dados (empresa, registro, endereço)', async () => c1.texto.includes('Exemplo Comércio Ltda., a company duly incorporated and existing under the laws of the Federative Republic of Brazil, registered under No. 12.345.678/0001-90') && c1.texto.includes('period of two (2) years'));
   await t('CT5', 'Rascunho é invisível ao cliente (lista vazia; PDF → 404)', async () => (await K(cAna, 'GET')).dados.contratos.length === 0 && (await K(cAna, 'GET', `/${c1.id}/pdf`)).status === 404);
   const pdf1 = await E('GET', `/contratos/${c1.id}/pdf`);
-  await t('CT6', 'PDF da equipe: válido, várias páginas, timbrado e selo DRAFT', async () => pdf1.status === 200 && pdf1.h.get('content-type') === 'application/pdf' && pdf1.dados.subarray(0, 5).toString() === '%PDF-' && (await paginas(pdf1.dados)) > 1
-    && (!temPdftotext || (() => { const t = textoPdf(pdf1.dados); return t.includes('Exemplo Comércio Ltda.') && t.includes('NDA — DRAFT') && t.includes('Passport: FZ123456') && t.includes('Diretor Fictício - EXECUTIVE DIRECTOR'); })()));
+  await t('CT6', 'PDF da equipe: válido, várias páginas, timbrado, sem frase DRAFT', async () => pdf1.status === 200 && pdf1.h.get('content-type') === 'application/pdf' && pdf1.dados.subarray(0, 5).toString() === '%PDF-' && (await paginas(pdf1.dados)) > 1
+    && (!temPdftotext || (() => { const t = textoPdf(pdf1.dados); return t.includes('Exemplo Comércio Ltda.') && !t.includes('DRAFT') && t.includes('Passport: FZ123456') && t.includes('Diretor Fictício - EXECUTIVE DIRECTOR'); })()));
 
   console.log('--- Edição e versões');
   const ed = await E('PUT', `/contratos/${c1.id}`, { json: { campos: { ...c1.campos, prazo: 'three (3)', endereco: 'Rua Nova, 50, Rio de Janeiro, Brasil' } } });
