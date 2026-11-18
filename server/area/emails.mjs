@@ -23,7 +23,7 @@ export async function enviarEmailAcesso({ to, finalidade, lang, link, horas }) {
 const ASSUNTOS_PT = { abertura_conta: 'Abertura de conta', investimentos: 'Investimentos', documentos: 'Documentos', outro: 'Outro assunto' };
 const esc = (v) => String(v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 /** Aviso INTERNO à equipe (CONTACT_EMAIL_TO): um cliente pediu agendamento pela Área do Cliente. */
-const FORMATOS_PT = { video: 'Vídeo', presencial: 'Presencial' };
+const FORMATOS_PT = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
 const PERIODOS_PT = { manha: 'Manhã (9h–12h, Dubai)', tarde: 'Tarde (13h–18h, Dubai)', qualquer: 'Qualquer horário' };
 export async function avisarEquipeAgendamento({ email, nome, assunto, data, formato, periodo, observacao }) {
   const para = teamList(); if (!para.length) return;
@@ -44,7 +44,7 @@ export async function enviarConfirmacaoAgendamento({ email, lang, tipo, formato,
   const en = lang === 'en';
   const quando = new Date(horario).toLocaleString(en ? 'en-GB' : 'pt-BR', { timeZone: 'Asia/Dubai', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   const assunto = (en ? ASSUNTOS_EN : ASSUNTOS_PT)[tipo] || tipo || '';
-  const fmt = formato ? (en ? { video: 'video call', presencial: 'in person' } : { video: 'por vídeo', presencial: 'presencial' })[formato] : '';
+  const fmt = formato ? (en ? { video: 'video call', telefone: 'phone call', presencial: 'in person' } : { video: 'por vídeo', telefone: 'por telefone', presencial: 'presencial' })[formato] : '';
   const titulo = en ? 'Appointment confirmed' : 'Agendamento confirmado';
   const linhas = en
     ? [`Your appointment${assunto ? ` (${esc(assunto)})` : ''} has been confirmed:`, `<strong>${esc(quando)}</strong> — Dubai time (GST, UTC+4)${fmt ? `, ${fmt}` : ''}.`, 'If you need to reschedule, simply reply to this email or contact our team.']

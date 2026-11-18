@@ -115,6 +115,7 @@ try {
   await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.data.value='2020-01-01';f.requestSubmit();return 1})()`);
   check('Data no passado → aviso, sem enviar', await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('a partir de amanhã')`));
   await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.assunto.value='investimentos';f.data.value=document.querySelector('[data-appt-date]').min;f.observacao.value='Prefiro por vídeo';f.requestSubmit();return 1})()`);
+  check('Formato tem as 3 opções: Vídeo, Telefone e Presencial', await ev(`[...document.querySelectorAll('[data-appt-form] [name=formato]')].map(i=>i.value).join(',')==='video,telefone,presencial' && document.querySelector('[data-appt-form]').innerText.includes('Telefone')`));
   await shot('3a-pedido');
   check('Sem escolher formato/horário → aviso', await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('formato e o melhor horário')`));
   await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.querySelector('[name=formato][value=video]').closest('label').click();f.querySelector('[name=periodo][value=tarde]').closest('label').click();f.requestSubmit();return 1})()`);

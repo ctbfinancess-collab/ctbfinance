@@ -34,7 +34,7 @@ function validarPassaporte(k, v) {
 }
 // agendamentos pedidos pelo cliente
 export const ASSUNTOS_AGENDAMENTO = ['abertura_conta', 'investimentos', 'documentos', 'outro'];
-export const FORMATOS_AGENDAMENTO = ['video', 'presencial'];
+export const FORMATOS_AGENDAMENTO = ['video', 'telefone', 'presencial'];
 export const PERIODOS_AGENDAMENTO = ['manha', 'tarde', 'qualquer'];
 const AGENDA_PENDENTES_MAX = 3;      // pedidos em aberto (sem horário confirmado) por cliente
 const AGENDA_DIA_MAX = 5;            // pedidos por cliente em 24 h
