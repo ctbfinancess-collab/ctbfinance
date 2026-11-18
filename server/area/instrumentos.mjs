@@ -22,12 +22,13 @@ export const STATUS_PT = {
 const FINAIS = ['recusada', 'cancelada', 'concluida'];
 // 'enviada' = ainda não entrou em análise: a cliente pode corrigir e reenviar (sempre completa)
 const EDITAVEL_CLIENTE = ['rascunho', 'enviada', 'documentacao_solicitada'];
-// transições que a EQUIPE pode fazer (rascunho é da cliente: a equipe não vê nem mexe)
+// transições que a EQUIPE pode fazer (rascunho é da cliente: a equipe não vê nem mexe).
+// "Aprovada" pode vir de qualquer etapa em aberto (a pedido da titular), mas só pela aprovadora e com comprovante anexado.
 const TRANSICOES = {
-  enviada: ['analise_documental', 'documentacao_solicitada', 'analise_interna', 'recusada', 'cancelada'],
-  analise_documental: ['documentacao_solicitada', 'analise_interna', 'recusada', 'cancelada'],
-  documentacao_solicitada: ['analise_documental', 'analise_interna', 'recusada', 'cancelada'],
-  analise_interna: ['analise_documental', 'documentacao_solicitada', 'encaminhada', 'recusada', 'cancelada'],
+  enviada: ['analise_documental', 'documentacao_solicitada', 'analise_interna', 'aprovada', 'recusada', 'cancelada'],
+  analise_documental: ['documentacao_solicitada', 'analise_interna', 'aprovada', 'recusada', 'cancelada'],
+  documentacao_solicitada: ['analise_documental', 'analise_interna', 'aprovada', 'recusada', 'cancelada'],
+  analise_interna: ['analise_documental', 'documentacao_solicitada', 'encaminhada', 'aprovada', 'recusada', 'cancelada'],
   encaminhada: ['aguardando_instituicao', 'aprovada', 'recusada', 'cancelada'],
   aguardando_instituicao: ['documentacao_solicitada', 'aprovada', 'recusada', 'cancelada'],
   aprovada: ['concluida', 'cancelada'],

@@ -110,7 +110,7 @@ try {
   await t('IN16', 'Rascunho de outra solicitação (POF, declaração) não aparece no Admin; ficha → 404', async () => r2.status === 201 && (await E('GET', '/instrumentos?status=todas')).dados.solicitacoes.length === 1 && (await E('GET', `/instrumentos/${r2.dados.solicitacao.id}`)).status === 404);
   await t('IN17', 'Filtros: instrumento=LC → 0; q=ana → 1; moeda=USD → 1', async () => (await E('GET', '/instrumentos?instrumento=LC')).dados.solicitacoes.length === 0 && (await E('GET', '/instrumentos?q=ana')).dados.solicitacoes.length === 1 && (await E('GET', '/instrumentos?moeda=USD')).dados.solicitacoes.length === 1);
   await t('IN18', 'Resumo conta 1 instrumento em aberto', async () => (await E('GET', '/resumo')).dados.instrumentos_abertos === 1);
-  await t('IN19', 'Transição inválida (enviada → aprovada) → 409 com mensagem', async () => { await adm.aprovadorInstrumentos('chefe@example.com', true); const r = await E('POST', `/instrumentos/${id1}/status`, { json: { status: 'aguardando_instituicao' } }); await adm.aprovadorInstrumentos('chefe@example.com', false); return r.status === 409 && /Não é possível/.test(r.dados.mensagem); });
+  await t('IN19', 'Transição inválida (enviada → aguardando instituição) → 409 com mensagem', async () => { await adm.aprovadorInstrumentos('chefe@example.com', true); const r = await E('POST', `/instrumentos/${id1}/status`, { json: { status: 'aguardando_instituicao' } }); await adm.aprovadorInstrumentos('chefe@example.com', false); return r.status === 409 && /Não é possível/.test(r.dados.mensagem); });
   await E('POST', `/instrumentos/${id1}/status`, { json: { status: 'analise_documental' } });
   await E('POST', `/instrumentos/${id1}/mensagem`, { json: { texto: 'Nota secreta da equipe', interna: true } });
   await E('POST', `/instrumentos/${id1}/mensagem`, { json: { texto: 'Recebemos seus documentos.' } });
@@ -202,6 +202,9 @@ try {
     await t('IN43', 'Enviada: alteração que deixaria incompleta → 400 e nada muda', async () => inc.status === 400 && inc.dados.erro === 'campos_obrigatorios' && l2.finalidade === 'Importação de máquinas');
     await E('POST', `/instrumentos/${e1.id}/status`, { json: { status: 'analise_documental' } });
     await t('IN44', 'Depois que a equipe começa a análise → cliente não edita mais (409)', async () => (await C(cAna, 'PUT', `/${e1.id}`, { valor: '1' })).status === 409);
+    await req('POST', `/api/cliente/equipe/instrumentos/${e1.id}/evidencias?para=aprovada`, { cookie: cChefe, corpo: PDF, headers: { 'Content-Type': 'application/pdf' } });
+    const apDireto = await E('POST', `/instrumentos/${e1.id}/status`, { json: { status: 'aprovada' } });
+    await t('IN45', 'Aprovadora pode marcar "Aprovada" direto de "Em análise documental" (com comprovante)', async () => apDireto.status === 200 && (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === e1.id).status === 'aprovada');
   }
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
