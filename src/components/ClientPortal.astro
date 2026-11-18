@@ -290,7 +290,11 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       if (ag) ag.textContent = prox ? `${M.assuntos[prox.tipo] || prox.tipo} · ${prox.horarioConfirmado ? `${M.apptConfirmed}: ${new Date(prox.horarioConfirmado).toLocaleString(locale, { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' })} (Dubai)` : `${M.apptRequested}: ${dataCivil(prox.dataSolicitada)} · ${M.apptToConfirm}`}` : M.apptEmpty;
       const dc = root.querySelector<HTMLElement>('[data-inicio-docs]');
       const emAnalise = (docs || []).filter((d) => d.status === 'disponivel_analise').length;
-      if (dc) dc.textContent = (docs || []).length ? `${docs.length} · ${M.st.disponivel_analise}: ${emAnalise}` : M.docsEmpty;
+      const n = (docs || []).length;
+      const en = lang === 'en';
+      if (dc) dc.textContent = !n ? M.docsEmpty
+        : en ? `${n} ${n === 1 ? 'document sent' : 'documents sent'} · ${emAnalise ? `${emAnalise} under review` : 'none under review'}`
+        : `${n} ${n === 1 ? 'documento enviado' : 'documentos enviados'} · ${emAnalise ? `${emAnalise} em análise` : 'nenhum em análise'}`;
     }
     // sessão encerrada no servidor (expirada/revogada): volta ao login
     const sessaoCaiu = () => { sessao++; usuarioAtual = null; limparTudo(); show('login'); msg($('[data-login-msg]'), M.sessionEnded, 'err'); };
