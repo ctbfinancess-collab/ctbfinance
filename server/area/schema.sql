@@ -63,6 +63,17 @@ create table if not exists equipe (
   concedido_em timestamptz,
   revogado_em timestamptz
 );
+-- Registro das ações feitas pelo painel da equipe (quem, o quê, sobre quem, quando). Só inserções.
+create table if not exists acoes_equipe (
+  id bigserial primary key,
+  por_usuario uuid,
+  por_email text not null,
+  acao text not null,
+  alvo text,
+  detalhes jsonb not null default '{}'::jsonb,
+  em timestamptz not null default now()
+);
+create index if not exists acoes_equipe_em on acoes_equipe(em desc);
 create table if not exists registro_equipe (
   id bigserial primary key,
   usuario_id uuid not null,

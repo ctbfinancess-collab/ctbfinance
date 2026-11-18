@@ -45,6 +45,7 @@ const MAX_ARQUIVO = 10 * 1024 * 1024;
 // cota de envios por cliente (24 h): evita lotar o volume
 const COTA_ARQUIVOS_DIA = 30;
 const COTA_BYTES_DIA = 200 * 1024 * 1024;
+const EQUIPE_OCIOSA_MS = 30 * 60 * 1000;   // sessão de conta da equipe: 30 min parada encerra
 const RECUSAS_DIA = 50;               // arquivos recusados (não ocupam disco) têm limite próprio
 const ENVIOS_SIMULTANEOS = 3;         // envios em andamento por cliente (limita o disco temporário)
 // cabeçalhos de segurança de toda resposta da API
@@ -126,6 +127,11 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
           and s.ultimo_uso_em > now() - ($2 || ' milliseconds')::interval`, [hashToken(token), String(SESSAO_OCIOSA_MS)]);
     const s = r.rows[0];
     if (!s || s.bloqueado) return null;
+    // contas da equipe (acesso a dados de todos os clientes): sessão encerra após 30 min parada
+    if (s.equipe === true && Date.now() - new Date(s.ultimo_uso_em).getTime() > EQUIPE_OCIOSA_MS) {
+      await db.q('update sessoes set revogada_em=now() where id_hash=$1 and revogada_em is null', [s.id_hash]);
+      return null;
+    }
     if (Date.now() - new Date(s.ultimo_uso_em).getTime() > 60_000) await db.q('update sessoes set ultimo_uso_em=now() where id_hash=$1', [s.id_hash]);
     return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true, sessao: s.id_hash };
   }
@@ -406,7 +412,8 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       if (rota === '/api/cliente/redefinir' && m === 'POST') return await redefinir(req, res);
       const u = await autenticar(req);
       if (!u) return json(res, 401, { erro: 'sessao' }, { 'Set-Cookie': cookieApagar() });
-      if (rota === '/api/cliente/sessao' && m === 'GET') return json(res, 200, { email: u.email, verificado: u.verificado });
+      if (rota === '/api/cliente/sessao' && m === 'GET') return json(res, 200, { email: u.email, verificado: u.verificado, equipe: u.equipe });
+      if (rota.startsWith('/api/cliente/equipe/')) return painel ? await painel(req, res, url, u) : json(res, 404, { erro: 'rota' });
       if (rota === '/api/cliente/perfil' && (m === 'GET' || m === 'PUT')) return await perfil(req, res, u);
       if (rota === '/api/cliente/documentos' && m === 'GET') return await listarDocumentos(res, u);
       if (rota === '/api/cliente/documentos' && m === 'POST') return await enviarDocumento(req, res, u);
@@ -422,5 +429,8 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       res.destroy();
     }
   }
-  return { tratar, enviarLinkSenha };
+  let painel = null;
+  /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson). */
+  const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson }); };
+  return { tratar, enviarLinkSenha, ligarPainel };
 }

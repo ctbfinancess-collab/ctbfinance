@@ -1,0 +1,465 @@
+---
+/**
+ * Painel da equipe CTB Finances (somente contas com papel de equipe). Fora dos buscadores e do sitemap.
+ * Tudo vem da API /api/cliente/equipe/* (sessão HttpOnly; conta sem papel de equipe recebe 404).
+ * Dados de clientes são inseridos na página sempre como TEXTO (nunca como HTML).
+ */
+import '../../styles/global.css';
+---
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Painel da equipe · CTB Finances</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <header class="topo">
+      <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="72" height="34" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /><em>Painel da equipe</em></a>
+      <div class="quem" data-quem hidden><span data-email></span><button type="button" class="sair" data-sair>Sair</button></div>
+    </header>
+
+    <main class="corpo">
+      <!-- Entrar -->
+      <section class="cartao entrar" data-vista="entrar" hidden>
+        <h1>Painel da equipe</h1>
+        <p class="nota">Acesso restrito à equipe da CTB Finances.</p>
+        <form data-form-entrar novalidate>
+          <label><span>E-mail</span><input type="email" name="email" autocomplete="username" required /></label>
+          <label><span>Senha</span><input type="password" name="senha" autocomplete="current-password" required /></label>
+          <button type="submit" class="botao">Entrar</button>
+        </form>
+        <p class="msg" data-msg-entrar hidden></p>
+      </section>
+
+      <p class="carregando" data-vista="carregando">Carregando…</p>
+
+      <!-- Painel -->
+      <section data-vista="painel" hidden>
+        <nav class="abas" role="tablist">
+          <button role="tab" data-aba="geral" aria-selected="true">Visão geral</button>
+          <button role="tab" data-aba="clientes">Clientes</button>
+          <button role="tab" data-aba="agendamentos">Agendamentos <b data-cont="agendamentos_pendentes"></b></button>
+          <button role="tab" data-aba="documentos">Documentos <b data-cont="documentos_em_analise"></b></button>
+          <button role="tab" data-aba="registro">Registro</button>
+        </nav>
+        <p class="msg" data-msg hidden></p>
+
+        <div data-painel="geral">
+          <div class="numeros" data-numeros></div>
+          <p class="nota">Os números se atualizam a cada ação. A sessão do painel encerra após 30 minutos sem uso.</p>
+        </div>
+
+        <div data-painel="clientes" hidden>
+          <form class="cartao convite" data-form-convite novalidate>
+            <h2>Convidar cliente</h2>
+            <div class="linha">
+              <label><span>Nome</span><input name="nome" maxlength="120" /></label>
+              <label><span>E-mail</span><input name="email" type="email" required maxlength="160" /></label>
+              <label><span>Idioma do convite</span><select name="idioma"><option value="pt">Português</option><option value="en">Inglês</option></select></label>
+              <button type="submit" class="botao">Enviar convite</button>
+            </div>
+          </form>
+          <div class="busca"><input type="search" placeholder="Buscar por nome ou e-mail" data-busca /></div>
+          <div class="tabela" data-clientes></div>
+        </div>
+
+        <div data-painel="agendamentos" hidden>
+          <div class="filtro"><label><input type="checkbox" data-agenda-todos /> Mostrar também os já confirmados</label></div>
+          <div data-agendamentos></div>
+        </div>
+
+        <div data-painel="documentos" hidden>
+          <div class="filtro">
+            <select data-doc-status>
+              <option value="disponivel_analise">Em análise</option>
+              <option value="aprovado">Aprovados</option>
+              <option value="rejeitado">Rejeitados</option>
+              <option value="">Todos</option>
+            </select>
+          </div>
+          <div data-documentos></div>
+        </div>
+
+        <div data-painel="registro" hidden>
+          <div class="tabela" data-registro></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Ficha do cliente -->
+    <dialog class="ficha" data-ficha>
+      <div class="ficha__topo"><h2 data-ficha-titulo></h2><button type="button" class="fechar" data-fechar aria-label="Fechar">×</button></div>
+      <div data-ficha-corpo></div>
+    </dialog>
+
+    <!-- Rejeitar documento -->
+    <dialog class="ficha pequena" data-rejeitar>
+      <form method="dialog" data-form-rejeitar>
+        <div class="ficha__topo"><h2>Rejeitar documento</h2><button type="button" class="fechar" data-fechar aria-label="Fechar">×</button></div>
+        <p class="nota" data-rejeitar-qual></p>
+        <label><span>Orientação ao cliente (português) *</span><textarea name="pt" rows="3" maxlength="1000" required placeholder="Ex.: A imagem está ilegível. Envie uma nova foto do passaporte, com boa iluminação."></textarea></label>
+        <label><span>Orientação em inglês (opcional)</span><textarea name="en" rows="2" maxlength="1000"></textarea></label>
+        <div class="acoes"><button type="submit" class="botao perigo" value="ok">Rejeitar</button><button type="button" class="link" data-fechar>Cancelar</button></div>
+      </form>
+    </dialog>
+
+    <script>
+      const API = '/api/cliente';
+      const $ = <T extends HTMLElement = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
+      const $$ = <T extends HTMLElement = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
+      // cria elementos com TEXTO (dados de clientes nunca viram HTML)
+      function el(tag: string, props: Record<string, any> = {}, ...filhos: (Node | string | null | false | undefined)[]) {
+        const e = document.createElement(tag);
+        for (const [k, v] of Object.entries(props)) {
+          if (v === undefined || v === null || v === false) continue;
+          if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else if (k === 'dataset') Object.assign(e.dataset, v); else e.setAttribute(k, v === true ? '' : String(v));
+        }
+        for (const f of filhos) if (f !== null && f !== undefined && f !== false) e.append(typeof f === 'string' ? document.createTextNode(f) : f);
+        return e;
+      }
+      const ASSUNTOS: Record<string, string> = { abertura_conta: 'Abertura de conta', investimentos: 'Investimentos', documentos: 'Documentos', outro: 'Outro assunto' };
+      const FORMATOS: Record<string, string> = { video: 'Vídeo', presencial: 'Presencial' };
+      const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
+      const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha' };
+      const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
+      const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+
+      let eu: { email: string } | null = null;
+      const vista = (v: string) => $$('[data-vista]').forEach((x) => (x.hidden = x.dataset.vista !== v));
+      const aviso = (t: string, tipo: 'ok' | 'erro' = 'ok') => { const m = $('[data-msg]'); m.hidden = false; m.textContent = t; m.dataset.tipo = tipo; clearTimeout((aviso as any).t); (aviso as any).t = setTimeout(() => (m.hidden = true), 7000); };
+
+      async function chamar(rota: string, opts: { metodo?: string; corpo?: unknown } = {}) {
+        const r = await fetch(API + rota, { method: opts.metodo || 'GET', credentials: 'same-origin', headers: opts.corpo !== undefined ? { 'Content-Type': 'application/json' } : {}, body: opts.corpo !== undefined ? JSON.stringify(opts.corpo) : undefined });
+        if (r.status === 401) { sessaoCaiu(); throw Object.assign(new Error('sessao'), { silencioso: true }); }
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok) throw Object.assign(new Error(d.mensagem || 'Não foi possível concluir. Tente novamente.'), { status: r.status, d });
+        return d;
+      }
+      const falhou = (e: any) => { if (!e.silencioso) aviso(e.message, 'erro'); };
+      function sessaoCaiu() { eu = null; $('[data-quem]').hidden = true; vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Sua sessão terminou. Entre novamente.'; }
+
+      // ---- entrar / sair
+      $('[data-form-entrar]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target as HTMLFormElement); const m = $('[data-msg-entrar]'); m.hidden = true;
+        const r = await fetch(API + '/entrar', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: String(f.get('email')).trim(), senha: String(f.get('senha')) }) }).catch(() => null);
+        if (!r || !r.ok) { m.hidden = false; m.textContent = r && r.status === 429 ? 'Muitas tentativas. Aguarde alguns minutos.' : 'E-mail ou senha incorretos.'; return; }
+        (e.target as HTMLFormElement).reset(); iniciar();
+      });
+      $('[data-sair]').addEventListener('click', async () => { await fetch(API + '/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => {}); eu = null; $('[data-quem]').hidden = true; vista('entrar'); });
+
+      // ---- abas
+      let abaAtual = 'geral';
+      const carregar: Record<string, () => Promise<void>> = {};
+      // cada lista só é desenhada pela resposta MAIS RECENTE (respostas atrasadas são descartadas)
+      const versao: Record<string, number> = {};
+      const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
+      const vigente = (k: string, v: number) => versao[k] === v;
+      function abrirAba(a: string) {
+        abaAtual = a;
+        $$('[data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === a)));
+        $$('[data-painel]').forEach((p) => (p.hidden = p.dataset.painel !== a));
+        carregar[a]?.().catch(falhou);
+      }
+      $$('[data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba!)));
+      const atualizar = async () => { await atualizarResumo().catch(falhou); await carregar[abaAtual]?.().catch(falhou); };
+
+      // ---- visão geral
+      async function atualizarResumo() {
+        const v = nova('resumo'); const r = await chamar('/equipe/resumo'); if (!vigente('resumo', v)) return;
+        $$('[data-cont]').forEach((b) => (b.textContent = r[b.dataset.cont!] ? String(r[b.dataset.cont!]) : ''));
+        const box = $('[data-numeros]'); box.replaceChildren();
+        const itens: [string, number, string][] = [['Clientes', r.clientes, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes']];
+        for (const [t, n, aba] of itens) box.append(el('button', { type: 'button', class: 'numero' + (n && t !== 'Clientes' ? ' alerta' : ''), onclick: () => abrirAba(aba) }, el('strong', {}, String(n)), el('span', {}, t)));
+      }
+      carregar.geral = atualizarResumo;
+
+      // ---- clientes
+      let buscaT: any;
+      $<HTMLInputElement>('[data-busca]').addEventListener('input', () => { clearTimeout(buscaT); buscaT = setTimeout(() => carregar.clientes().catch(falhou), 250); });
+      carregar.clientes = async () => {
+        const q = $<HTMLInputElement>('[data-busca]').value.trim();
+        const v = nova('clientes'); const { clientes } = await chamar('/equipe/clientes' + (q ? '?q=' + encodeURIComponent(q) : '')); if (!vigente('clientes', v)) return;
+        const box = $('[data-clientes]'); box.replaceChildren();
+        if (!clientes.length) { box.append(el('p', { class: 'vazio' }, 'Nenhum cliente encontrado.')); return; }
+        box.append(el('div', { class: 'linha-t cab' }, el('span', {}, 'Cliente'), el('span', {}, 'Situação'), el('span', {}, 'Passaporte'), el('span', {}, 'Pendências'), el('span', {})));
+        for (const c of clientes) {
+          const sit = c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado';
+          const pass = !c.tem_passaporte ? '—' : c.passaporte_conferido_em ? 'Conferido' : 'A conferir';
+          const pend = [c.docs_em_analise && `${c.docs_em_analise} doc.`, c.agend_pendentes && `${c.agend_pendentes} agend.`].filter(Boolean).join(' · ') || '—';
+          box.append(el('div', { class: 'linha-t' },
+            el('span', {}, el('strong', {}, c.nome || '(sem nome)'), el('small', {}, c.email + (c.equipe ? ' · equipe' : ''))),
+            el('span', { class: 'etiqueta', dataset: { t: c.bloqueado ? 'erro' : c.ativo ? 'ok' : 'aviso' } }, sit),
+            el('span', { class: pass === 'A conferir' ? 'destaque' : '' }, pass),
+            el('span', {}, pend),
+            el('button', { type: 'button', class: 'link', onclick: () => abrirFicha(c.id) }, 'Abrir ficha')));
+        }
+      };
+      $('[data-form-convite]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement; const f = new FormData(form);
+        const email = String(f.get('email')).trim();
+        if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) return aviso('Informe um e-mail válido.', 'erro');
+        const botao = form.querySelector('button')!; botao.disabled = true;
+        try {
+          const r = await chamar('/equipe/clientes', { metodo: 'POST', corpo: { email, nome: String(f.get('nome')).trim(), idioma: f.get('idioma') } });
+          aviso(r.convite === 'convite_enviado' ? `Convite enviado para ${email}.` : `${email} já tinha senha: enviamos um link para redefinir.`);
+          form.reset(); await atualizar();
+        } catch (er) { falhou(er); } finally { botao.disabled = false; }
+      });
+
+      // ---- ficha
+      const ficha = $<HTMLDialogElement>('[data-ficha]');
+      $$('[data-fechar]').forEach((b) => b.addEventListener('click', () => (b.closest('dialog') as HTMLDialogElement).close()));
+      async function abrirFicha(id: string) {
+        let c: any;
+        const v = nova('ficha');
+        try { c = await chamar('/equipe/clientes/' + id); } catch (e) { return falhou(e); }
+        if (!vigente('ficha', v)) return;
+        const d = c.dados || {};
+        $('[data-ficha-titulo]').textContent = d.display_name || c.email;
+        const corpo = $('[data-ficha-corpo]'); corpo.replaceChildren();
+        const acao = (rotulo: string, rota: string, confirmar?: string, classe = '') => el('button', { type: 'button', class: 'botao pequeno ' + classe, onclick: async () => {
+          if (confirmar && !confirm(confirmar)) return;
+          try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id); await atualizar(); } catch (e) { falhou(e); }
+        } }, rotulo);
+        const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
+        corpo.append(el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])));
+        // passaporte (número completo só aqui)
+        const pass = el('div', { class: 'bloco' }, el('h3', {}, 'Passaporte'));
+        if (!d.passportnumber) pass.append(el('p', { class: 'nota' }, 'O cliente ainda não informou.'));
+        else {
+          pass.append(el('dl', { class: 'dados' }, el('dt', {}, 'Número'), el('dd', { class: 'mono' }, d.passportnumber), el('dt', {}, 'Validade'), el('dd', {}, d.passportexpirationdate ? dataCivil(d.passportexpirationdate) : '—')));
+          if (c.passaporteConferidoEm) pass.append(el('p', { class: 'nota ok' }, `Conferido em ${dataHora(c.passaporteConferidoEm)} por ${c.passaporteConferidoPor || 'equipe'}.`), acao('Destravar (cliente poderá alterar)', 'passaporte-liberar', 'Destravar o passaporte? O cliente poderá alterar o número e a validade.', 'claro'));
+          else pass.append(el('p', { class: 'nota' }, 'Compare com a cópia do passaporte em Documentos antes de conferir.'), acao('Marcar como conferido', 'passaporte-conferir', 'Confirmar que o número e a validade conferem com o documento? O campo ficará travado para o cliente.'));
+        }
+        corpo.append(pass);
+        // documentos
+        const docs = el('div', { class: 'bloco' }, el('h3', {}, `Documentos (${c.documentos.length})`));
+        for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id)));
+        if (!c.documentos.length) docs.append(el('p', { class: 'nota' }, 'Nenhum documento enviado.'));
+        corpo.append(docs);
+        // agendamentos
+        const ags = el('div', { class: 'bloco' }, el('h3', {}, `Agendamentos (${c.agendamentos.length})`));
+        for (const a of c.agendamentos) ags.append(linhaAgendamento({ ...a, email: c.email, nome: d.display_name }, () => abrirFicha(c.id)));
+        if (!c.agendamentos.length) ags.append(el('p', { class: 'nota' }, 'Nenhum agendamento.'));
+        corpo.append(ags);
+        // conta
+        const conta = el('div', { class: 'bloco acoes' }, el('h3', {}, 'Conta'));
+        if (!c.bloqueado) conta.append(acao(c.ativo ? 'Enviar link para redefinir senha' : 'Reenviar convite', 'reenviar', undefined, 'claro'));
+        if (eu && c.email !== eu.email) conta.append(c.bloqueado ? acao('Desbloquear acesso', 'desbloquear') : acao('Bloquear acesso', 'bloquear', 'Bloquear o acesso deste cliente? As sessões abertas dele terminam na hora.', 'perigo'));
+        corpo.append(conta);
+        if (!ficha.open) ficha.showModal();
+      }
+
+      // ---- agendamentos
+      const inicioPeriodo = (p: string) => (p === 'tarde' ? '14:00' : '10:00');
+      function linhaAgendamento(a: any, depois: () => Promise<void> | void) {
+        const info = [a.formato && FORMATOS[a.formato], a.periodo && PERIODOS[a.periodo]].filter(Boolean).join(' · ');
+        const caixa = el('div', { class: 'item' + (a.horario_confirmado ? ' feito' : '') },
+          el('div', { class: 'item__txt' },
+            el('strong', {}, ASSUNTOS[a.tipo] || a.tipo || '—'),
+            el('span', {}, `${a.nome || a.email}${a.nome ? ' · ' + a.email : ''}`),
+            el('span', {}, a.horario_confirmado ? `Confirmado: ${dataHora(a.horario_confirmado)} (Dubai)${a.confirmado_por ? ' por ' + a.confirmado_por : ''}` : `Data pedida: ${a.data_solicitada ? dataCivil(a.data_solicitada) : '—'}${info ? ' · ' + info : ''}`),
+            a.descricao ? el('em', {}, `“${a.descricao}”`) : null));
+        if (!a.horario_confirmado) {
+          const dia = el('input', { type: 'date', value: a.data_solicitada || '' }) as HTMLInputElement;
+          const hora = el('input', { type: 'time', step: '900', value: inicioPeriodo(a.periodo) }) as HTMLInputElement;
+          const mandar = el('input', { type: 'checkbox', checked: true }) as HTMLInputElement;
+          const botao = el('button', { type: 'button', class: 'botao pequeno', onclick: async () => {
+            if (!dia.value || !hora.value) return aviso('Escolha o dia e a hora.', 'erro');
+            botao.disabled = true;
+            try {
+              const r = await chamar(`/equipe/agendamentos/${a.id}/confirmar`, { metodo: 'POST', corpo: { dataHora: `${dia.value}T${hora.value}`, avisar: mandar.checked } });
+              aviso(`Confirmado para ${dataCivil(dia.value)} às ${hora.value} (Dubai). ${r.emailCliente === 'enviado' ? 'O cliente recebeu o e-mail.' : mandar.checked ? 'Atenção: o e-mail não foi enviado (' + r.emailCliente + ').' : 'Sem e-mail ao cliente.'}`, r.emailCliente === 'enviado' || !mandar.checked ? 'ok' : 'erro');
+              await depois(); await atualizar();
+            } catch (e) { falhou(e); } finally { botao.disabled = false; }
+          } }, 'Confirmar');
+          caixa.append(el('div', { class: 'item__acao' }, el('label', { class: 'mini' }, el('span', {}, 'Dia'), dia), el('label', { class: 'mini' }, el('span', {}, 'Hora (Dubai)'), hora), el('label', { class: 'check' }, mandar, ' E-mail ao cliente'), botao));
+        }
+        return caixa;
+      }
+      carregar.agendamentos = async () => {
+        const todos = $<HTMLInputElement>('[data-agenda-todos]').checked;
+        const v = nova('agendamentos'); const { agendamentos } = await chamar('/equipe/agendamentos' + (todos ? '?todos=1' : '')); if (!vigente('agendamentos', v)) return;
+        const box = $('[data-agendamentos]'); box.replaceChildren();
+        if (!agendamentos.length) box.append(el('p', { class: 'vazio' }, todos ? 'Nenhum agendamento.' : 'Nenhum agendamento esperando confirmação.'));
+        for (const a of agendamentos) box.append(linhaAgendamento(a, () => {}));
+      };
+      $('[data-agenda-todos]').addEventListener('change', () => carregar.agendamentos().catch(falhou));
+
+      // ---- documentos
+      const rejeitar = $<HTMLDialogElement>('[data-rejeitar]');
+      let rejeitarAtual: { id: string; depois: () => any } | null = null;
+      $('[data-form-rejeitar]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const f = new FormData(e.target as HTMLFormElement);
+        const pt = String(f.get('pt')).trim(); if (!pt) return aviso('Escreva a orientação ao cliente.', 'erro');
+        try { await chamar(`/equipe/documentos/${rejeitarAtual!.id}/decidir`, { metodo: 'POST', corpo: { decisao: 'rejeitado', orientacaoPt: pt, orientacaoEn: String(f.get('en')).trim() } }); rejeitar.close(); (e.target as HTMLFormElement).reset(); aviso('Documento rejeitado; o cliente vê a orientação na Área do Cliente.'); await rejeitarAtual!.depois(); await atualizar(); }
+        catch (er) { falhou(er); }
+      });
+      async function baixar(d: any) {
+        try {
+          const r = await fetch(`${API}/documentos/${d.id}/arquivo`, { credentials: 'same-origin' });
+          if (r.status === 401) return sessaoCaiu();
+          if (!r.ok) throw new Error('Arquivo indisponível para download.');
+          const url = URL.createObjectURL(await r.blob());
+          const a = el('a', { href: url, download: d.arquivo }) as HTMLAnchorElement; a.click(); setTimeout(() => URL.revokeObjectURL(url), 5000);
+        } catch (e) { falhou(e); }
+      }
+      function linhaDocumento(d: any, depois: () => any) {
+        const baixavel = d.tem_arquivo && (d.status !== 'rejeitado' || d.motivo === 'analise_equipe');
+        const caixa = el('div', { class: 'item' + (d.status !== 'disponivel_analise' ? ' feito' : '') },
+          el('div', { class: 'item__txt' },
+            el('strong', {}, d.arquivo),
+            el('span', {}, `${d.nome || d.email}${d.nome ? ' · ' + d.email : ''}`),
+            el('span', {}, `Recebido em ${dataHora(d.recebido_em)} · ${tamanho(d.tamanho)}${d.decidido_em ? ` · decidido por ${d.decidido_por || 'equipe'} em ${dataHora(d.decidido_em)}` : ''}`),
+            d.status === 'rejeitado' && d.orientacao ? el('em', {}, `Orientação: ${d.orientacao.pt}`) : null),
+          el('span', { class: 'etiqueta', dataset: { t: d.status === 'aprovado' ? 'ok' : d.status === 'rejeitado' ? 'erro' : 'aviso' } }, ST_DOC[d.status] || d.status));
+        const acoes = el('div', { class: 'item__acao' });
+        if (baixavel) acoes.append(el('button', { type: 'button', class: 'link', onclick: () => baixar(d) }, 'Baixar'));
+        if (d.status === 'disponivel_analise') {
+          acoes.append(
+            el('button', { type: 'button', class: 'botao pequeno', onclick: async () => { if (!confirm(`Aprovar "${d.arquivo}"?`)) return; try { await chamar(`/equipe/documentos/${d.id}/decidir`, { metodo: 'POST', corpo: { decisao: 'aprovado' } }); aviso('Documento aprovado.'); await depois(); await atualizar(); } catch (e) { falhou(e); } } }, 'Aprovar'),
+            el('button', { type: 'button', class: 'botao pequeno perigo', onclick: () => { rejeitarAtual = { id: d.id, depois }; $('[data-rejeitar-qual]').textContent = `${d.arquivo} — ${d.nome || d.email}`; rejeitar.showModal(); } }, 'Rejeitar'));
+        }
+        caixa.append(acoes);
+        return caixa;
+      }
+      carregar.documentos = async () => {
+        const st = $<HTMLSelectElement>('[data-doc-status]').value;
+        const v = nova('documentos'); const { documentos } = await chamar('/equipe/documentos' + (st ? '?status=' + st : '')); if (!vigente('documentos', v)) return;
+        const box = $('[data-documentos]'); box.replaceChildren();
+        if (!documentos.length) box.append(el('p', { class: 'vazio' }, st === 'disponivel_analise' ? 'Nenhum documento esperando análise.' : 'Nenhum documento.'));
+        for (const d of documentos) box.append(linhaDocumento(d, () => {}));
+      };
+      $('[data-doc-status]').addEventListener('change', () => carregar.documentos().catch(falhou));
+
+      // ---- registro
+      carregar.registro = async () => {
+        const v = nova('registro'); const { acoes } = await chamar('/equipe/registro'); if (!vigente('registro', v)) return;
+        const box = $('[data-registro]'); box.replaceChildren();
+        if (!acoes.length) { box.append(el('p', { class: 'vazio' }, 'Nenhuma ação registrada ainda.')); return; }
+        box.append(el('div', { class: 'linha-t cab reg' }, el('span', {}, 'Quando (Dubai)'), el('span', {}, 'Quem'), el('span', {}, 'Ação'), el('span', {}, 'Sobre')));
+        for (const a of acoes) box.append(el('div', { class: 'linha-t reg' }, el('span', {}, dataHora(a.em)), el('span', {}, a.por_email), el('span', {}, ACOES[a.acao] || a.acao), el('span', { class: 'mono' }, a.alvo || '—')));
+      };
+
+      // ---- início
+      async function iniciar() {
+        vista('carregando');
+        const r = await fetch(API + '/sessao', { credentials: 'same-origin' }).catch(() => null);
+        if (!r || !r.ok) { vista('entrar'); return; }
+        const s = await r.json();
+        if (!s.equipe) {
+          await fetch(API + '/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+          vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Esta conta não tem acesso ao painel da equipe.'; return;
+        }
+        eu = { email: s.email }; $('[data-email]').textContent = s.email; $('[data-quem]').hidden = false;
+        vista('painel'); abrirAba('geral');
+      }
+      iniciar();
+    </script>
+
+    <style is:global>
+      body { background: var(--color-ivory); color: var(--color-espresso); min-height: 100vh; }
+      [hidden] { display: none !important; }
+      .topo { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.9rem clamp(1rem, 3vw, 2.5rem); background: var(--color-espresso); color: var(--color-champagne); border-bottom: 1px solid var(--color-line); }
+      .marca { display: flex; align-items: center; gap: 0.8rem; color: var(--color-champagne); text-decoration: none; }
+      .marca img { height: 34px; width: auto; }
+      .marca .palavra { height: 20px; }
+      .marca em { font-style: normal; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-gold); border-left: 1px solid var(--color-line); padding-left: 0.8rem; }
+      .quem { display: flex; align-items: center; gap: 1rem; font-size: 0.88rem; }
+      .sair { background: none; border: 1px solid var(--color-line); color: var(--color-champagne); border-radius: 999px; padding: 0.4rem 1rem; font: inherit; cursor: pointer; }
+      .corpo { max-width: 1200px; margin: 0 auto; padding: clamp(1.2rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem) 4rem; }
+      .cartao { background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); padding: clamp(1.2rem, 2.5vw, 2rem); box-shadow: 0 18px 40px rgba(53, 36, 29, 0.06); }
+      .entrar { max-width: 420px; margin: 3rem auto; }
+      .entrar h1 { font-size: 2.2rem; margin: 0 0 0.3rem; }
+      .entrar form { display: grid; gap: 0.9rem; margin-top: 1.2rem; }
+      label { display: flex; flex-direction: column; gap: 0.35rem; }
+      label > span { font-size: 0.76rem; letter-spacing: 0.04em; color: var(--color-cafe); }
+      input, select, textarea { font: inherit; font-size: 0.95rem; color: var(--color-espresso); background: var(--color-ivory); border: 1px solid rgba(98, 72, 58, 0.28); border-radius: 4px; padding: 0.6rem 0.75rem; min-height: 42px; }
+      input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.2); }
+      .botao { font: inherit; font-weight: 500; font-size: 0.92rem; border: 0; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #2a140d; background: linear-gradient(180deg, #e9c98f, #b9853f); box-shadow: 0 6px 14px rgba(53, 36, 29, 0.15); }
+      .botao:disabled { opacity: 0.6; cursor: wait; }
+      .botao.pequeno { padding: 0.45rem 1rem; font-size: 0.85rem; }
+      .botao.claro { background: #efe6d6; box-shadow: none; border: 1px solid rgba(98, 72, 58, 0.25); }
+      .botao.perigo { background: #f2dcd2; color: #8b3a1f; box-shadow: none; border: 1px solid rgba(199, 113, 79, 0.45); }
+      .link { background: none; border: 0; font: inherit; font-size: 0.88rem; color: #8a5e2e; text-decoration: underline; cursor: pointer; padding: 0.3rem; }
+      .nota { color: var(--color-cafe); font-size: 0.86rem; margin: 0.4rem 0; }
+      .nota.ok { color: #3f6b44; }
+      .msg { margin: 0.8rem 0; padding: 0.7rem 0.9rem; font-size: 0.9rem; border-left: 3px solid #6f9a72; background: rgba(111, 154, 114, 0.14); }
+      .msg[data-tipo='erro'] { border-left-color: #c7714f; background: rgba(199, 113, 79, 0.14); }
+      .carregando { text-align: center; margin: 4rem 0; color: var(--color-cafe); }
+      .abas { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.2rem; }
+      .abas button { font: inherit; font-size: 0.9rem; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(98, 72, 58, 0.3); background: transparent; color: var(--color-espresso); cursor: pointer; }
+      .abas button[aria-selected='true'] { background: var(--color-espresso); color: var(--color-champagne); border-color: var(--color-espresso); }
+      .abas b { display: inline-block; min-width: 1.3em; margin-left: 0.3rem; padding: 0 0.4em; border-radius: 999px; background: #c7714f; color: #fff; font-size: 0.75rem; font-weight: 600; }
+      .abas b:empty { display: none; }
+      .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.9rem; }
+      .numero { text-align: left; font: inherit; cursor: pointer; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
+      .numero strong { font-family: var(--font-display); font-size: 2.4rem; font-weight: 500; line-height: 1; }
+      .numero span { font-size: 0.85rem; color: var(--color-cafe); }
+      .numero.alerta { border-color: rgba(199, 113, 79, 0.55); background: #fbefe9; }
+      .convite h2 { font-size: 1.4rem; margin: 0 0 0.8rem; }
+      .linha { display: grid; grid-template-columns: 1fr 1.3fr 0.8fr auto; gap: 0.8rem; align-items: end; }
+      .busca { margin: 1.2rem 0 0.6rem; }
+      .busca input { width: 100%; max-width: 420px; }
+      .tabela { border-top: 1px solid rgba(98, 72, 58, 0.15); }
+      .linha-t { display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr auto; gap: 0.8rem; align-items: center; padding: 0.75rem 0.3rem; border-bottom: 1px solid rgba(98, 72, 58, 0.12); font-size: 0.9rem; }
+      .linha-t.reg { grid-template-columns: 1fr 1.3fr 1.2fr 1.6fr; }
+      .linha-t.cab { font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-cafe); }
+      .linha-t strong { display: block; font-weight: 500; }
+      .linha-t small { color: var(--color-cafe); overflow-wrap: anywhere; }
+      .destaque { color: #9a4a2c; font-weight: 500; }
+      .etiqueta { justify-self: start; font-size: 0.74rem; padding: 0.22rem 0.6rem; border-radius: 999px; background: #efe8dc; white-space: nowrap; }
+      .etiqueta[data-t='ok'] { background: rgba(111, 154, 114, 0.22); color: #2f5a34; }
+      .etiqueta[data-t='erro'] { background: rgba(199, 113, 79, 0.2); color: #8b3a1f; }
+      .etiqueta[data-t='aviso'] { background: rgba(181, 139, 77, 0.22); color: #6d4a1f; }
+      .filtro { margin-bottom: 0.8rem; font-size: 0.9rem; }
+      .filtro label { flex-direction: row; align-items: center; gap: 0.4rem; }
+      .item { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem 1rem; align-items: start; padding: 1rem 1.1rem; margin-bottom: 0.7rem; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); }
+      .item.feito { opacity: 0.8; }
+      .item__txt { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; color: var(--color-cafe); min-width: 0; }
+      .item__txt strong { color: var(--color-espresso); font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
+      .item__txt em { color: var(--color-espresso); }
+      .item__acao { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 0.7rem; }
+      .mini input { min-height: 38px; padding: 0.4rem 0.6rem; }
+      .check { flex-direction: row; align-items: center; gap: 0.35rem; font-size: 0.85rem; padding-bottom: 0.5rem; }
+      .check input { min-height: 0; }
+      .vazio { color: var(--color-cafe); font-style: italic; padding: 1rem 0.3rem; }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86rem; overflow-wrap: anywhere; }
+      dialog.ficha { width: min(760px, 94vw); max-height: 90vh; border: 1px solid var(--color-line); padding: 0 1.4rem 1.4rem; background: var(--color-ivory); color: var(--color-espresso); box-shadow: 0 30px 70px rgba(53, 36, 29, 0.35); }
+      dialog.pequena { width: min(520px, 94vw); }
+      dialog::backdrop { background: rgba(35, 13, 8, 0.45); }
+      .ficha__topo { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0 0.6rem; background: var(--color-ivory); border-bottom: 1px solid rgba(98, 72, 58, 0.15); margin-bottom: 0.8rem; }
+      .ficha__topo h2 { margin: 0; font-size: 1.6rem; }
+      .fechar { background: none; border: 0; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--color-cafe); }
+      .dados { display: grid; grid-template-columns: 170px 1fr; gap: 0.35rem 1rem; margin: 0.4rem 0 0.8rem; font-size: 0.9rem; }
+      .dados dt { color: var(--color-cafe); }
+      .dados dd { margin: 0; overflow-wrap: anywhere; }
+      .bloco { border-top: 1px solid rgba(98, 72, 58, 0.15); padding-top: 0.8rem; margin-top: 0.8rem; }
+      .bloco h3 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+      .bloco.acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+      .bloco.acoes h3 { width: 100%; }
+      dialog form { display: grid; gap: 0.8rem; }
+      .acoes { display: flex; gap: 0.8rem; align-items: center; }
+      @media (max-width: 800px) {
+        .linha { grid-template-columns: 1fr; }
+        .linha-t, .linha-t.reg { grid-template-columns: 1fr 1fr; }
+        .linha-t.cab { display: none; }
+        .marca em { display: none; }
+        .dados { grid-template-columns: 1fr; }
+        .dados dt { margin-top: 0.4rem; }
+      }
+    </style>
+  </body>
+</html>

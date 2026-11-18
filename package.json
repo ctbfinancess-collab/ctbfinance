@@ -13,7 +13,9 @@
     "test:navegador": "npm run build && node tests/navegador-area.mjs",
     "test:correcoes": "node tests/correcoes-railway.test.mjs",
     "test:revisao": "node tests/revisao-independente.test.mjs",
-    "test:ajustes": "node tests/ajustes-portal.test.mjs"
+    "test:ajustes": "node tests/ajustes-portal.test.mjs",
+    "test:painel": "node tests/painel-equipe.test.mjs",
+    "test:navegador-painel": "npm run build && node tests/navegador-painel.mjs"
   },
   "dependencies": {
     "astro": "^7.4.12",
