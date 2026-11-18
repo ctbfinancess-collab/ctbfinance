@@ -25,6 +25,19 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
         (select count(*) from documentos where status='disponivel_analise')::int as documentos_em_analise,
         (select count(*) from agendamentos where horario_confirmado is null)::int as agendamentos_pendentes,
         (select count(*) from perfis where coalesce(dados->>'passportnumber','')<>'' and passaporte_conferido_em is null)::int as passaportes_a_conferir`)).rows[0];
+    // painel inicial: só dados reais do sistema
+    r.clientes_ativos = (await db.q(`select count(*)::int n from usuarios u where senha_hash is not null and not bloqueado
+                                       and not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo)`)).rows[0].n;
+    r.clientes_mes = (await db.q(`select to_char(m, 'YYYY-MM') as mes,
+             (select count(*) from usuarios u where date_trunc('month', u.criado_em) = m
+                and not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo))::int as n
+        from generate_series(date_trunc('month', now()) - interval '11 months', date_trunc('month', now()), interval '1 month') m order by m`)).rows;
+    r.atividade = (await db.q(`select por_email, acao, alvo, em from acoes_equipe where acao <> 'ver_ficha' order by em desc limit 6`)).rows;
+    r.proximos = (await db.q(`select a.id, u.email, p.dados->>'display_name' as nome, a.tipo, a.formato, a.horario_confirmado,
+             to_char(a.data_solicitada,'YYYY-MM-DD') as data_solicitada
+        from agendamentos a join usuarios u on u.id=a.usuario_id left join perfis p on p.usuario_id=u.id
+       where (a.horario_confirmado is not null and a.horario_confirmado > now()) or (a.horario_confirmado is null and a.data_solicitada >= current_date)
+       order by coalesce(a.horario_confirmado, a.data_solicitada::timestamptz) limit 5`)).rows;
     return json(res, 200, r);
   }
 

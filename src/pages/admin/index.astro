@@ -20,14 +20,11 @@ import '../../styles/global.css';
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
-    <header class="topo">
-      <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="72" height="34" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /><em>Admin</em></a>
-      <div class="quem" data-quem hidden><span data-email></span><button type="button" class="sair" data-sair>Sair</button></div>
-    </header>
-
-    <main class="corpo">
-      <!-- Entrar -->
-      <section class="cartao entrar" data-vista="entrar" hidden>
+    <!-- Entrar -->
+    <section class="tela-entrar" data-vista="entrar" hidden>
+      <div class="cartao-entrar">
+        <img src="/brand/ctb-eagle.png" alt="" width="120" height="56" class="aguia" />
+        <img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra-grande" />
         <h1>Admin</h1>
         <p class="nota">Acesso restrito à equipe da CTB Finances.</p>
         <form data-form-entrar novalidate>
@@ -36,28 +33,90 @@ import '../../styles/global.css';
           <button type="submit" class="botao">Entrar</button>
         </form>
         <p class="msg" data-msg-entrar hidden></p>
-      </section>
+      </div>
+    </section>
 
-      <p class="carregando" data-vista="carregando">Carregando…</p>
+    <p class="carregando" data-vista="carregando">Carregando…</p>
 
-      <!-- Painel -->
-      <section data-vista="painel" hidden>
-        <nav class="abas" role="tablist">
-          <button role="tab" data-aba="geral" aria-selected="true">Visão geral</button>
-          <button role="tab" data-aba="clientes">Clientes</button>
-          <button role="tab" data-aba="agendamentos">Agendamentos <b data-cont="agendamentos_pendentes"></b></button>
-          <button role="tab" data-aba="documentos">Documentos <b data-cont="documentos_em_analise"></b></button>
-          <button role="tab" data-aba="registro">Registro</button>
+    <!-- Admin -->
+    <div class="app" data-vista="painel" hidden>
+      <aside class="lateral">
+        <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="64" height="30" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /></a>
+        <nav class="menu" role="tablist" aria-label="Admin">
+          <button role="tab" data-aba="geral" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Dashboard</span></button>
+          <button role="tab" data-aba="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9.3 5.5 2.6 5.5 5.8"/></svg><span>Clientes</span></button>
+          <button role="tab" data-aba="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Agendamentos</span><b data-cont="agendamentos_pendentes"></b></button>
+          <button role="tab" data-aba="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Documentos</span><b data-cont="documentos_em_analise"></b></button>
+          <button role="tab" data-aba="registro"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/><circle cx="18" cy="18" r="3"/></svg><span>Registro</span></button>
         </nav>
-        <p class="msg" data-msg hidden></p>
+        <p class="menu-titulo">Em breve</p>
+        <ul class="menu breve" aria-label="Módulos em preparação">
+          <li><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M16 15h2"/></svg><span>Contas e Saldos</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16v-4M10 16V9M14 16v-6M18 16V6"/></svg><span>Investimentos</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Operações</span></li>
+          <li><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/></svg><span>Crédito e Financiamento</span></li>
+          <li><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Compliance (KYC/AML)</span></li>
+        </ul>
+        <div class="quem" data-quem hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg><span data-email></span><button type="button" class="sair" data-sair title="Sair"><svg viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></svg><span>Sair</span></button></div>
+        <div class="onda" aria-hidden="true"></div>
+      </aside>
 
-        <div data-painel="geral">
-          <div class="numeros" data-numeros></div>
-          <p class="nota">Os números se atualizam a cada ação. A sessão do Admin encerra após 30 minutos sem uso.</p>
-        </div>
+      <div class="principal">
+        <header class="faixa">
+          <div class="faixa__txt">
+            <h1>Painel da Equipe – <em>Administração</em></h1>
+            <p data-subtitulo>Gestão de clientes, agendamentos e documentos</p>
+          </div>
+        </header>
 
-        <div data-painel="clientes" hidden>
-          <form class="cartao convite" data-form-convite novalidate>
+        <main class="conteudo">
+          <p class="msg" data-msg hidden></p>
+
+          <div data-painel="geral">
+            <div class="kpis" data-numeros>
+              <button type="button" class="kpi" data-ir="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9.3 5.5 2.6 5.5 5.8"/></svg><div><span class="kpi__n" data-k="clientes">–</span><span class="kpi__t">Clientes</span><small data-k-sub="clientes_ativos"></small></div></button>
+              <button type="button" class="kpi" data-ir="clientes"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.2"/><path d="M4 20c0-3.3 2.7-6 6-6 1.2 0 2.3.3 3.2.9M18 14v6M15 17h6"/></svg><div><span class="kpi__n" data-k="convites_pendentes">–</span><span class="kpi__t">Convites sem senha criada</span></div></button>
+              <button type="button" class="kpi" data-ir="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><div><span class="kpi__n" data-k="agendamentos_pendentes">–</span><span class="kpi__t">Agendamentos a confirmar</span></div></button>
+              <button type="button" class="kpi" data-ir="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><div><span class="kpi__n" data-k="documentos_em_analise">–</span><span class="kpi__t">Documentos em análise</span></div></button>
+              <button type="button" class="kpi" data-ir="clientes"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/></svg><div><span class="kpi__n" data-k="passaportes_a_conferir">–</span><span class="kpi__t">Passaportes a conferir</span></div></button>
+            </div>
+
+            <div class="grade">
+              <section class="quadro grafico">
+                <h2>Novos clientes <small>últimos 12 meses</small></h2>
+                <div data-grafico></div>
+              </section>
+              <section class="quadro">
+                <h2>Demandas da equipe</h2>
+                <div class="demandas" data-demandas></div>
+              </section>
+              <section class="quadro">
+                <h2>Ações rápidas</h2>
+                <div class="rapidas">
+                  <button type="button" data-rapida="convidar"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.2"/><path d="M4 20c0-3.3 2.7-6 6-6 1.2 0 2.3.3 3.2.9M18 14v6M15 17h6"/></svg><span>Cadastrar cliente</span></button>
+                  <button type="button" data-ir="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Confirmar agendamentos</span></button>
+                  <button type="button" data-ir="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Analisar documentos</span></button>
+                  <button type="button" data-ir="clientes"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/></svg><span>Conferir passaportes</span></button>
+                  <button type="button" data-ir="registro"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/><circle cx="18" cy="18" r="3"/></svg><span>Ver registro</span></button>
+                </div>
+              </section>
+            </div>
+
+            <div class="grade dupla">
+              <section class="quadro">
+                <h2>Atividade recente <button type="button" class="ver" data-ir="registro">Ver tudo →</button></h2>
+                <div data-atividade></div>
+              </section>
+              <section class="quadro">
+                <h2>Próximos agendamentos <button type="button" class="ver" data-ir="agendamentos">Ver todos →</button></h2>
+                <div data-proximos></div>
+              </section>
+            </div>
+            <p class="nota rodape">Somente dados reais do sistema. A sessão do Admin encerra após 30 minutos sem uso.</p>
+          </div>
+
+          <div data-painel="clientes" hidden>
+          <form class="quadro convite" data-form-convite novalidate>
             <h2>Convidar cliente</h2>
             <div class="linha">
               <label><span>Nome</span><input name="nome" maxlength="120" /></label>
@@ -90,8 +149,9 @@ import '../../styles/global.css';
         <div data-painel="registro" hidden>
           <div class="tabela" data-registro></div>
         </div>
-      </section>
-    </main>
+        </main>
+      </div>
+    </div>
 
     <!-- Ficha do cliente -->
     <dialog class="ficha" data-ficha>
@@ -164,8 +224,10 @@ import '../../styles/global.css';
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
+      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
       function abrirAba(a: string) {
         abaAtual = a;
+        $('[data-subtitulo]').textContent = SUB[a] || '';
         $$('[data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === a)));
         $$('[data-painel]').forEach((p) => (p.hidden = p.dataset.painel !== a));
         carregar[a]?.().catch(falhou);
@@ -174,13 +236,43 @@ import '../../styles/global.css';
       const atualizar = async () => { await atualizarResumo().catch(falhou); await carregar[abaAtual]?.().catch(falhou); };
 
       // ---- visão geral
+      const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+      const NS = 'http://www.w3.org/2000/svg';
+      const svg = (tag: string, at: Record<string, string | number>) => { const e = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(at)) e.setAttribute(k, String(v)); return e; };
+      function grafico(dados: { mes: string; n: number }[]) {
+        const W = 560, H = 190, L = 34, B = 26, T = 12, R = 10;
+        const max = Math.max(4, ...dados.map((d) => d.n)); const passo = Math.ceil(max / 4);
+        const topo = passo * 4;
+        const x = (i: number) => L + (i * (W - L - R)) / (dados.length - 1); const y = (n: number) => T + (H - T - B) * (1 - n / topo);
+        const g = svg('svg', { viewBox: `0 0 ${W} ${H}`, class: 'svg-grafico', role: 'img', 'aria-label': 'Novos clientes por mês' });
+        const defs = svg('defs', {}); const lg = svg('linearGradient', { id: 'grad', x1: 0, y1: 0, x2: 0, y2: 1 });
+        lg.append(svg('stop', { offset: '0%', 'stop-color': '#d9ae6b', 'stop-opacity': 0.45 }), svg('stop', { offset: '100%', 'stop-color': '#d9ae6b', 'stop-opacity': 0 })); defs.append(lg); g.append(defs);
+        for (let k = 0; k <= 4; k++) { const v = passo * k; g.append(svg('line', { x1: L, x2: W - R, y1: y(v), y2: y(v), class: 'g-linha' })); const t = svg('text', { x: L - 8, y: y(v) + 4, class: 'g-eixo', 'text-anchor': 'end' }); t.textContent = String(v); g.append(t); }
+        const pts = dados.map((d, i) => `${x(i)},${y(d.n)}`);
+        g.append(svg('path', { d: `M${x(0)},${y(0)} L${pts.join(' L')} L${x(dados.length - 1)},${y(0)} Z`, fill: 'url(#grad)' }));
+        g.append(svg('polyline', { points: pts.join(' '), class: 'g-traco' }));
+        dados.forEach((d, i) => { const c = svg('circle', { cx: x(i), cy: y(d.n), r: 3.6, class: 'g-ponto' }); const tt = svg('title', {}); tt.textContent = `${MESES[+d.mes.slice(5) - 1]}/${d.mes.slice(2, 4)}: ${d.n}`; c.append(tt); g.append(c);
+          const t = svg('text', { x: x(i), y: H - 8, class: 'g-eixo', 'text-anchor': 'middle' }); t.textContent = MESES[+d.mes.slice(5) - 1]; g.append(t); });
+        return g;
+      }
       async function atualizarResumo() {
         const v = nova('resumo'); const r = await chamar('/equipe/resumo'); if (!vigente('resumo', v)) return;
         $$('[data-cont]').forEach((b) => (b.textContent = r[b.dataset.cont!] ? String(r[b.dataset.cont!]) : ''));
-        const box = $('[data-numeros]'); box.replaceChildren();
-        const itens: [string, number, string][] = [['Clientes', r.clientes, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes']];
-        for (const [t, n, aba] of itens) box.append(el('button', { type: 'button', class: 'numero' + (n && t !== 'Clientes' ? ' alerta' : ''), onclick: () => abrirAba(aba) }, el('strong', {}, String(n)), el('span', {}, t)));
+        $$('[data-k]').forEach((e) => { e.textContent = String(r[e.dataset.k!] ?? 0); e.closest('.kpi')!.classList.toggle('alerta', e.dataset.k !== 'clientes' && r[e.dataset.k!] > 0); });
+        const sub = $('[data-k-sub]'); sub.textContent = `${r.clientes_ativos} com acesso ativo`;
+        $('[data-grafico]').replaceChildren(grafico(r.clientes_mes || []));
+        const dem: [string, number, string][] = [['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
+        $('[data-demandas]').replaceChildren(...dem.map(([t, n, aba]) => el('button', { type: 'button', class: 'demanda' + (n ? ' tem' : ''), onclick: () => abrirAba(aba) }, el('span', {}, t), el('b', {}, String(n)))));
+        const at = $('[data-atividade]');
+        at.replaceChildren(...(r.atividade.length ? r.atividade.map((a: any) => el('div', { class: 'mini-linha' }, el('span', { class: 'quando' }, dataHora(a.em)), el('span', {}, ACOES[a.acao] || a.acao), el('small', {}, a.por_email))) : [el('p', { class: 'vazio' }, 'Nenhuma ação registrada ainda.')]));
+        const px = $('[data-proximos]');
+        px.replaceChildren(...(r.proximos.length ? r.proximos.map((a: any) => el('div', { class: 'mini-linha' },
+          el('span', { class: 'quando' }, a.horario_confirmado ? dataHora(a.horario_confirmado) : dataCivil(a.data_solicitada)),
+          el('span', {}, `${ASSUNTOS[a.tipo] || a.tipo}${a.formato ? ' · ' + (FORMATOS[a.formato] || a.formato) : ''}`),
+          el('small', { class: a.horario_confirmado ? 'ok' : 'pend' }, `${a.nome || a.email} · ${a.horario_confirmado ? 'confirmado' : 'a confirmar'}`))) : [el('p', { class: 'vazio' }, 'Nenhum agendamento à frente.')]));
       }
+      $$('[data-ir]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.ir!)));
+      $('[data-rapida="convidar"]').addEventListener('click', () => { abrirAba('clientes'); setTimeout(() => $<HTMLInputElement>('[data-form-convite] [name=nome]').focus(), 50); });
       carregar.geral = atualizarResumo;
 
       // ---- clientes
@@ -378,95 +470,177 @@ import '../../styles/global.css';
     </script>
 
     <style is:global>
-      body { background: var(--color-ivory); color: var(--color-espresso); min-height: 100vh; }
+      :root { --fundo: #1c100b; --fundo-2: #24150e; --cartao: rgba(43, 26, 18, 0.88); --borda: rgba(201, 164, 106, 0.32); --borda-forte: rgba(217, 174, 107, 0.6); --ouro: #d9ae6b; --ouro-claro: #f0d39c; --texto: #f3e6d2; --texto-2: #c9b49a; --verde: #7fbf7f; --vermelho: #e0846a; }
+      html, body { background: var(--fundo); }
+      body { color: var(--texto); min-height: 100vh; font-family: var(--font-body); }
       [hidden] { display: none !important; }
-      .topo { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.9rem clamp(1rem, 3vw, 2.5rem); background: var(--color-espresso); color: var(--color-champagne); border-bottom: 1px solid var(--color-line); }
-      .marca { display: flex; align-items: center; gap: 0.8rem; color: var(--color-champagne); text-decoration: none; }
-      .marca img { height: 34px; width: auto; }
-      .marca .palavra { height: 20px; }
-      .marca em { font-style: normal; font-size: 0.78rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--color-gold); border-left: 1px solid var(--color-line); padding-left: 0.8rem; }
-      .quem { display: flex; align-items: center; gap: 1rem; font-size: 0.88rem; }
-      .sair { background: none; border: 1px solid var(--color-line); color: var(--color-champagne); border-radius: 999px; padding: 0.4rem 1rem; font: inherit; cursor: pointer; }
-      .corpo { max-width: 1200px; margin: 0 auto; padding: clamp(1.2rem, 3vw, 2.5rem) clamp(1rem, 3vw, 2.5rem) 4rem; }
-      .cartao { background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); padding: clamp(1.2rem, 2.5vw, 2rem); box-shadow: 0 18px 40px rgba(53, 36, 29, 0.06); }
-      .entrar { max-width: 420px; margin: 3rem auto; }
-      .entrar h1 { font-size: 2.2rem; margin: 0 0 0.3rem; }
-      .entrar form { display: grid; gap: 0.9rem; margin-top: 1.2rem; }
+      svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+      h1, h2, h3 { color: var(--texto); }
+
+      /* entrar */
+      .tela-entrar { min-height: 100vh; display: grid; place-items: center; padding: 2rem 1rem; background: radial-gradient(ellipse at 50% 0%, rgba(217, 174, 107, 0.18), transparent 60%), var(--fundo); }
+      .cartao-entrar { width: min(420px, 100%); padding: 2.2rem; background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5); text-align: center; }
+      .cartao-entrar .aguia { height: 56px; width: auto; }
+      .cartao-entrar .palavra-grande { display: block; height: 26px; width: auto; margin: 0.6rem auto 0; }
+      .cartao-entrar h1 { font-size: 1.9rem; margin: 1.1rem 0 0.2rem; color: var(--ouro-claro); }
+      .cartao-entrar form { display: grid; gap: 0.9rem; margin-top: 1.3rem; text-align: left; }
+      .carregando { text-align: center; padding: 6rem 0; color: var(--texto-2); }
+
+      /* estrutura */
+      .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+      .lateral { position: sticky; top: 0; height: 100vh; overflow: auto; display: flex; flex-direction: column; padding: 1.3rem 0.9rem 0; background: linear-gradient(180deg, #160b07, #1e110b 70%, #2a170e); border-right: 1px solid var(--borda); }
+      .marca { display: flex; align-items: center; gap: 0.6rem; padding: 0.2rem 0.5rem 1.3rem; border-bottom: 1px solid rgba(201, 164, 106, 0.18); margin-bottom: 0.9rem; }
+      .marca img:first-child { height: 30px; width: auto; }
+      .marca .palavra { height: auto; width: 100%; max-width: 150px; min-width: 0; }
+      .marca img:first-child { flex: none; }
+      .menu { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.2rem; }
+      .menu button, .menu li { display: flex; align-items: center; gap: 0.8rem; width: 100%; padding: 0.72rem 0.85rem; border-radius: 10px; border: 1px solid transparent; background: none; color: var(--texto); font: inherit; font-size: 0.95rem; text-align: left; cursor: pointer; }
+      .menu button svg, .menu li svg { color: var(--ouro); }
+      .menu button:hover { background: rgba(217, 174, 107, 0.08); }
+      .menu button[aria-selected='true'] { background: linear-gradient(90deg, #c0904c, #e4bd7c 55%, #b07c3a); color: #24120a; border-color: #f0d39c; box-shadow: 0 8px 22px rgba(217, 174, 107, 0.25); font-weight: 600; }
+      .menu button[aria-selected='true'] svg { color: #24120a; }
+      .menu button span { flex: 1; }
+      .menu b { min-width: 1.5em; padding: 0.05em 0.45em; border-radius: 999px; background: #c9643e; color: #fff; font-size: 0.75rem; text-align: center; }
+      .menu b:empty { display: none; }
+      .menu-titulo { margin: 1.3rem 0.85rem 0.4rem; font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto-2); opacity: 0.75; }
+      .menu.breve li { cursor: default; opacity: 0.45; font-size: 0.88rem; padding: 0.55rem 0.85rem; }
+      .onda { margin-top: auto; height: 90px; background: radial-gradient(120% 70% at 0% 100%, rgba(240, 211, 156, 0.55), transparent 55%), linear-gradient(170deg, transparent 55%, rgba(217, 174, 107, 0.35) 56%, transparent 62%); opacity: 0.8; }
+      .principal { min-width: 0; display: flex; flex-direction: column; }
+      .faixa { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; min-height: 150px; padding: 1.4rem clamp(1rem, 2.5vw, 2rem); border-bottom: 1px solid var(--borda); background: linear-gradient(90deg, #1c100b 0%, rgba(28, 16, 11, 0.9) 30%, rgba(28, 16, 11, 0.25) 62%, rgba(28, 16, 11, 0.1) 100%), url('/brand/admin-robo-faixa.jpg') right 22% / cover no-repeat; }
+      .faixa h1 { margin: 0; font-size: clamp(1.5rem, 2.6vw, 2.2rem); font-weight: 600; }
+      .faixa h1 em { font-style: normal; color: var(--ouro); }
+      .faixa p { margin: 0.25rem 0 0; color: var(--texto); opacity: 0.85; font-size: 0.98rem; }
+      .quem { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.6rem; margin: 1.4rem 0.2rem 0; padding: 0.8rem 0.85rem; border-radius: 12px; background: rgba(217, 174, 107, 0.07); border: 1px solid var(--borda); font-size: 0.82rem; }
+      .quem [data-email] { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+      .quem > svg { color: var(--ouro); }
+      .sair { display: flex; align-items: center; gap: 0.35rem; background: none; border: 1px solid var(--borda); color: var(--texto); border-radius: 999px; padding: 0.35rem 0.8rem; font: inherit; font-size: 0.85rem; cursor: pointer; }
+      .sair svg { width: 16px; height: 16px; }
+      .conteudo { padding: clamp(1rem, 2.2vw, 1.8rem); max-width: 1500px; width: 100%; }
+
+      /* cartões e quadros */
+      .quadro { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 1.1rem 1.2rem; box-shadow: inset 0 1px 0 rgba(240, 211, 156, 0.06); }
+      .quadro h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; font-family: var(--font-body); font-size: 1.05rem; font-weight: 600; margin: 0 0 0.9rem; }
+      .quadro h2 small { font-weight: 400; font-size: 0.8rem; color: var(--texto-2); margin-right: auto; margin-left: 0.5rem; }
+      .ver { background: none; border: 0; color: var(--ouro); font: inherit; font-size: 0.85rem; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+      .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; margin-bottom: 1rem; }
+      .kpi { display: flex; align-items: center; gap: 0.9rem; text-align: left; padding: 1rem 1.1rem; border-radius: 14px; border: 1px solid var(--borda); background: var(--cartao); color: var(--texto); font: inherit; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+      .kpi:hover { border-color: var(--borda-forte); transform: translateY(-1px); }
+      .kpi > svg { width: 38px; height: 38px; color: var(--ouro); stroke-width: 1.4; }
+      .kpi div { display: flex; flex-direction: column; min-width: 0; }
+      .kpi__n { font-size: 1.9rem; font-weight: 600; line-height: 1.05; font-variant-numeric: lining-nums tabular-nums; color: var(--ouro-claro); }
+      .kpi__t { font-size: 0.86rem; color: var(--texto); }
+      .kpi small { font-size: 0.76rem; color: var(--verde); }
+      .kpi.alerta { border-color: rgba(224, 132, 106, 0.6); }
+      .kpi.alerta .kpi__n { color: #f2a487; }
+      .grade { display: grid; grid-template-columns: 1.6fr 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+      .grade.dupla { grid-template-columns: 1fr 1fr; }
+      .svg-grafico { width: 100%; height: auto; }
+      .g-linha { stroke: rgba(201, 164, 106, 0.16); stroke-width: 1; }
+      .g-eixo { fill: var(--texto-2); font-size: 11px; font-family: var(--font-body); }
+      .g-traco { fill: none; stroke: var(--ouro); stroke-width: 2.4; }
+      .g-ponto { fill: var(--ouro-claro); stroke: #1c100b; stroke-width: 1.5; }
+      .demandas { display: flex; flex-direction: column; }
+      .demanda { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: 0.7rem 0.2rem; border: 0; border-bottom: 1px solid rgba(201, 164, 106, 0.14); background: none; color: var(--texto); font: inherit; font-size: 0.92rem; text-align: left; cursor: pointer; }
+      .demanda b { min-width: 2em; padding: 0.15em 0.55em; border-radius: 999px; background: rgba(201, 164, 106, 0.18); color: var(--texto-2); font-variant-numeric: tabular-nums; text-align: center; }
+      .demanda.tem b { background: #b86a3c; color: #fff; }
+      .rapidas { display: flex; flex-direction: column; gap: 0.55rem; }
+      .rapidas button { display: flex; align-items: center; gap: 0.8rem; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--borda); background: rgba(20, 11, 7, 0.35); color: var(--texto); font: inherit; font-size: 0.92rem; cursor: pointer; text-align: left; }
+      .rapidas button svg { color: var(--ouro); width: 20px; height: 20px; }
+      .rapidas button:hover { border-color: var(--borda-forte); background: rgba(217, 174, 107, 0.08); }
+      .mini-linha { display: grid; grid-template-columns: 150px 1fr; gap: 0.15rem 1rem; padding: 0.6rem 0.1rem; border-bottom: 1px solid rgba(201, 164, 106, 0.12); font-size: 0.9rem; }
+      .mini-linha .quando { grid-row: span 2; color: var(--texto-2); font-variant-numeric: tabular-nums; font-size: 0.84rem; }
+      .mini-linha small { color: var(--texto-2); overflow-wrap: anywhere; }
+      .mini-linha small.ok { color: var(--verde); }
+      .mini-linha small.pend { color: #e9b77a; }
+      .rodape { margin-top: 0.4rem; }
+
+      /* formulários e botões */
       label { display: flex; flex-direction: column; gap: 0.35rem; }
-      label > span { font-size: 0.76rem; letter-spacing: 0.04em; color: var(--color-cafe); }
-      input, select, textarea { font: inherit; font-size: 0.95rem; color: var(--color-espresso); background: var(--color-ivory); border: 1px solid rgba(98, 72, 58, 0.28); border-radius: 4px; padding: 0.6rem 0.75rem; min-height: 42px; }
-      input:focus, select:focus, textarea:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.2); }
-      .botao { font: inherit; font-weight: 500; font-size: 0.92rem; border: 0; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #2a140d; background: linear-gradient(180deg, #e9c98f, #b9853f); box-shadow: 0 6px 14px rgba(53, 36, 29, 0.15); }
+      label > span { font-size: 0.76rem; letter-spacing: 0.04em; color: var(--texto-2); }
+      input, select, textarea { font: inherit; font-size: 0.95rem; color: var(--texto); background: rgba(14, 7, 4, 0.55); border: 1px solid var(--borda); border-radius: 8px; padding: 0.6rem 0.75rem; min-height: 42px; color-scheme: dark; }
+      input::placeholder, textarea::placeholder { color: rgba(201, 180, 154, 0.55); }
+      input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ouro); box-shadow: 0 0 0 3px rgba(217, 174, 107, 0.22); }
+      .botao { font: inherit; font-weight: 600; font-size: 0.92rem; border: 1px solid #f0d39c; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550 60%, #a8742f); box-shadow: 0 8px 18px rgba(0, 0, 0, 0.3); }
       .botao:disabled { opacity: 0.6; cursor: wait; }
       .botao.pequeno { padding: 0.45rem 1rem; font-size: 0.85rem; }
-      .botao.claro { background: #efe6d6; box-shadow: none; border: 1px solid rgba(98, 72, 58, 0.25); }
-      .botao.perigo { background: #f2dcd2; color: #8b3a1f; box-shadow: none; border: 1px solid rgba(199, 113, 79, 0.45); }
-      .link { background: none; border: 0; font: inherit; font-size: 0.88rem; color: #8a5e2e; text-decoration: underline; cursor: pointer; padding: 0.3rem; }
-      .nota { color: var(--color-cafe); font-size: 0.86rem; margin: 0.4rem 0; }
-      .nota.ok { color: #3f6b44; }
-      .msg { margin: 0.8rem 0; padding: 0.7rem 0.9rem; font-size: 0.9rem; border-left: 3px solid #6f9a72; background: rgba(111, 154, 114, 0.14); }
-      .msg[data-tipo='erro'] { border-left-color: #c7714f; background: rgba(199, 113, 79, 0.14); }
-      .carregando { text-align: center; margin: 4rem 0; color: var(--color-cafe); }
-      .abas { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 1.2rem; }
-      .abas button { font: inherit; font-size: 0.9rem; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(98, 72, 58, 0.3); background: transparent; color: var(--color-espresso); cursor: pointer; }
-      .abas button[aria-selected='true'] { background: var(--color-espresso); color: var(--color-champagne); border-color: var(--color-espresso); }
-      .abas b { display: inline-block; min-width: 1.3em; margin-left: 0.3rem; padding: 0 0.4em; border-radius: 999px; background: #c7714f; color: #fff; font-size: 0.75rem; font-weight: 600; }
-      .abas b:empty { display: none; }
-      .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.9rem; }
-      .numero { text-align: left; font: inherit; cursor: pointer; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
-      .numero strong { font-family: var(--font-body); font-size: 2rem; font-weight: 500; line-height: 1; font-variant-numeric: lining-nums tabular-nums; color: var(--color-espresso); }
-      .numero span { font-size: 0.85rem; color: var(--color-cafe); }
-      .numero.alerta { border-color: rgba(199, 113, 79, 0.55); background: #fbefe9; }
-      .convite h2 { font-size: 1.4rem; margin: 0 0 0.8rem; }
+      .botao.claro { background: rgba(217, 174, 107, 0.12); color: var(--texto); border-color: var(--borda); box-shadow: none; }
+      .botao.perigo { background: rgba(224, 132, 106, 0.16); color: #f4b39b; border-color: rgba(224, 132, 106, 0.55); box-shadow: none; }
+      .link { background: none; border: 0; font: inherit; font-size: 0.88rem; color: var(--ouro); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0.3rem; }
+      .nota { color: var(--texto-2); font-size: 0.86rem; margin: 0.4rem 0; }
+      .nota.ok { color: var(--verde); }
+      .msg { margin: 0 0 1rem; padding: 0.75rem 1rem; font-size: 0.9rem; border-radius: 10px; border: 1px solid rgba(127, 191, 127, 0.45); background: rgba(127, 191, 127, 0.12); color: var(--texto); }
+      .msg[data-tipo='erro'], .cartao-entrar .msg { border-color: rgba(224, 132, 106, 0.5); background: rgba(224, 132, 106, 0.12); }
+
+      /* clientes / listas */
+      .convite { margin-bottom: 1rem; }
+      .convite h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 500; }
       .linha { display: grid; grid-template-columns: 1fr 1.3fr 0.8fr auto; gap: 0.8rem; align-items: end; }
-      .busca { margin: 1.2rem 0 0.6rem; }
+      .busca { margin: 0 0 0.7rem; }
       .busca input { width: 100%; max-width: 420px; }
-      .tabela { border-top: 1px solid rgba(98, 72, 58, 0.15); }
-      .linha-t { display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr auto; gap: 0.8rem; align-items: center; padding: 0.75rem 0.3rem; border-bottom: 1px solid rgba(98, 72, 58, 0.12); font-size: 0.9rem; }
+      .tabela { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 0.3rem 1rem; }
+      .linha-t { display: grid; grid-template-columns: 2.2fr 1fr 1fr 1fr auto; gap: 0.8rem; align-items: center; padding: 0.8rem 0.2rem; border-bottom: 1px solid rgba(201, 164, 106, 0.12); font-size: 0.9rem; }
+      .linha-t:last-child { border-bottom: 0; }
       .linha-t.reg { grid-template-columns: 1fr 1.3fr 1.2fr 1.6fr; }
-      .linha-t.cab { font-size: 0.74rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--color-cafe); }
+      .linha-t.cab { font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--texto-2); }
       .linha-t strong { display: block; font-weight: 500; }
-      .linha-t small { color: var(--color-cafe); overflow-wrap: anywhere; }
-      .destaque { color: #9a4a2c; font-weight: 500; }
-      .etiqueta { justify-self: start; font-size: 0.74rem; padding: 0.22rem 0.6rem; border-radius: 999px; background: #efe8dc; white-space: nowrap; }
-      .etiqueta[data-t='ok'] { background: rgba(111, 154, 114, 0.22); color: #2f5a34; }
-      .etiqueta[data-t='erro'] { background: rgba(199, 113, 79, 0.2); color: #8b3a1f; }
-      .etiqueta[data-t='aviso'] { background: rgba(181, 139, 77, 0.22); color: #6d4a1f; }
-      .filtro { margin-bottom: 0.8rem; font-size: 0.9rem; }
+      .linha-t small { color: var(--texto-2); overflow-wrap: anywhere; }
+      .destaque { color: #f2a487; font-weight: 500; }
+      .etiqueta { justify-self: start; font-size: 0.74rem; padding: 0.22rem 0.65rem; border-radius: 999px; background: rgba(201, 164, 106, 0.16); color: var(--texto-2); white-space: nowrap; }
+      .etiqueta[data-t='ok'] { background: rgba(127, 191, 127, 0.18); color: #a8dca8; }
+      .etiqueta[data-t='erro'] { background: rgba(224, 132, 106, 0.2); color: #f4b39b; }
+      .etiqueta[data-t='aviso'] { background: rgba(217, 174, 107, 0.22); color: var(--ouro-claro); }
+      .filtro { margin-bottom: 0.9rem; font-size: 0.9rem; color: var(--texto-2); }
       .filtro label { flex-direction: row; align-items: center; gap: 0.4rem; }
-      .item { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem 1rem; align-items: start; padding: 1rem 1.1rem; margin-bottom: 0.7rem; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); }
-      .item.feito { opacity: 0.8; }
-      .item__txt { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; color: var(--color-cafe); min-width: 0; }
-      .item__txt strong { color: var(--color-espresso); font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
-      .item__txt em { color: var(--color-espresso); }
+      .item { display: grid; grid-template-columns: 1fr auto; gap: 0.6rem 1rem; align-items: start; padding: 1rem 1.1rem; margin-bottom: 0.7rem; background: var(--cartao); border: 1px solid var(--borda); border-radius: 12px; }
+      .item.feito { opacity: 0.75; }
+      .item__txt { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.88rem; color: var(--texto-2); min-width: 0; }
+      .item__txt strong { color: var(--texto); font-size: 1rem; font-weight: 500; overflow-wrap: anywhere; }
+      .item__txt em { color: var(--texto); }
       .item__acao { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: end; gap: 0.7rem; }
       .mini input { min-height: 38px; padding: 0.4rem 0.6rem; }
-      .check { flex-direction: row; align-items: center; gap: 0.35rem; font-size: 0.85rem; padding-bottom: 0.5rem; }
+      .check { flex-direction: row; align-items: center; gap: 0.35rem; font-size: 0.85rem; padding-bottom: 0.5rem; color: var(--texto); }
       .check input { min-height: 0; }
-      .vazio { color: var(--color-cafe); font-style: italic; padding: 1rem 0.3rem; }
+      .vazio { color: var(--texto-2); font-style: italic; padding: 0.8rem 0.2rem; margin: 0; }
       .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.86rem; overflow-wrap: anywhere; }
-      dialog.ficha { width: min(760px, 94vw); max-height: 90vh; border: 1px solid var(--color-line); padding: 0 1.4rem 1.4rem; background: var(--color-ivory); color: var(--color-espresso); box-shadow: 0 30px 70px rgba(53, 36, 29, 0.35); }
+
+      /* janelas */
+      dialog.ficha { width: min(780px, 94vw); max-height: 90vh; border: 1px solid var(--borda-forte); border-radius: 14px; padding: 0 1.4rem 1.4rem; background: #22140d; color: var(--texto); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6); }
       dialog.pequena { width: min(520px, 94vw); }
-      dialog::backdrop { background: rgba(35, 13, 8, 0.45); }
-      .ficha__topo { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0 0.6rem; background: var(--color-ivory); border-bottom: 1px solid rgba(98, 72, 58, 0.15); margin-bottom: 0.8rem; }
-      .ficha__topo h2 { margin: 0; font-size: 1.6rem; }
-      .fechar { background: none; border: 0; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--color-cafe); }
-      .dados { display: grid; grid-template-columns: 170px 1fr; gap: 0.35rem 1rem; margin: 0.4rem 0 0.8rem; font-size: 0.9rem; }
-      .dados dt { color: var(--color-cafe); }
+      dialog::backdrop { background: rgba(10, 5, 3, 0.7); }
+      .ficha__topo { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 1.1rem 0 0.7rem; background: #22140d; border-bottom: 1px solid var(--borda); margin-bottom: 0.8rem; }
+      .ficha__topo h2 { margin: 0; font-size: 1.6rem; color: var(--ouro-claro); overflow-wrap: anywhere; }
+      .fechar { background: none; border: 0; font-size: 1.8rem; line-height: 1; cursor: pointer; color: var(--texto-2); }
+      .dados { display: grid; grid-template-columns: 170px 1fr; gap: 0.4rem 1rem; margin: 0.4rem 0 0.8rem; font-size: 0.9rem; }
+      .dados dt { color: var(--texto-2); }
       .dados dd { margin: 0; overflow-wrap: anywhere; }
-      .bloco { border-top: 1px solid rgba(98, 72, 58, 0.15); padding-top: 0.8rem; margin-top: 0.8rem; }
-      .bloco h3 { font-size: 1.25rem; margin: 0 0 0.5rem; }
+      .bloco { border-top: 1px solid var(--borda); padding-top: 0.8rem; margin-top: 0.8rem; }
+      .bloco h3 { font-size: 1.25rem; margin: 0 0 0.5rem; color: var(--ouro-claro); }
+      .bloco .item { background: rgba(14, 7, 4, 0.4); }
       .bloco.acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
       .bloco.acoes h3 { width: 100%; }
       dialog form { display: grid; gap: 0.8rem; }
       .acoes { display: flex; gap: 0.8rem; align-items: center; }
-      @media (max-width: 800px) {
+
+      @media (max-width: 1250px) { .kpis { grid-template-columns: repeat(3, 1fr); } .grade { grid-template-columns: 1fr 1fr; } .grade .grafico { grid-column: 1 / -1; } }
+      @media (max-width: 900px) {
+        .app { grid-template-columns: 1fr; }
+        .lateral { position: static; height: auto; padding: 0.8rem; flex-direction: column; }
+        .marca { border: 0; margin: 0; padding-bottom: 0.6rem; }
+        .menu:not(.breve) { flex-direction: row; overflow-x: auto; gap: 0.3rem; }
+        .menu:not(.breve) button { width: auto; white-space: nowrap; padding: 0.55rem 0.8rem; }
+        .menu-titulo, .menu.breve, .onda { display: none; }
+        .lateral { order: 0; }
+        .faixa { flex-direction: column; align-items: flex-start; background: linear-gradient(90deg, rgba(28, 16, 11, 0.92) 0%, rgba(28, 16, 11, 0.75) 100%), url('/brand/admin-robo-faixa.jpg') right 22% / cover no-repeat; }
+        .quem { margin: 0.6rem 0 0; }
+        .kpis { grid-template-columns: 1fr 1fr; }
+        .grade, .grade.dupla { grid-template-columns: 1fr; }
         .linha { grid-template-columns: 1fr; }
         .linha-t, .linha-t.reg { grid-template-columns: 1fr 1fr; }
         .linha-t.cab { display: none; }
-        .marca em { display: none; }
         .dados { grid-template-columns: 1fr; }
         .dados dt { margin-top: 0.4rem; }
+        .mini-linha { grid-template-columns: 1fr; }
+        .mini-linha .quando { grid-row: auto; }
       }
     </style>
   </body>
