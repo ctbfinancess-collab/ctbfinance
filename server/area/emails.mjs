@@ -57,3 +57,20 @@ export async function enviarConfirmacaoAgendamento({ email, lang, tipo, formato,
   }, 'agendamento-confirmado');
   if (!ok) throw new Error('falha ao enviar e-mail de confirmação');
 }
+
+const TIPOS_OP_PT = { transferencia_local: 'Transferência local (UAE)', transferencia_swift: 'Transferência internacional (SWIFT)', cambio: 'Câmbio' };
+/** Aviso INTERNO à equipe: um cliente fez uma solicitação de operação pela Área do Cliente (nada foi executado). */
+export async function avisarEquipeOperacao({ email, nome, tipo, valor, moeda, moedaDestino, beneficiario = {}, observacao }) {
+  const para = teamList(); if (!para.length) return;
+  const linhas = [['Cliente', nome || '—'], ['E-mail', email], ['Operação', TIPOS_OP_PT[tipo] || tipo], ['Valor', `${moeda} ${valor}`]];
+  if (moedaDestino) linhas.push(['Converter para', moedaDestino]);
+  if (beneficiario.nome) linhas.push(['Beneficiário', beneficiario.nome], ['Banco', beneficiario.banco || '—'], ['IBAN / conta', beneficiario.iban || '—'], ['SWIFT/BIC', beneficiario.swift || '—'], ['País', beneficiario.pais || '—']);
+  linhas.push(['Observação', observacao || '—']);
+  const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px;font-family:Georgia,serif;font-size:15px;color:#35241D">${linhas.map(([k, v]) => `<tr><td style="padding:3px 14px 3px 0;color:#7a5a45;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:3px 0">${esc(v)}</td></tr>`).join('')}</table>` };
+  const ok = await sendEmail({
+    from: fromAddress(), to: para, reply_to: email, subject: `Solicitação de operação · ${nome || email}`,
+    html: brandedHtml('pt', 'Solicitação de operação', ['Um cliente fez uma solicitação pela Área do Cliente. Nada foi executado — analise no Admin (aba Operações):', tabela, `${SITE}/admin/#operacoes`]),
+    text: `Solicitação de operação (Área do Cliente)\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nAnalise no Admin: ${SITE}/admin/#operacoes`,
+  }, 'aviso-operacao');
+  if (!ok) throw new Error('falha ao enviar aviso de operação');
+}

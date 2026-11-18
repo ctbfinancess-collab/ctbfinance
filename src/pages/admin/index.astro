@@ -46,13 +46,13 @@ import '../../styles/global.css';
           <button role="tab" data-aba="geral" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Dashboard</span></button>
           <button role="tab" data-aba="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Interessados</span><b data-cont="interessados_novos"></b></button>
           <button role="tab" data-aba="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9.3 5.5 2.6 5.5 5.8"/></svg><span>Clientes</span></button>
+          <button role="tab" data-aba="operacoes"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Operações</span><b data-cont="operacoes_abertas"></b></button>
           <button role="tab" data-aba="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Agendamentos</span><b data-cont="agendamentos_pendentes"></b></button>
           <button role="tab" data-aba="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Documentos</span><b data-cont="documentos_em_analise"></b></button>
           <button role="tab" data-aba="registro"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/><circle cx="18" cy="18" r="3"/></svg><span>Registro</span></button>
         </nav>
         <p class="menu-titulo">Em breve</p>
         <ul class="menu breve" aria-label="Módulos em preparação">
-          <li><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Operações</span></li>
           <li><svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6M5 10v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4M5 14v4c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-4"/></svg><span>Crédito e Financiamento</span></li>
           <li><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="m9 12 2 2 4-4"/></svg><span>Compliance (KYC/AML)</span></li>
         </ul>
@@ -95,6 +95,7 @@ import '../../styles/global.css';
                 <div class="rapidas">
                   <button type="button" data-ir="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Ver interessados</span></button>
                   <button type="button" data-rapida="convidar"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.2"/><path d="M4 20c0-3.3 2.7-6 6-6 1.2 0 2.3.3 3.2.9M18 14v6M15 17h6"/></svg><span>Cadastrar cliente</span></button>
+                  <button type="button" data-ir="operacoes"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Analisar operações</span></button>
                   <button type="button" data-ir="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Confirmar agendamentos</span></button>
                   <button type="button" data-ir="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Analisar documentos</span></button>
                   <button type="button" data-ir="clientes"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/></svg><span>Conferir passaportes</span></button>
@@ -128,6 +129,19 @@ import '../../styles/global.css';
               <span class="nota">Pedidos recebidos pelos formulários "Seja nosso cliente" e "Contato" do site.</span>
             </div>
             <div data-interessados></div>
+          </div>
+
+          <div data-painel="operacoes" hidden>
+            <div class="filtro">
+              <select data-op-status>
+                <option value="abertas">Em aberto</option>
+                <option value="concluida">Concluídas</option>
+                <option value="recusada">Recusadas</option>
+                <option value="todas">Todas</option>
+              </select>
+              <span class="nota">Solicitações feitas pelos clientes na Área do Cliente. Nada é executado pelo sistema: a equipe confere, executa e, ao concluir, lança no extrato.</span>
+            </div>
+            <div data-operacoes></div>
           </div>
 
           <div data-painel="clientes" hidden>
@@ -204,7 +218,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -246,9 +260,9 @@ import '../../styles/global.css';
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
-      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
+      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', operacoes: 'Operações — transferências e câmbio solicitados pelos clientes', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
       // histórico: cada aba e cada ficha viram um passo; "Voltar" (e o botão do navegador) retornam ao anterior
-      const ABAS = ['geral', 'interessados', 'clientes', 'agendamentos', 'documentos', 'registro'];
+      const ABAS = ['geral', 'interessados', 'operacoes', 'clientes', 'agendamentos', 'documentos', 'registro'];
       let passos = 0;
       const btnVoltar = $('[data-voltar]');
       const marcarVoltar = () => (btnVoltar.hidden = passos <= 0 && abaAtual === 'geral' && !ficha.open);
@@ -263,7 +277,8 @@ import '../../styles/global.css';
         $$('[data-painel]').forEach((p) => (p.hidden = p.dataset.painel !== a));
         carregar[a]?.().catch(falhou);
       }
-      $$('[data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba!)));
+      // trocar de aba também atualiza os contadores do menu (sem esperar recarregar a página)
+      $$('[data-aba]').forEach((b) => b.addEventListener('click', () => { abrirAba(b.dataset.aba!); if (b.dataset.aba !== 'geral') atualizarResumo().catch(() => {}); }));
       let fechandoPeloHistorico = false;
       window.addEventListener('popstate', (e) => {
         if (!eu) return;
@@ -301,7 +316,7 @@ import '../../styles/global.css';
         $$('[data-k]').forEach((e) => { e.textContent = String(r[e.dataset.k!] ?? 0); e.closest('.kpi')!.classList.toggle('alerta', e.dataset.k !== 'clientes' && r[e.dataset.k!] > 0); });
         const sub = $('[data-k-sub]'); sub.textContent = `${r.clientes_ativos} com acesso ativo`;
         $('[data-grafico]').replaceChildren(grafico(r.clientes_mes || []));
-        const dem: [string, number, string][] = [['Novos interessados', r.interessados_novos, 'interessados'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
+        const dem: [string, number, string][] = [['Novos interessados', r.interessados_novos, 'interessados'], ['Operações a analisar', r.operacoes_abertas, 'operacoes'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
         $('[data-demandas]').replaceChildren(...dem.map(([t, n, aba]) => el('button', { type: 'button', class: 'demanda' + (n ? ' tem' : ''), onclick: () => abrirAba(aba) }, el('span', {}, t), el('b', {}, String(n)))));
         const at = $('[data-atividade]');
         at.replaceChildren(...(r.atividade.length ? r.atividade.map((a: any) => el('div', { class: 'mini-linha' }, el('span', { class: 'quando' }, dataHora(a.em)), el('span', {}, ACOES[a.acao] || a.acao), el('small', {}, a.por_email))) : [el('p', { class: 'vazio' }, 'Nenhuma ação registrada ainda.')]));
@@ -581,6 +596,53 @@ import '../../styles/global.css';
         for (const i of interessados) box.append(linhaInteressado(i));
       };
       $('[data-int-status]').addEventListener('change', () => carregar.interessados().catch(falhou));
+
+      // ---- operações solicitadas pelos clientes
+      const TIPOS_OP: Record<string, string> = { transferencia_local: 'Transferência local (UAE)', transferencia_swift: 'Transferência internacional (SWIFT)', cambio: 'Câmbio' };
+      const ST_OP: Record<string, [string, string]> = { recebida: ['Recebida', 'erro'], em_analise: ['Em análise', 'aviso'], concluida: ['Concluída', 'ok'], recusada: ['Recusada', ''] };
+      const valorOp = (c: string, moeda: string) => { const n = BigInt(c); return `${moeda} ${(n / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(n % 100n).toString().padStart(2, '0')}`; };
+      function linhaOperacao(o: any) {
+        const st = ST_OP[o.status] || [o.status, ''];
+        const ben = o.beneficiario || {};
+        const caixa = el('div', { class: 'item' + (o.status === 'concluida' || o.status === 'recusada' ? ' feito' : '') },
+          el('div', { class: 'item__txt' },
+            el('strong', {}, `${TIPOS_OP[o.tipo] || o.tipo} · ${valorOp(o.valor, o.moeda)}${o.moeda_destino ? ' → ' + o.moeda_destino : ''}`),
+            el('span', {}, `${o.nome || '(sem nome)'} · ${o.email}${o.conta_tipo ? ' · ' + (TIPOS_CONTA[o.conta_tipo] || o.conta_tipo) : ' · conta excluída'}`),
+            el('span', {}, `Solicitado em ${dataHora(o.criado_em)}`),
+            ben.nome ? el('span', {}, `Beneficiário: ${ben.nome}${ben.banco ? ' · ' + ben.banco : ''}${ben.pais ? ' · ' + ben.pais : ''}`) : null,
+            ben.iban ? el('span', {}, `IBAN / conta: ${ben.iban}${ben.swift ? ' · SWIFT ' + ben.swift : ''}`) : null,
+            o.observacao ? el('em', { class: 'mensagem' }, o.observacao) : null,
+            o.status === 'recusada' && o.motivo ? el('em', { class: 'mensagem' }, `Motivo informado ao cliente: ${o.motivo}`) : null,
+            o.atualizado_por ? el('small', {}, `Atualizado por ${o.atualizado_por} em ${dataHora(o.atualizado_em)}${o.lancada ? ' · lançada no extrato' : ''}`) : null),
+          el('span', { class: 'etiqueta', dataset: { t: st[1] } }, st[0]));
+        const mudar = async (status: string, txt: string, motivo?: string) => {
+          try { await chamar(`/equipe/operacoes/${o.id}/status`, { metodo: 'POST', corpo: { status, motivo } }); aviso(txt); await atualizar(); }
+          catch (e: any) { falhou(e); if (e.status === 409) await atualizar(); } };
+        const acoes = el('div', { class: 'item__acao' });
+        if (o.status === 'recebida') acoes.append(el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => mudar('em_analise', 'Operação em análise.') }, 'Pôr em análise'));
+        if (o.status === 'recebida' || o.status === 'em_analise') {
+          acoes.append(el('button', { type: 'button', class: 'botao pequeno', onclick: () => { if (confirm('Marcar como concluída? Use depois de executar a operação.')) mudar('concluida', 'Operação concluída. Agora você pode lançar no extrato.'); } }, 'Concluir'));
+          const motivo = el('input', { class: 'motivo-op', maxlength: 500, placeholder: 'Motivo (o cliente verá)' }) as HTMLInputElement;
+          const caixaRec = el('div', { class: 'recusa-op', hidden: true }, motivo,
+            el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => { if (!motivo.value.trim()) { aviso('Escreva o motivo da recusa.', 'erro'); motivo.focus(); return; } mudar('recusada', 'Operação recusada.', motivo.value.trim()); } }, 'Confirmar recusa'));
+          acoes.append(el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => { caixaRec.hidden = !caixaRec.hidden; if (!caixaRec.hidden) motivo.focus(); } }, 'Recusar'), caixaRec);
+        }
+        if (o.status === 'concluida' && !o.lancada && o.conta_id) acoes.append(el('button', { type: 'button', class: 'botao pequeno', onclick: async () => {
+          if (!confirm(`Lançar no extrato do cliente: débito de ${valorOp(o.valor, o.moeda)}? O saldo será atualizado.`)) return;
+          try { await chamar(`/equipe/operacoes/${o.id}/lancar`, { metodo: 'POST', corpo: {} }); aviso(o.tipo === 'cambio' ? 'Débito lançado. Lance o crédito na outra moeda pela ficha do cliente.' : 'Lançada no extrato e saldo atualizado.'); await atualizar(); }
+          catch (e: any) { falhou(e); if (e.status === 409) await atualizar(); } } }, 'Lançar no extrato'));
+        acoes.append(el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => abrirFicha(o.usuario_id) }, 'Abrir ficha'));
+        caixa.append(acoes);
+        return caixa;
+      }
+      carregar.operacoes = async () => {
+        const st = $<HTMLSelectElement>('[data-op-status]').value;
+        const v = nova('operacoes'); const { operacoes } = await chamar('/equipe/operacoes?status=' + st); if (!vigente('operacoes', v)) return;
+        const box = $('[data-operacoes]'); box.replaceChildren();
+        if (!operacoes.length) box.append(el('p', { class: 'vazio' }, st === 'abertas' ? 'Nenhuma operação em aberto.' : 'Nenhuma operação.'));
+        for (const o of operacoes) box.append(linhaOperacao(o));
+      };
+      $('[data-op-status]').addEventListener('change', () => carregar.operacoes().catch(falhou));
 
       // ---- agendamentos
       const inicioPeriodo = (p: string) => (p === 'tarde' ? '14:00' : '10:00');
@@ -862,6 +924,9 @@ import '../../styles/global.css';
       .fin-linha small { color: var(--texto-2); }
       .fin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem 0.7rem; align-items: end; margin: 0.6rem 0; padding: 0.8rem; border: 1px dashed rgba(201, 164, 106, 0.35); border-radius: 10px; }
       .fin-form .largo { grid-column: span 2; }
+      .recusa-op { display: flex; gap: 0.5rem; flex-wrap: wrap; width: 100%; }
+      .recusa-op[hidden] { display: none; }
+      .motivo-op { flex: 1 1 220px; font: inherit; padding: 0.45rem 0.7rem; border-radius: 8px; border: 1px solid rgba(201, 164, 106, 0.45); background: rgba(20, 11, 7, 0.6); color: #f6f0e6; }
       .fin-form.corrigindo { border-style: solid; border-color: #d9ae6b; background: rgba(217, 174, 107, 0.07); }
       .fin-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.2rem; }
       .fin-chip { font: inherit; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; background: rgba(201, 164, 106, 0.08); color: #e8d6b7; border: 1px solid rgba(201, 164, 106, 0.35); }

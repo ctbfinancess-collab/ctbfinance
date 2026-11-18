@@ -111,6 +111,16 @@ try {
   await ev(`document.querySelector('[data-tab=cartoes]').click(),1`);
   check('Cartões: final 3478, fatura e vencimento', await waitFor(`(()=>{const t=document.querySelector('[data-fin-cartao]').innerText;return t.includes('3478') && t.includes('AED 5.420,00') && t.includes('Ativo')})()`));
   await shot('2a-financeiro');
+  console.log('--- Operações (solicitação da cliente)');
+  await ev(`document.querySelector('[data-ir-aba=operacoes][data-op-pre=cambio]').click(),1`);
+  check('Atalho "Câmbio" abre Operações já com Câmbio escolhido', await waitFor(`!document.querySelector('[data-panel=operacoes]').hidden && document.querySelector('[data-op-tipo=cambio]').getAttribute('aria-checked')==='true' && !document.querySelector('[data-op-cambio]').hidden && document.querySelector('[data-op-benef]').hidden`));
+  check('Formulário com as contas reais e lista vazia', await waitFor(`document.querySelector('[data-op-form]').contaId.options.length===2 && document.querySelector('[data-op-lista]').innerText.includes('ainda não fez')`));
+  await ev(`(()=>{document.querySelector('[data-op-tipo=transferencia_swift]').click();const f=document.querySelector('[data-op-form]');f.valor.value='8.000,00';f.nome.value='Maria Silva';f.iban.value='AE07 0331 2345';f.swift.value='12';f.querySelector('[data-op-enviar]').click();return 1})()`);
+  check('SWIFT inválido → aviso claro na tela', await waitFor(`(()=>{const m=document.querySelector('[data-op-msg]');return !m.hidden && m.textContent.includes('SWIFT')})()`));
+  await ev(`(()=>{const f=document.querySelector('[data-op-form]');f.swift.value='BOMLAEAD';f.querySelector('[data-op-enviar]').click();return 1})()`);
+  check('Enviar solicitação → confirmação e item "Recebida" na lista', await waitFor(`document.querySelector('[data-op-msg]').textContent.includes('Solicitação recebida') && document.querySelector('[data-op-lista]').innerText.includes('Transferência internacional (SWIFT)') && document.querySelector('[data-op-lista]').innerText.includes('Recebida')`));
+  check('Nada debitado: saldo continua AED 28.750,00 e nenhum lançamento novo', (await db.q(`select saldo_centavos::text s from contas_cliente where id=$1`, [cAED])).rows[0].s === '2875000' && (await db.q(`select count(*)::int n from movimentos_cliente where usuario_id=$1`, [uAna])).rows[0].n === 2);
+  await shot('2b-operacoes');
   console.log('--- Documentos');
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   const { root } = await send('DOM.getDocument', { depth: -1, pierce: true });
@@ -177,6 +187,7 @@ try {
   const v2 = await vigiar(2500);
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   check('Bruno não vê o financeiro da Ana (saldo vazio)', await waitFor(`document.querySelector('[data-fin-saldo]').textContent==='—'`));
+  check('Bruno não vê as solicitações da Ana', await waitFor(`!document.querySelector('[data-op-lista]').innerText.includes('Maria Silva')`));
   check(`S2 Resposta atrasada da Ana descartada (vistos: ${JSON.stringify(v2)}); lista do Bruno só com o dele`, v2.length === 0 && await waitFor(`document.querySelector('[data-docs]').innerText.includes('contrato-bruno') && !document.querySelector('[data-docs]').innerText.includes('comprovante')`));
   await sair(); await waitFor(vis('[data-view="login"]'));
   // S3: Ana usa o painel; depois a leitura de documentos do Bruno FALHA

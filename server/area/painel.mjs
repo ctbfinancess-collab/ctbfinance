@@ -46,6 +46,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
         (select count(*) from agendamentos where horario_confirmado is null)::int as agendamentos_pendentes,
         (select count(*) from perfis where coalesce(dados->>'passportnumber','')<>'' and passaporte_conferido_em is null)::int as passaportes_a_conferir`)).rows[0];
     r.interessados_novos = (await db.q(`select count(*)::int n from interessados where status='novo'`)).rows[0].n;
+    r.operacoes_abertas = (await db.q(`select count(*)::int n from operacoes_cliente where status in ('recebida','em_analise')`)).rows[0].n;
     // painel inicial: só dados reais do sistema
     r.clientes_ativos = (await db.q(`select count(*)::int n from usuarios u where senha_hash is not null and not bloqueado
                                        and not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo)`)).rows[0].n;
@@ -391,6 +392,65 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     }
   }
 
+  // ---- Operações solicitadas pelos clientes (nada é executado pelo sistema)
+  const FILTRO_OP = { abertas: "o.status in ('recebida','em_analise')", concluida: "o.status='concluida'", recusada: "o.status='recusada'", todas: 'true' };
+  const TRANSICOES_OP = { recebida: ['em_analise', 'concluida', 'recusada'], em_analise: ['concluida', 'recusada', 'recebida'], concluida: [], recusada: [] };
+  const DESC_OP = { transferencia_local: 'Transferência local (UAE)', transferencia_swift: 'Transferência internacional (SWIFT)', cambio: 'Câmbio' };
+  async function listarOperacoes(res, url) {
+    const f = FILTRO_OP[url.searchParams.get('status')] || FILTRO_OP.abertas;
+    const r = await db.q(`select o.id, o.usuario_id, u.email, p.dados->>'display_name' as nome, o.tipo, o.moeda, o.valor_centavos::text as valor, o.moeda_destino,
+                                 o.beneficiario, o.observacao, o.status, o.motivo, o.criado_em, o.atualizado_em, o.atualizado_por, o.conta_id, c.tipo as conta_tipo,
+                                 o.movimento_id is not null as lancada
+                            from operacoes_cliente o join usuarios u on u.id=o.usuario_id left join perfis p on p.usuario_id=u.id
+                            left join contas_cliente c on c.id=o.conta_id
+                           where ${f} order by o.criado_em desc limit 300`);
+    return json(res, 200, { operacoes: r.rows });
+  }
+  async function statusOperacao(req, res, u, id) {
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 3000);
+    const motivo = texto(b.motivo, 500);
+    if (!['em_analise', 'concluida', 'recusada', 'recebida'].includes(b.status)) return erro(res, 400, 'status_invalido');
+    if (b.status === 'recusada' && !motivo) return erro(res, 400, 'motivo_obrigatorio', 'Escreva o motivo para o cliente.');
+    const r = await db.transacao(async (q) => {
+      const o = (await q('select status, usuario_id from operacoes_cliente where id=$1 for update', [id])).rows[0];
+      if (!o) return 404;
+      if (!TRANSICOES_OP[o.status].includes(b.status)) return 409;
+      await q('update operacoes_cliente set status=$2, motivo=$3, atualizado_em=now(), atualizado_por=$4 where id=$1', [id, b.status, b.status === 'recusada' ? motivo : null, u.email]);
+      return (await q('select email from usuarios where id=$1', [o.usuario_id])).rows[0].email;
+    });
+    if (r === 404) return erro(res, 404, 'nao_encontrado');
+    if (r === 409) return erro(res, 409, 'status_final', 'Esta solicitação já foi concluída ou recusada.');
+    await registrar(u, 'operacao_' + b.status, r);
+    return json(res, 200, { status: b.status });
+  }
+  /** Concluída → lança o débito no extrato da conta de origem (saldo atualizado), uma única vez. */
+  async function lancarOperacao(req, res, u, id) {
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const r = await db.transacao(async (q) => {
+      const o = (await q('select * from operacoes_cliente where id=$1 for update', [id])).rows[0];
+      if (!o) return 404;
+      if (o.status !== 'concluida') return 'nao_concluida';
+      if (o.movimento_id) return 'ja_lancada';
+      if (!o.conta_id) return 'sem_conta';
+      await q('select id from contas_cliente where id=$1 for update', [o.conta_id]);
+      const ben = o.beneficiario || {};
+      const desc = (o.tipo === 'cambio' ? `Câmbio ${o.moeda} → ${o.moeda_destino}` : `${DESC_OP[o.tipo]}${ben.nome ? ' — ' + ben.nome : ''}`).slice(0, 140);
+      const hoje = new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10);
+      const mov = (await q('insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por, aplicado_no_saldo) values ($1,$2,$3,$4,$5,$6,true) returning id',
+        [o.usuario_id, o.conta_id, hoje, desc, (-BigInt(o.valor_centavos)).toString(), u.email])).rows[0];
+      await q('update contas_cliente set saldo_centavos = saldo_centavos - $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [o.conta_id, String(o.valor_centavos), u.email]);
+      await q('update operacoes_cliente set movimento_id=$2, atualizado_em=now(), atualizado_por=$3 where id=$1', [id, mov.id, u.email]);
+      return (await q('select email from usuarios where id=$1', [o.usuario_id])).rows[0].email;
+    });
+    if (r === 404) return erro(res, 404, 'nao_encontrado');
+    if (r === 'nao_concluida') return erro(res, 409, 'nao_concluida', 'Conclua a solicitação antes de lançar no extrato.');
+    if (r === 'ja_lancada') return erro(res, 409, 'ja_lancada', 'Esta operação já foi lançada no extrato.');
+    if (r === 'sem_conta') return erro(res, 409, 'sem_conta', 'A conta de origem foi excluída; lance manualmente na ficha.');
+    await registrar(u, 'operacao_lancada', r);
+    return json(res, 200, { ok: true });
+  }
+
   async function registro(res) {
     const r = await db.q('select por_email, acao, alvo, detalhes, em from acoes_equipe order by em desc limit 200');
     return json(res, 200, { acoes: r.rows });
@@ -430,6 +490,11 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (p.length === 1 && m === 'GET') return listarInteressados(res, url);
       if (p.length === 3 && p[2] === 'status' && m === 'POST') return statusInteressado(req, res, u, p[1]);
       if (p.length === 3 && p[2] === 'convidar' && m === 'POST') return convidarInteressado(req, res, u, p[1]);
+    }
+    if (p[0] === 'operacoes') {
+      if (p.length === 1 && m === 'GET') return listarOperacoes(res, url);
+      if (p.length === 3 && p[2] === 'status' && m === 'POST') return statusOperacao(req, res, u, p[1]);
+      if (p.length === 3 && p[2] === 'lancar' && m === 'POST') return lancarOperacao(req, res, u, p[1]);
     }
     if (p[0] === 'registro' && p.length === 1 && m === 'GET') return registro(res);
     return json(res, 404, { erro: 'rota' });

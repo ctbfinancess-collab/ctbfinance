@@ -19,6 +19,15 @@ const T = en ? {
   cartaoFinal: 'Card ending in', situacao: 'Status', limite: 'Limit', fatura: 'Current statement', vencimento: 'Due date',
   opsTitulo: 'Transfers and currency exchange', opsTexto: 'Transfers (local or SWIFT) and currency exchange are carried out with our team, with personal service and the required checks. Book a conversation or talk to us.',
   agendar: 'Book a conversation', falar: 'Talk to our team',
+  opsIntro: 'Make your request here. Our team reviews and carries it out with the required checks — nothing is debited until the team completes it. Follow the status below.',
+  opsNova: 'New request', opsTipo: 'Operation', opsConta: 'From account', opsValor: 'Amount', opsPara: 'Convert to', opsBenef: 'Beneficiary',
+  opsNome: 'Full name', opsBanco: 'Bank', opsIban: 'IBAN / account number', opsSwift: 'SWIFT/BIC', opsPais: 'Country', opsObs: 'Notes (optional)',
+  opsEnviar: 'Send request', opsEnviando: 'Sending…', opsOk: 'Request received. Our team will review it and you can follow the status below.',
+  opsMinhas: 'My requests', opsNenhuma: 'You have not made any requests yet.', opsSemConta: 'Requests become available once our team has registered your account. Book a conversation to get started.',
+  opsMotivo: 'Reason', opsLancada: 'Recorded in your statement',
+  opsTipos: { transferencia_local: 'Local transfer (UAE)', transferencia_swift: 'International transfer (SWIFT)', cambio: 'Currency exchange' },
+  opsStatus: { recebida: 'Received', em_analise: 'Under review', concluida: 'Completed', recusada: 'Declined' },
+  opsErros: { valor_invalido: 'Check the amount (e.g. 8,000.00).', moeda_invalida: 'Choose a currency different from the account currency.', beneficiario_obrigatorio: 'Enter the beneficiary name.', iban_obrigatorio: 'Enter the IBAN or account number.', swift_invalido: 'Check the SWIFT/BIC code (8 or 11 characters).', conta_invalida: 'Choose the account.', tipo_invalido: 'Choose the operation.', limite_operacoes: 'You already have several open requests. Wait for our team to review them.', geral: 'We could not send your request. Please try again.' },
   tipos: { digital: 'Digital Account', global: 'Global Account', investimentos: 'Investment Account' },
   classes: { renda_fixa: 'Fixed income', renda_variavel: 'Equities', fundos: 'Funds', alternativos: 'Alternatives', exterior: 'International' },
   situacoes: { ativo: 'Active', bloqueado: 'Locked', em_emissao: 'Being issued' },
@@ -31,6 +40,15 @@ const T = en ? {
   cartaoFinal: 'Cartão final', situacao: 'Situação', limite: 'Limite', fatura: 'Fatura atual', vencimento: 'Vencimento',
   opsTitulo: 'Transferências e câmbio', opsTexto: 'Transferências (locais ou SWIFT) e câmbio são feitos com a nossa equipe, com atendimento personalizado e as verificações necessárias. Agende uma conversa ou fale com a gente.',
   agendar: 'Agendar conversa', falar: 'Falar com a equipe',
+  opsIntro: 'Faça sua solicitação aqui. Nossa equipe confere e executa com as verificações necessárias — nada é debitado antes de a equipe concluir. Acompanhe a situação abaixo.',
+  opsNova: 'Nova solicitação', opsTipo: 'Operação', opsConta: 'Conta de origem', opsValor: 'Valor', opsPara: 'Converter para', opsBenef: 'Beneficiário',
+  opsNome: 'Nome completo', opsBanco: 'Banco', opsIban: 'IBAN / número da conta', opsSwift: 'SWIFT/BIC', opsPais: 'País', opsObs: 'Observação (opcional)',
+  opsEnviar: 'Enviar solicitação', opsEnviando: 'Enviando…', opsOk: 'Solicitação recebida. Nossa equipe vai analisar e você acompanha a situação abaixo.',
+  opsMinhas: 'Minhas solicitações', opsNenhuma: 'Você ainda não fez nenhuma solicitação.', opsSemConta: 'As solicitações ficam disponíveis depois que a nossa equipe registrar a sua conta. Agende uma conversa para começar.',
+  opsMotivo: 'Motivo', opsLancada: 'Lançada no seu extrato',
+  opsTipos: { transferencia_local: 'Transferência local (UAE)', transferencia_swift: 'Transferência internacional (SWIFT)', cambio: 'Câmbio' },
+  opsStatus: { recebida: 'Recebida', em_analise: 'Em análise', concluida: 'Concluída', recusada: 'Recusada' },
+  opsErros: { valor_invalido: 'Confira o valor (ex.: 8.000,00).', moeda_invalida: 'Escolha uma moeda diferente da moeda da conta.', beneficiario_obrigatorio: 'Informe o nome do beneficiário.', iban_obrigatorio: 'Informe o IBAN ou número da conta.', swift_invalido: 'Confira o código SWIFT/BIC (8 ou 11 caracteres).', conta_invalida: 'Escolha a conta.', tipo_invalido: 'Escolha a operação.', limite_operacoes: 'Você já tem várias solicitações em aberto. Aguarde a análise da nossa equipe.', geral: 'Não foi possível enviar. Tente de novo.' },
   tipos: { digital: 'Conta Digital', global: 'Conta Global', investimentos: 'Conta Investimentos' },
   classes: { renda_fixa: 'Renda fixa', renda_variavel: 'Renda variável', fundos: 'Fundos', alternativos: 'Alternativos', exterior: 'Exterior' },
   situacoes: { ativo: 'Ativo', bloqueado: 'Bloqueado', em_emissao: 'Em emissão' },
@@ -51,9 +69,9 @@ const T = en ? {
     <h3>{T.atalhos}</h3>
     <div class="atalhos">
       <button type="button" data-ir-aba="conta"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M9 12h6M9 16h6"/></svg>{T.extrato}</button>
-      <button type="button" data-ir-aba="operacoes"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>{T.transferencias}</button>
+      <button type="button" data-ir-aba="operacoes" data-op-pre="transferencia_swift"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg>{T.transferencias}</button>
       <button type="button" data-ir-aba="investimentos"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16v-4M10 16V9M14 16v-6M18 16V6"/></svg>{T.investimentos}</button>
-      <button type="button" data-ir-aba="operacoes"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6v12"/></svg>{T.cambio}</button>
+      <button type="button" data-ir-aba="operacoes" data-op-pre="cambio"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M14.5 9.5c-.5-1-1.5-1.5-2.5-1.5-1.4 0-2.5.8-2.5 2s1.1 1.7 2.5 2 2.5.8 2.5 2-1.1 2-2.5 2c-1 0-2-.5-2.5-1.5M12 6v12"/></svg>{T.cambio}</button>
       <button type="button" data-ir-aba="cartoes"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg>{T.cartoes}</button>
     </div>
     <div class="duas">
@@ -86,7 +104,34 @@ const T = en ? {
   <!-- Operações -->
   <section data-panel="operacoes" hidden>
     <h3>{T.opsTitulo}</h3>
-    <p class="real">{T.opsTexto}</p>
+    <p class="real">{T.opsIntro}</p>
+    <p class="vazio" data-op-semconta hidden>{T.opsSemConta}</p>
+    <form class="op-form" data-op-form hidden novalidate>
+      <h4>{T.opsNova}</h4>
+      <div class="op-tipos" role="radiogroup" aria-label={T.opsTipo}>
+        {Object.entries(T.opsTipos).map(([k, v], i) => <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} data-op-tipo={k}>{v}</button>)}
+      </div>
+      <div class="op-grade">
+        <label><span>{T.opsConta}</span><select name="contaId" data-op-conta></select></label>
+        <label><span>{T.opsValor}</span><input name="valor" inputmode="decimal" autocomplete="off" placeholder={en ? 'e.g. 8,000.00' : 'ex.: 8.000,00'} /></label>
+        <label data-op-cambio hidden><span>{T.opsPara}</span><select name="moedaDestino">{['AED', 'USD', 'EUR', 'GBP', 'BRL'].map((m) => <option value={m}>{m}</option>)}</select></label>
+      </div>
+      <fieldset class="op-benef" data-op-benef>
+        <legend>{T.opsBenef}</legend>
+        <div class="op-grade">
+          <label class="largo"><span>{T.opsNome}</span><input name="nome" maxlength="120" autocomplete="off" /></label>
+          <label><span>{T.opsBanco}</span><input name="banco" maxlength="120" autocomplete="off" /></label>
+          <label class="largo"><span>{T.opsIban}</span><input name="iban" maxlength="50" autocomplete="off" /></label>
+          <label data-op-swift><span>{T.opsSwift}</span><input name="swift" maxlength="11" autocomplete="off" /></label>
+          <label><span>{T.opsPais}</span><input name="pais" maxlength="60" autocomplete="off" /></label>
+        </div>
+      </fieldset>
+      <label class="op-obs"><span>{T.opsObs}</span><textarea name="observacao" maxlength="500" rows="2"></textarea></label>
+      <button type="submit" class="btn-ouro" data-op-enviar>{T.opsEnviar}</button>
+      <p class="op-msg" data-op-msg role="status" aria-live="polite" hidden></p>
+    </form>
+    <h4 class="sub">{T.opsMinhas}</h4>
+    <ul class="op-lista" data-op-lista></ul>
     <div class="ops-acoes">
       <button type="button" class="btn-ouro" data-ir-aba="appointments">{T.agendar}</button>
       <a class="btn-linha" href={routes.contact[lang]}>{T.falar}</a>
@@ -173,7 +218,79 @@ const T = en ? {
         box.append(ul);
       }
     }
-    window.addEventListener('ctb:financeiro', (e) => render((e as CustomEvent).detail));
+    // ---- Operações (solicitações; nada é executado sem a equipe)
+    const form = raiz.querySelector<HTMLFormElement>('[data-op-form]')!;
+    const lista = $('[data-op-lista]');
+    const msg = $('[data-op-msg]');
+    let geracao = 0; let tipoOp = 'transferencia_local'; let contasAtuais: Conta[] = [];
+    const escolherTipo = (t: string) => {
+      tipoOp = t;
+      form.querySelectorAll<HTMLElement>('[data-op-tipo]').forEach((b) => b.setAttribute('aria-checked', String(b.dataset.opTipo === t)));
+      $('[data-op-cambio]').hidden = t !== 'cambio';
+      $('[data-op-benef]').hidden = t === 'cambio';
+      $('[data-op-swift]').hidden = t !== 'transferencia_swift';
+      ajustarDestino();
+    };
+    const ajustarDestino = () => {
+      const c = contasAtuais.find((k) => k.id === (form.elements.namedItem('contaId') as HTMLSelectElement).value);
+      const sel = form.elements.namedItem('moedaDestino') as HTMLSelectElement;
+      [...sel.options].forEach((o) => (o.disabled = !!c && o.value === c.moeda));
+      if (sel.selectedOptions[0]?.disabled) sel.value = [...sel.options].find((o) => !o.disabled)!.value;
+    };
+    form.querySelectorAll<HTMLElement>('[data-op-tipo]').forEach((b) => b.addEventListener('click', () => escolherTipo(b.dataset.opTipo!)));
+    form.elements.namedItem('contaId')!.addEventListener('change', ajustarDestino);
+    document.querySelectorAll<HTMLElement>('[data-op-pre]').forEach((b) => b.addEventListener('click', () => escolherTipo(b.dataset.opPre!)));
+    const aviso = (t: string, tipo: 'ok' | 'erro') => { msg.hidden = false; msg.textContent = t; msg.dataset.tipo = tipo; };
+    function desenharLista(ops: any[]) {
+      lista.replaceChildren();
+      if (!ops.length) { lista.append(Object.assign(el('li', 'vazio-li'), { textContent: T.opsNenhuma })); return; }
+      for (const o of ops) {
+        const li = el('li');
+        const topo = el('div', 'op-topo');
+        const st = el('span', 'op-status', T.opsStatus[o.status] || o.status); st.dataset.s = o.status;
+        topo.append(el('strong', '', T.opsTipos[o.tipo] || o.tipo), st);
+        const det = [valor(o.valor, o.moeda) + (o.moeda_destino ? ` → ${o.moeda_destino}` : ''), o.conta_tipo ? T.tipos[o.conta_tipo] || '' : '', new Date(o.criado_em).toLocaleDateString(loc, { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Dubai' })].filter(Boolean).join(' · ');
+        li.append(topo, el('span', 'op-det', det));
+        if (o.beneficiario && o.beneficiario.nome) li.append(el('span', 'op-det', `${T.opsBenef}: ${o.beneficiario.nome}${o.beneficiario.banco ? ' · ' + o.beneficiario.banco : ''}`));
+        if (o.status === 'recusada' && o.motivo) li.append(el('span', 'op-motivo', `${T.opsMotivo}: ${o.motivo}`));
+        lista.append(li);
+      }
+    }
+    async function carregarOps(g: number) {
+      try {
+        const r = await fetch('/api/cliente/operacoes', { credentials: 'same-origin' });
+        if (!r.ok || g !== geracao) return;
+        const d = await r.json(); if (g === geracao) desenharLista(d.operacoes || []);
+      } catch {}
+    }
+    function prepararOps(d: any | null) {
+      const g = ++geracao;
+      lista.replaceChildren(); msg.hidden = true; form.reset(); escolherTipo('transferencia_local');
+      contasAtuais = d ? d.contas || [] : [];
+      const sel = form.elements.namedItem('contaId') as HTMLSelectElement;
+      sel.replaceChildren(...contasAtuais.map((c) => Object.assign(document.createElement('option'), { value: c.id, textContent: `${T.tipos[c.tipo] || c.tipo} · ${c.moeda} · ${valor(c.saldo, c.moeda)}` })));
+      form.hidden = !contasAtuais.length; $('[data-op-semconta]').hidden = !d || !!contasAtuais.length;
+      ajustarDestino();
+      if (d) carregarOps(g);
+    }
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(form); const g = geracao;
+      const corpo: any = { tipo: tipoOp, contaId: f.get('contaId'), valor: String(f.get('valor') || '').trim(), observacao: String(f.get('observacao') || '') };
+      if (tipoOp === 'cambio') corpo.moedaDestino = f.get('moedaDestino');
+      else corpo.beneficiario = { nome: f.get('nome'), banco: f.get('banco'), iban: f.get('iban'), swift: tipoOp === 'transferencia_swift' ? f.get('swift') : '', pais: f.get('pais') };
+      if (!corpo.valor) return aviso(T.opsErros.valor_invalido, 'erro');
+      const btn = $('[data-op-enviar]') as HTMLButtonElement; btn.disabled = true; btn.textContent = T.opsEnviando;
+      try {
+        const r = await fetch('/api/cliente/operacoes', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+        const d = await r.json().catch(() => ({}));
+        if (g !== geracao) return;
+        if (r.status === 201) { form.reset(); escolherTipo(tipoOp); aviso(T.opsOk, 'ok'); carregarOps(g); }
+        else aviso(T.opsErros[d.erro] || T.opsErros.geral, 'erro');
+      } catch { aviso(T.opsErros.geral, 'erro'); }
+      finally { btn.disabled = false; btn.textContent = T.opsEnviar; }
+    });
+    window.addEventListener('ctb:financeiro', (e) => { const d = (e as CustomEvent).detail; render(d); prepararOps(d); });
   }
 </script>
 
@@ -225,12 +342,39 @@ const T = en ? {
   .cartao-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.4rem; align-items: start; }
   .cartao-img { width: 100%; height: auto; border-radius: 16px; border: 1px solid rgba(240, 211, 156, 0.5); box-shadow: 0 20px 40px rgba(28, 16, 11, 0.45); }
   .fin :global(.cartao-final) { margin: 0 0 0.8rem; font-size: 1.1rem; color: #f0d39c; letter-spacing: 0.04em; }
-  .ops-acoes { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1rem; }
+  .ops-acoes { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 1.4rem; }
+  .op-form { display: grid; gap: 0.9rem; margin-top: 1rem; padding: 1.1rem 1.2rem; border: 1px solid rgba(201, 164, 106, 0.32); border-radius: 16px; background: rgba(28, 16, 11, 0.28); }
+  .op-form[hidden], .op-form [hidden] { display: none !important; }
+  .op-form + .sub, [data-op-semconta] + .op-form[hidden] + .sub { margin-top: 1.8rem; }
+  .op-tipos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .op-tipos button { font: inherit; font-size: 0.88rem; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; background: transparent; color: #f3e6d2; border: 1px solid rgba(201, 164, 106, 0.45); }
+  .op-tipos button[aria-checked='true'] { background: linear-gradient(180deg, #f0d39c, #c99550); color: #24120a; border-color: transparent; font-weight: 600; }
+  .op-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.7rem 0.9rem; }
+  .op-grade .largo { grid-column: span 2; }
+  .op-form label { display: flex; flex-direction: column; gap: 0.3rem; font-size: 0.82rem; color: #c9b49a; }
+  .op-form input, .op-form select, .op-form textarea { font: inherit; font-size: 0.95rem; padding: 0.6rem 0.75rem; border-radius: 10px; border: 1px solid rgba(201, 164, 106, 0.4); background: rgba(20, 11, 7, 0.55); color: #f6f0e6; }
+  .op-form input:focus, .op-form select:focus, .op-form textarea:focus { outline: 2px solid #d9ae6b; outline-offset: 1px; }
+  .op-benef { border: 1px dashed rgba(201, 164, 106, 0.32); border-radius: 12px; padding: 0.7rem 0.9rem 0.9rem; margin: 0; }
+  .op-benef legend { padding: 0 0.4rem; color: #f0d39c; font-size: 0.88rem; }
+  .op-form .btn-ouro { justify-self: start; }
+  .op-form .btn-ouro:disabled { opacity: 0.6; cursor: wait; }
+  .op-msg { margin: 0; padding: 0.65rem 0.9rem; border-radius: 10px; font-size: 0.9rem; border: 1px solid rgba(240, 211, 156, 0.6); background: rgba(217, 174, 107, 0.14); color: #f0d39c; }
+  .op-msg[data-tipo='erro'] { border-color: #a8742f; background: rgba(168, 116, 47, 0.18); color: #f3e6d2; }
+  .op-lista { list-style: none; margin: 0; padding: 0; border-top: 1px solid rgba(201, 164, 106, 0.18); }
+  .op-lista :global(li) { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.8rem 0.2rem; border-bottom: 1px solid rgba(201, 164, 106, 0.14); color: #f3e6d2; font-size: 0.92rem; }
+  .op-lista :global(.op-topo) { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
+  .op-lista :global(.op-det) { color: #c9b49a; font-size: 0.82rem; overflow-wrap: anywhere; }
+  .op-lista :global(.op-motivo) { color: #e8d6b7; font-size: 0.85rem; font-style: italic; overflow-wrap: anywhere; }
+  .op-lista :global(.op-status) { font-size: 0.76rem; padding: 0.2rem 0.65rem; border-radius: 999px; border: 1px solid rgba(201, 164, 106, 0.5); color: #e8d6b7; white-space: nowrap; }
+  .op-lista :global(.op-status[data-s='em_analise']) { background: rgba(217, 174, 107, 0.16); color: #f0d39c; }
+  .op-lista :global(.op-status[data-s='concluida']) { background: linear-gradient(180deg, #f0d39c, #c99550); color: #24120a; border-color: transparent; font-weight: 600; }
+  .op-lista :global(.op-status[data-s='recusada']) { background: rgba(98, 72, 58, 0.6); color: #e8d6b7; border-color: rgba(168, 116, 47, 0.7); }
   .btn-ouro { font: inherit; font-weight: 600; border: 1px solid #f0d39c; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550 60%, #a8742f); }
   .btn-linha { display: inline-flex; align-items: center; font-weight: 500; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.7rem 1.4rem; color: #f3e6d2; text-decoration: none; }
   @media (max-width: 800px) {
     .atalhos { grid-template-columns: repeat(3, 1fr); }
     .duas, .cartao-grid { grid-template-columns: 1fr; }
+    .op-grade .largo { grid-column: auto; }
     .fin :global(.carteira li) { grid-template-columns: 7rem 1fr 3rem; }
     .mov :global(.mov__valor) { white-space: normal; }
   }

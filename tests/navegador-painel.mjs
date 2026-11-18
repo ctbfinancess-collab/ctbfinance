@@ -148,9 +148,39 @@ try {
   check('A cliente vê os dados corrigidos na Área do Cliente', pAna.perfil.display_name === 'Ana Corrigida' && pAna.perfil.city === 'Sharjah');
   await ev(`document.querySelector('[data-ficha]').close(),1`);
   check('Fechar a ficha volta para a aba Clientes (não para o Dashboard)', await waitFor(`!document.querySelector('[data-ficha]').open && document.querySelector('[data-aba=clientes]').getAttribute('aria-selected')==='true' && location.hash==='#clientes'`));
+  console.log('--- Operações');
+  const cAnaOp = await sessaoDe('ana@example.com', 'Cliente2026Xyz');
+  const contaAna = (await db.q(`select c.id from contas_cliente c join usuarios u on u.id=c.usuario_id where u.email='ana@example.com' and c.tipo='digital'`)).rows[0].id;
+  const nOp = await fetch(`${BASE}/api/cliente/operacoes`, { method: 'POST', headers: { Cookie: cAnaOp, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'transferencia_swift', contaId: contaAna, valor: '2.000,00', beneficiario: { nome: 'Maria <i>Silva</i>', banco: 'Banco X', iban: 'AE07 0331', swift: 'BOMLAEAD', pais: 'Emirados' }, observacao: 'Mensalidade' }) });
+  const nOp2 = await fetch(`${BASE}/api/cliente/operacoes`, { method: 'POST', headers: { Cookie: cAnaOp, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify({ tipo: 'cambio', contaId: contaAna, valor: '1.000', moedaDestino: 'USD' }) });
+  check('Cliente cria 2 solicitações (API)', nOp.status === 201 && nOp2.status === 201);
+  await clicar('[data-aba=operacoes]');
+  check('Aba Operações lista as 2 em aberto com beneficiário como texto', await waitFor(`(()=>{const t=document.querySelector('[data-operacoes]').innerText;return t.includes('Transferência internacional (SWIFT) · AED 2.000,00') && t.includes('Maria <i>Silva</i>') && !document.querySelector('[data-operacoes] i') && t.includes('Câmbio · AED 1.000,00 → USD')})()`));
+  check('Menu mostra o contador 2 em Operações', await waitFor(`document.querySelector('[data-aba=operacoes] [data-cont]').textContent==='2'`));
+  const itemOp = (txt) => `[...document.querySelectorAll('[data-operacoes] .item')].find(x=>x.innerText.includes('${txt}'))`;
+  await ev(`(()=>{const b=[...${itemOp('Câmbio')}.querySelectorAll('button')].find(x=>x.textContent==='Recusar');b.click();return 1})()`);
+  await ev(`(()=>{const b=[...${itemOp('Câmbio')}.querySelectorAll('button')].find(x=>x.textContent==='Confirmar recusa');b.click();return 1})()`);
+  check('Recusar sem motivo → pede o motivo', await waitFor(`${msg}.includes('Escreva o motivo')`));
+  await ev(`(()=>{const c=${itemOp('Câmbio')};c.querySelector('.motivo-op').value='Fora do horário de câmbio.';[...c.querySelectorAll('button')].find(x=>x.textContent==='Confirmar recusa').click();return 1})()`);
+  check('Recusar com motivo → sai das abertas', await waitFor(`${msg}.includes('Operação recusada') && !document.querySelector('[data-operacoes]').innerText.includes('Câmbio · AED')`));
+  await ev(`(()=>{const b=[...${itemOp('SWIFT')}.querySelectorAll('button')].find(x=>x.textContent==='Pôr em análise');b.click();return 1})()`);
+  check('Pôr em análise → etiqueta "Em análise"', await waitFor(`${itemOp('SWIFT')}?.querySelector('.etiqueta').textContent==='Em análise'`));
+  await ev(`(()=>{const b=[...${itemOp('SWIFT')}.querySelectorAll('button')].find(x=>x.textContent==='Concluir');b.click();return 1})()`);
+  await ev(`(()=>{const s=document.querySelector('[data-op-status]');s.value='concluida';s.dispatchEvent(new Event('change'));return 1})()`);
+  check('Concluir → aparece em Concluídas com "Lançar no extrato"', await waitFor(`!!${itemOp('SWIFT')} && [...${itemOp('SWIFT')}.querySelectorAll('button')].some(x=>x.textContent==='Lançar no extrato')`));
+  await ev(`(()=>{const b=[...${itemOp('SWIFT')}.querySelectorAll('button')].find(x=>x.textContent==='Lançar no extrato');b.click();return 1})()`);
+  check('Lançar no extrato → botão some e marca "lançada no extrato"', await waitFor(`${itemOp('SWIFT')}?.innerText.includes('lançada no extrato') && ![...${itemOp('SWIFT')}.querySelectorAll('button')].some(x=>x.textContent==='Lançar no extrato')`));
+  const finOp = await (await fetch(`${BASE}/api/cliente/financeiro`, { headers: { Cookie: cAnaOp } })).json();
+  check('Cliente vê o débito no extrato e o saldo atualizado (22.000 − 2.000 = 20.000)', finOp.contas.find((c) => c.tipo === 'digital').saldo === '2000000' && finOp.movimentos.some((m) => m.valor === '-200000' && m.descricao.includes('SWIFT')));
+  const opsAna = (await (await fetch(`${BASE}/api/cliente/operacoes`, { headers: { Cookie: cAnaOp } })).json()).operacoes;
+  check('Cliente vê "concluida" e a recusada com o motivo', opsAna.some((o) => o.status === 'concluida') && opsAna.some((o) => o.status === 'recusada' && o.motivo === 'Fora do horário de câmbio.'));
+  await shot('p3d-operacoes');
+  await clicar('[data-aba=clientes]');
   await ev(`(()=>{const l=[...document.querySelectorAll('[data-clientes] .linha-t')].find(x=>x.innerText.includes('chefe@example.com'));l.querySelector('button').click();return 1})()`);
   check('Na ficha da própria conta da equipe não existe "Bloquear acesso"', await waitFor(`document.querySelector('[data-ficha]').open && document.querySelector('[data-ficha-titulo]').textContent==='chefe@example.com'`) && await ev(`![...document.querySelectorAll('[data-ficha] button')].some(b=>b.textContent==='Bloquear acesso')`));
   await ev(`document.querySelector('[data-ficha]').close(),1`);
+  // fechar a ficha volta um passo no histórico (assíncrono): espera assentar antes do próximo clique
+  await waitFor(`!location.hash.includes('/') && !(history.state && history.state.ficha)`); await sleep(300);
 
   console.log('--- Agendamentos');
   await clicar('[data-aba=agendamentos]');
@@ -195,7 +225,7 @@ try {
 
   console.log('--- Registro, celular e saída');
   await clicar('[data-aba=registro]');
-  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
+  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Recusou operação','Concluiu operação','Lançou operação no extrato','Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
   await shot('p6-registro');
   await clicar('[data-aba=clientes]');
   await waitFor(`document.querySelector('[data-clientes]').innerText.includes('ana@example.com')`);

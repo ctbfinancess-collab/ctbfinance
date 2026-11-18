@@ -208,3 +208,25 @@ create table if not exists ips_confiaveis (
   ultimo_login_em timestamptz not null default now(),
   primary key (usuario_id, ip)
 );
+
+-- Solicitações de operação feitas pelo cliente (transferência / câmbio). NADA é executado automaticamente:
+-- a equipe analisa, executa fora do sistema e, ao concluir, pode lançar no extrato (movimento_id).
+create table if not exists operacoes_cliente (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  tipo text not null check (tipo in ('transferencia_local','transferencia_swift','cambio')),
+  conta_id uuid references contas_cliente(id) on delete set null,
+  moeda text not null,
+  valor_centavos bigint not null check (valor_centavos > 0),
+  moeda_destino text,
+  beneficiario jsonb not null default '{}'::jsonb,
+  observacao text,
+  status text not null default 'recebida' check (status in ('recebida','em_analise','concluida','recusada')),
+  motivo text,
+  movimento_id uuid references movimentos_cliente(id) on delete set null,
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text
+);
+create index if not exists operacoes_cliente_usuario on operacoes_cliente(usuario_id, criado_em desc);
+create index if not exists operacoes_cliente_status on operacoes_cliente(status, criado_em desc);

@@ -39,6 +39,22 @@ export const PERIODOS_AGENDAMENTO = ['manha', 'tarde', 'qualquer'];
 const AGENDA_PENDENTES_MAX = 3;      // pedidos em aberto (sem horário confirmado) por cliente
 const AGENDA_DIA_MAX = 5;            // pedidos por cliente em 24 h
 const AGENDA_DIAS_MAX = 180;         // até quantos dias à frente
+export const TIPOS_OPERACAO = ['transferencia_local', 'transferencia_swift', 'cambio'];
+const MOEDAS_OPERACAO = ['AED', 'USD', 'EUR', 'GBP', 'BRL'];
+const OPERACOES_ABERTAS_MAX = 5;     // solicitações de operação em aberto por cliente
+const OPERACOES_DIA_MAX = 10;        // solicitações por cliente em 24 h
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** "28.750,00" · "50.000" · "12480.5" → centavos (BigInt); positivo apenas. Inválido → null. */
+export function valorCentavos(v) {
+  let s = String(v ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  else s = s.replace(/,/g, '');
+  const m = /^(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s);
+  if (!m) return null;
+  return BigInt(m[1]) * 100n + BigInt((m[2] || '').padEnd(2, '0') || '0');
+}
 const hojeDubai = () => new Date(Date.now() + 4 * 3600 * 1000).toISOString().slice(0, 10);
 const somarDias = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const MAX_ARQUIVO = 10 * 1024 * 1024;
@@ -61,7 +77,7 @@ export async function limparRegistrosAntigos(db) {
 const LIBERADOS = ['disponivel_analise', 'aprovado'];
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 
-export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
+export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, avisarOperacao = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
   const json = (res, status, body, extra = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...SEG, ...extra });
     res.end(JSON.stringify(body));
@@ -396,6 +412,59 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const datas = [...contas, ...posicoes, ...(cartao ? [cartao] : [])].map((x) => new Date(x.atualizado_em).getTime());
     return json(res, 200, { contas, movimentos, posicoes, cartao, atualizadoEm: datas.length ? new Date(Math.max(...datas)).toISOString() : null });
   }
+  /** Solicitações de operação do próprio cliente (mais recentes primeiro). */
+  async function operacoes(res, u) {
+    const r = await db.q(`select o.id, o.tipo, o.moeda, o.valor_centavos::text as valor, o.moeda_destino, o.beneficiario, o.observacao, o.status, o.motivo,
+                                 o.criado_em, o.atualizado_em, c.tipo as conta_tipo
+                            from operacoes_cliente o left join contas_cliente c on c.id=o.conta_id
+                           where o.usuario_id=$1 order by o.criado_em desc limit 50`, [u.id]);
+    return json(res, 200, { operacoes: r.rows });
+  }
+  /** Nova solicitação: NÃO movimenta dinheiro — só registra o pedido e avisa a equipe. */
+  async function solicitarOperacao(req, res, u) {
+    const b = await lerJson(req, 6000);
+    const txt = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim() : '').slice(0, n);
+    const tipo = b && b.tipo;
+    if (!TIPOS_OPERACAO.includes(tipo)) return json(res, 400, { erro: 'tipo_invalido' });
+    if (!UUID_RE.test(String(b.contaId || ''))) return json(res, 400, { erro: 'conta_invalida' });
+    const conta = (await db.q('select id, moeda from contas_cliente where id=$1 and usuario_id=$2', [b.contaId, u.id])).rows[0];
+    if (!conta) return json(res, 400, { erro: 'conta_invalida' });
+    const valor = valorCentavos(b.valor);
+    if (valor === null || valor <= 0n || valor > 100000000000n) return json(res, 400, { erro: 'valor_invalido', campo: 'valor' });
+    let moedaDestino = null; let beneficiario = {};
+    if (tipo === 'cambio') {
+      moedaDestino = b.moedaDestino;
+      if (!MOEDAS_OPERACAO.includes(moedaDestino) || moedaDestino === conta.moeda) return json(res, 400, { erro: 'moeda_invalida', campo: 'moedaDestino' });
+    } else {
+      const bn = b.beneficiario || {};
+      beneficiario = { nome: txt(bn.nome, 120), banco: txt(bn.banco, 120), iban: txt(bn.iban, 50).replace(/\s+/g, ' ').toUpperCase(), swift: txt(bn.swift, 11).replace(/\s/g, '').toUpperCase(), pais: txt(bn.pais, 60) };
+      if (!beneficiario.nome) return json(res, 400, { erro: 'beneficiario_obrigatorio', campo: 'beneficiarioNome' });
+      if (!beneficiario.iban) return json(res, 400, { erro: 'iban_obrigatorio', campo: 'beneficiarioIban' });
+      if (tipo === 'transferencia_swift' && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(beneficiario.swift)) return json(res, 400, { erro: 'swift_invalido', campo: 'beneficiarioSwift' });
+      if (tipo === 'transferencia_local') beneficiario.swift = beneficiario.swift || '';
+    }
+    const obs = txt(b.observacao, 500);
+    const r = await db.transacao(async (q) => {
+      await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', ['operacao:' + u.id]);
+      const c = (await q(`select count(*) filter (where status in ('recebida','em_analise'))::int as abertas,
+                                 count(*) filter (where criado_em > now() - interval '24 hours')::int as dia
+                            from operacoes_cliente where usuario_id=$1`, [u.id])).rows[0];
+      if (c.abertas >= OPERACOES_ABERTAS_MAX || c.dia >= OPERACOES_DIA_MAX) return null;
+      return (await q(`insert into operacoes_cliente(usuario_id, tipo, conta_id, moeda, valor_centavos, moeda_destino, beneficiario, observacao)
+                       values ($1,$2,$3,$4,$5,$6,$7::jsonb,$8) returning id, status, criado_em`, [u.id, tipo, conta.id, conta.moeda, valor.toString(), moedaDestino, JSON.stringify(beneficiario), obs || null])).rows[0];
+    });
+    if (!r) return json(res, 429, { erro: 'limite_operacoes' });
+    if (avisarOperacao) {
+      setImmediate(async () => {
+        try {
+          const n = (await db.q(`select dados->>'display_name' as nome from perfis where usuario_id=$1`, [u.id])).rows[0];
+          const v = `${(valor / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(valor % 100n).toString().padStart(2, '0')}`;
+          await avisarOperacao({ email: u.email, nome: (n && n.nome) || '', tipo, valor: v, moeda: conta.moeda, moedaDestino, beneficiario, observacao: obs });
+        } catch (e) { log.error('[area-cliente] aviso de operação à equipe:', e.message); }
+      });
+    }
+    return json(res, 201, { operacao: { id: r.id, status: r.status, criado_em: r.criado_em } });
+  }
   /** Pedido de agendamento feito pelo cliente: assunto da lista fixa, data civil futura, observação curta. */
   async function solicitarAgendamento(req, res, u) {
     const b = await lerJson(req, 4000);
@@ -462,6 +531,8 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       if (dl && m === 'GET') return await baixarDocumento(res, u, dl[1]);
       if (rota === '/api/cliente/agendamentos' && m === 'GET') return await agendamentos(res, u);
       if (rota === '/api/cliente/financeiro' && m === 'GET') return await financeiro(res, u);
+      if (rota === '/api/cliente/operacoes' && m === 'GET') return await operacoes(res, u);
+      if (rota === '/api/cliente/operacoes' && m === 'POST') return await solicitarOperacao(req, res, u);
       if (rota === '/api/cliente/agendamentos' && m === 'POST') return await solicitarAgendamento(req, res, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {
