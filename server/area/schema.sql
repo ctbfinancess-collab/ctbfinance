@@ -25,6 +25,9 @@ create table if not exists sessoes (
   agente text
 );
 create index if not exists sessoes_usuario on sessoes(usuario_id);
+-- web: identificador no cookie HttpOnly · app: token no cabeçalho Authorization (guardado no cofre do aparelho)
+alter table sessoes add column if not exists tipo text not null default 'web';
+alter table sessoes add column if not exists dispositivo text;
 
 -- Links de convite e de redefinição de senha (uso único; só o hash fica guardado).
 create table if not exists tokens_senha (

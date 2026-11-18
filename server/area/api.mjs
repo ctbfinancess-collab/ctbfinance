@@ -116,15 +116,24 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
   const liberarReservas = (ids) => db.q('delete from tentativas_login where id = any($1::bigint[])', [ids]);
 
   // ---- sessão: conferida a cada requisição
+  /** Token da requisição: cabeçalho "Authorization: Bearer" (app) tem prioridade sobre o cookie (web). */
+  function tokenDaRequisicao(req) {
+    const h = String(req.headers.authorization || '');
+    const m = /^Bearer ([A-Za-z0-9_-]{20,100})$/.exec(h);
+    if (m) return { token: m[1], tipo: 'app' };
+    if (h) return { token: null, tipo: 'app' };          // cabeçalho presente mas malformado: não cai no cookie
+    const c = lerCookie(req);
+    return { token: c, tipo: 'web' };
+  }
   async function autenticar(req) {
-    const token = lerCookie(req);
+    const { token, tipo } = tokenDaRequisicao(req);
     if (!token || token.length > 100) return null;
     const r = await db.q(
       `select s.id_hash, s.criada_em, s.ultimo_uso_em, (extract(epoch from now() - s.ultimo_uso_em) * 1000)::bigint as ocioso_ms, u.id, u.email, u.email_verificado_em, u.bloqueado,
               coalesce(e.ativo, false) as equipe
          from sessoes s join usuarios u on u.id = s.usuario_id left join equipe e on e.usuario_id = u.id
-        where s.id_hash = $1 and s.revogada_em is null and s.expira_em > now()
-          and s.ultimo_uso_em > now() - ($2 || ' milliseconds')::interval`, [hashToken(token), String(SESSAO_OCIOSA_MS)]);
+        where s.id_hash = $1 and s.tipo = $3 and s.revogada_em is null and s.expira_em > now()
+          and s.ultimo_uso_em > now() - ($2 || ' milliseconds')::interval`, [hashToken(token), String(SESSAO_OCIOSA_MS), tipo]);
     const s = r.rows[0];
     if (!s || s.bloqueado) return null;
     // contas da equipe (acesso a dados de todos os clientes): sessão encerra após 30 min parada
@@ -133,13 +142,14 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       return null;
     }
     if (Number(s.ocioso_ms) > 60_000) await db.q('update sessoes set ultimo_uso_em=now() where id_hash=$1', [s.id_hash]);
-    return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true, sessao: s.id_hash };
+    return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true, sessao: s.id_hash, tipo };
   }
-  async function criarSessao(res, req, usuarioId) {
+  async function criarSessao(res, req, usuarioId, { tipo = 'web', dispositivo = null } = {}) {
     const token = novoToken();
-    await db.q('insert into sessoes(id_hash, usuario_id, expira_em, ip, agente) values ($1,$2, now() + ($3 || \' milliseconds\')::interval, $4, $5)',
-      [hashToken(token), usuarioId, String(SESSAO_MAX_MS), ip(req), String(req.headers['user-agent'] || '').slice(0, 200)]);
-    res.setHeader('Set-Cookie', cookieSessao(token));
+    await db.q('insert into sessoes(id_hash, usuario_id, expira_em, ip, agente, tipo, dispositivo) values ($1,$2, now() + ($3 || \' milliseconds\')::interval, $4, $5, $6, $7)',
+      [hashToken(token), usuarioId, String(SESSAO_MAX_MS), ip(req), String(req.headers['user-agent'] || '').slice(0, 200), tipo, dispositivo]);
+    if (tipo === 'web') res.setHeader('Set-Cookie', cookieSessao(token));
+    return token;
   }
 
   // ---- e-mails de acesso (convite / redefinição)
@@ -159,7 +169,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
   }
 
   // ---- rotas
-  async function entrar(req, res) {
+  async function entrar(req, res, { app = false } = {}) {
     const b = await lerJson(req);
     const email = String(b.email || '').trim().toLowerCase().slice(0, 160), senha = String(b.senha || '');
     // limites (15 min, reserva atômica ANTES de verificar a senha):
@@ -178,13 +188,18 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     if (!u || !ok || u.bloqueado) return json(res, 401, { erro: 'credenciais' }); // a reserva fica como falha registrada
     await liberarReservas(reservas);                                                 // login legítimo não consome o limite
     await db.q(`insert into ips_confiaveis(usuario_id, ip) values ($1,$2) on conflict (usuario_id, ip) do update set ultimo_login_em=now()`, [u.id, ip(req)]);
+    if (app) {
+      const d = b && typeof b.dispositivo === 'string' ? b.dispositivo.replace(/[^\w .:()-]/g, '').slice(0, 80) : null;
+      const token = await criarSessao(res, req, u.id, { tipo: 'app', dispositivo: d });
+      return json(res, 200, { ok: true, token, expiraEmSegundos: Math.floor(SESSAO_MAX_MS / 1000), ociosaEmSegundos: Math.floor(SESSAO_OCIOSA_MS / 1000) });
+    }
     await criarSessao(res, req, u.id);
     return json(res, 200, { ok: true });
   }
   async function sair(req, res) {
-    const token = lerCookie(req);
-    if (token) await db.q('update sessoes set revogada_em=now() where id_hash=$1 and revogada_em is null', [hashToken(token)]);
-    return json(res, 200, { ok: true }, { 'Set-Cookie': cookieApagar() });
+    const { token, tipo } = tokenDaRequisicao(req);
+    if (token) await db.q('update sessoes set revogada_em=now() where id_hash=$1 and tipo=$2 and revogada_em is null', [hashToken(token), tipo]);
+    return json(res, 200, { ok: true }, tipo === 'web' ? { 'Set-Cookie': cookieApagar() } : {});
   }
   async function esqueci(req, res) {
     const b = await lerJson(req);
@@ -401,20 +416,26 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const rota = url.pathname.replace(/\/+$/, '');
     const m = req.method;
     try {
-      if (m !== 'GET' && m !== 'HEAD' && !origemValida(req)) return json(res, 403, { erro: 'origem' });
+      if (m !== 'GET' && m !== 'HEAD') {
+        const origem = req.headers.origin;
+        if (origem ? !origens.has(origem) : Boolean(req.headers.cookie)) return json(res, 403, { erro: 'origem' });
+      }
       if (rota === '/api/cliente/status' && m === 'GET') {
         // diagnóstico TEMPORÁRIO (só com AREA_DIAGNOSTICO_IP=1): mostra qual IP o servidor enxerga, para conferir o proxy
         if (process.env.AREA_DIAGNOSTICO_IP === '1') return json(res, 200, { ativo: true, ipVisto: ip(req), xRealIp: String(req.headers['x-real-ip'] || ''), cfConnectingIp: String(req.headers['cf-connecting-ip'] || ''), xForwardedFor: String(req.headers['x-forwarded-for'] || ''), socket: String(req.socket.remoteAddress || '') });
         return json(res, 200, { ativo: true });
       }
       if (rota === '/api/cliente/entrar' && m === 'POST') return await entrar(req, res);
+      if (rota === '/api/cliente/app/entrar' && m === 'POST') return await entrar(req, res, { app: true });
+      if (rota === '/api/cliente/app/sair' && m === 'POST') return await sair(req, res);
       if (rota === '/api/cliente/sair' && m === 'POST') return await sair(req, res);
       if (rota === '/api/cliente/esqueci' && m === 'POST') return await esqueci(req, res);
       if (rota === '/api/cliente/redefinir' && m === 'POST') return await redefinir(req, res);
       const u = await autenticar(req);
       if (!u) return json(res, 401, { erro: 'sessao' }, { 'Set-Cookie': cookieApagar() });
       if (rota === '/api/cliente/sessao' && m === 'GET') return json(res, 200, { email: u.email, verificado: u.verificado, equipe: u.equipe });
-      if (rota.startsWith('/api/cliente/equipe/')) return painel ? await painel(req, res, url, u) : json(res, 404, { erro: 'rota' });
+      // Admin só com sessão do navegador (cookie): token do app nunca acessa o painel da equipe
+      if (rota.startsWith('/api/cliente/equipe/')) return painel && u.tipo === 'web' ? await painel(req, res, url, u) : json(res, 404, { erro: 'rota' });
       if (rota === '/api/cliente/perfil' && (m === 'GET' || m === 'PUT')) return await perfil(req, res, u);
       if (rota === '/api/cliente/documentos' && m === 'GET') return await listarDocumentos(res, u);
       if (rota === '/api/cliente/documentos' && m === 'POST') return await enviarDocumento(req, res, u);

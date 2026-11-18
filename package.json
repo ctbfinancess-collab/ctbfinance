@@ -15,7 +15,8 @@
     "test:revisao": "node tests/revisao-independente.test.mjs",
     "test:ajustes": "node tests/ajustes-portal.test.mjs",
     "test:painel": "node tests/painel-equipe.test.mjs",
-    "test:navegador-painel": "npm run build && node tests/navegador-painel.mjs"
+    "test:navegador-painel": "npm run build && node tests/navegador-painel.mjs",
+    "test:app": "node tests/app-mobile.test.mjs"
   },
   "dependencies": {
     "astro": "^7.4.12",
