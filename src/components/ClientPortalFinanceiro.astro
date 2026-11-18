@@ -36,11 +36,11 @@ const T = en ? {
     aviso: 'Sending a request does not represent approval or issuance of the instrument. Issuance is carried out exclusively by a licensed financial institution.',
     nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
     instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
-    ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', finalidade: 'Purpose', sugFinalidade: ['Monetization', 'Payment guarantee', 'Credit line / financing', 'Commodity purchase', 'Import / export', 'Contract performance guarantee', 'Project / investment'], operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
+    ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', ordPf: 'Individual (me)', ordPj: 'My company', ordPjDica: 'To request on behalf of your company, add your company details in My profile.', ordPfDica: 'Fill in your full name in My profile.', ordLegado: 'Entered previously:', ordEscolha: 'Choose who is requesting. The details come from My profile.', ordRotulos: { nome: 'Name', passaporte: 'Passport', nacionalidade: 'Nationality', empresa: 'Company', registro: 'Registration no.', pais: 'Country of incorporation', representante: 'Legal representative' }, contratoDica: 'Recommended: attach the contract with your trader/supplier (e.g. the cargo or vessel purchase agreement).', contratoAnexar: 'Attach contract (PDF, JPG, PNG)', contratoEnviando: 'Uploading…', remover: 'Remove', removido: 'Attachment removed.', finalidade: 'Purpose', sugFinalidade: ['Monetization', 'Payment guarantee', 'Credit line / financing', 'Commodity purchase', 'Import / export', 'Contract performance guarantee', 'Project / investment'], operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
     salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
     faltam: 'To send, fill in:', minhas: 'My instrument requests', nenhuma: 'No instrument requests yet.', rascunho: 'Draft', anexar: 'Attach file (PDF, JPG, PNG)', anexado: 'File attached.', cancelar: 'Cancel request', cancelarConf: 'Cancel this request?', cancelada: 'Request cancelled.',
     historico: 'History', anexos: 'Attachments', mensagem: 'Message to our team', enviarMsg: 'Send message', msgOk: 'Message sent.', equipe: 'CTB team', voce: 'You', aDefinir: 'to be defined',
-    campos: { instrumento: 'instrument', moeda: 'currency', valor: 'amount', beneficiarioNome: 'beneficiary name', beneficiarioPais: 'beneficiary country', finalidade: 'purpose', ordenanteNome: 'applicant name' },
+    campos: { instrumento: 'instrument', moeda: 'currency', valor: 'amount', beneficiarioNome: 'beneficiary name', beneficiarioPais: 'beneficiary country', finalidade: 'purpose', ordenanteNome: 'applicant name', ordenante: 'applicant (individual or company)', ordenantePerfil: 'your full name in My profile', ordenanteEmpresa: 'your company details in My profile' },
     erros: { campos_invalidos: 'Check the highlighted information (amount e.g. 1,000,000.00; valid date).', limite_instrumentos: 'You already have several open requests. Please wait for our review.', nao_editavel: 'This request can no longer be edited.', ja_enviada: 'This request has already been sent.', nao_cancelavel: 'This request can no longer be cancelled.', tipo_nao_aceito: 'Only PDF, JPG or PNG files.', muito_grande: 'File larger than 10 MB.', conteudo_nao_confere: 'The file content does not match its type.', cota: 'Daily upload limit reached.', limite_mensagens: 'Daily message limit reached.', geral: 'We could not complete this. Please try again.' },
     status: { rascunho: 'Draft', enviada: 'Request sent', analise_documental: 'Document review', documentacao_solicitada: 'Additional documents requested', analise_interna: 'Internal review', encaminhada: 'Forwarded to the financial institution', aguardando_instituicao: 'Awaiting the institution', aprovada: 'Approved by the institution', recusada: 'Declined', cancelada: 'Cancelled', concluida: 'Completed' },
     garantiasLista: { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee' }, declaracoesLista: { RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' },
@@ -71,11 +71,11 @@ const T = en ? {
     aviso: 'O envio da solicitação não representa aprovação nem emissão do instrumento. A emissão é feita exclusivamente por instituição financeira habilitada.',
     nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
     instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
-    ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', finalidade: 'Finalidade', sugFinalidade: ['Monetização', 'Garantia de pagamento', 'Linha de crédito / financiamento', 'Compra de commodities', 'Importação / exportação', 'Garantia de performance contratual', 'Projeto / investimento'], operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
+    ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', ordPf: 'Pessoa física (eu)', ordPj: 'Minha empresa (PJ)', ordPjDica: 'Para solicitar em nome da sua empresa, cadastre sua empresa em Meu perfil.', ordPfDica: 'Preencha seu nome completo em Meu perfil.', ordLegado: 'Informado anteriormente:', ordEscolha: 'Escolha quem está solicitando. Os dados vêm de Meu perfil.', ordRotulos: { nome: 'Nome', passaporte: 'Passaporte', nacionalidade: 'Nacionalidade', empresa: 'Empresa', registro: 'Nº de registro', pais: 'País de constituição', representante: 'Representante legal' }, contratoDica: 'Recomendado: anexe o contrato com o seu trader/fornecedor (ex.: compra da carga ou do navio).', contratoAnexar: 'Anexar contrato (PDF, JPG, PNG)', contratoEnviando: 'Enviando…', remover: 'Remover', removido: 'Anexo removido.', finalidade: 'Finalidade', sugFinalidade: ['Monetização', 'Garantia de pagamento', 'Linha de crédito / financiamento', 'Compra de commodities', 'Importação / exportação', 'Garantia de performance contratual', 'Projeto / investimento'], operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
     salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
     faltam: 'Para enviar, preencha:', minhas: 'Minhas solicitações de instrumentos', nenhuma: 'Nenhuma solicitação de instrumento ainda.', rascunho: 'Rascunho', anexar: 'Anexar arquivo (PDF, JPG, PNG)', anexado: 'Arquivo anexado.', cancelar: 'Cancelar solicitação', cancelarConf: 'Cancelar esta solicitação?', cancelada: 'Solicitação cancelada.',
     historico: 'Histórico', anexos: 'Anexos', mensagem: 'Mensagem para a nossa equipe', enviarMsg: 'Enviar mensagem', msgOk: 'Mensagem enviada.', equipe: 'Equipe CTB', voce: 'Você', aDefinir: 'a definir',
-    campos: { instrumento: 'instrumento', moeda: 'moeda', valor: 'valor', beneficiarioNome: 'nome do beneficiário', beneficiarioPais: 'país do beneficiário', finalidade: 'finalidade', ordenanteNome: 'nome do ordenante' },
+    campos: { instrumento: 'instrumento', moeda: 'moeda', valor: 'valor', beneficiarioNome: 'nome do beneficiário', beneficiarioPais: 'país do beneficiário', finalidade: 'finalidade', ordenanteNome: 'nome do ordenante', ordenante: 'ordenante (pessoa física ou empresa)', ordenantePerfil: 'seu nome completo em Meu perfil', ordenanteEmpresa: 'os dados da sua empresa em Meu perfil' },
     erros: { campos_invalidos: 'Confira as informações (valor ex.: 1.000.000,00; data válida).', limite_instrumentos: 'Você já tem várias solicitações em aberto. Aguarde a nossa análise.', nao_editavel: 'Esta solicitação não pode mais ser editada.', ja_enviada: 'Esta solicitação já foi enviada.', nao_cancelavel: 'Esta solicitação não pode mais ser cancelada.', tipo_nao_aceito: 'Somente arquivos PDF, JPG ou PNG.', muito_grande: 'Arquivo maior que 10 MB.', conteudo_nao_confere: 'O conteúdo do arquivo não confere com o tipo.', cota: 'Limite diário de envios atingido.', limite_mensagens: 'Limite diário de mensagens atingido.', geral: 'Não foi possível concluir. Tente de novo.' },
     status: { rascunho: 'Rascunho', enviada: 'Solicitação enviada', analise_documental: 'Em análise documental', documentacao_solicitada: 'Documentação complementar solicitada', analise_interna: 'Em análise interna', encaminhada: 'Encaminhada à instituição financeira', aguardando_instituicao: 'Aguardando resposta da instituição', aprovada: 'Aprovada pela instituição', recusada: 'Recusada', cancelada: 'Cancelada', concluida: 'Concluída' },
     garantiasLista: { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee' }, declaracoesLista: { RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' },
@@ -138,7 +138,7 @@ const I = T.inst;
       <p class="real">{I.intro}</p>
       <p class="inst-aviso" data-inst-aviso>{I.aviso}</p>
       <button type="button" class="btn-ouro" data-inst-nova>{I.nova}</button>
-      <form class="op-form inst-form" data-inst-form hidden novalidate>
+      <form class="op-form inst-form" data-inst-form hidden novalidate autocomplete="off">
         <h4 data-inst-form-titulo>{I.nova}</h4>
         <input type="hidden" name="id" />
         <div class="op-grade">
@@ -148,7 +148,7 @@ const I = T.inst;
           </select></label>
           <label><span>{I.moeda}</span><select name="moeda">{['USD', 'EUR', 'AED', 'GBP'].map((m) => <option value={m}>{m}</option>)}</select></label>
           <label><span>{I.valor}</span><input name="valor" inputmode="decimal" autocomplete="off" placeholder={en ? 'e.g. 1,000,000.00' : 'ex.: 1.000.000,00'} /></label>
-          <label><span>{I.validade}</span><input name="validade" type="date" /></label>
+          <label><span>{I.validade}</span><input name="validade" type="date" autocomplete="off" /></label>
         </div>
         <fieldset class="op-benef">
           <legend>{I.benef}</legend>
@@ -161,10 +161,15 @@ const I = T.inst;
         </fieldset>
         <fieldset class="op-benef">
           <legend>{I.ordenante}</legend>
-          <div class="op-grade">
-            <label class="largo"><span>{I.ordNome}</span><input name="oNome" maxlength="160" autocomplete="off" /></label>
-            <label><span>{I.ordId}</span><input name="oId" maxlength="80" autocomplete="off" /></label>
+          <p class="ord-nota">{I.ordEscolha}</p>
+          <div class="op-tipos" role="radiogroup" aria-label={I.ordenante}>
+            <button type="button" role="radio" aria-checked="false" data-ord-tipo="pf">{I.ordPf}</button>
+            <button type="button" role="radio" aria-checked="false" data-ord-tipo="pj">{I.ordPj}</button>
           </div>
+          <input type="hidden" name="ordTipo" />
+          <p class="ord-nota" data-ord-dica hidden></p>
+          <dl class="ord-dados" data-ord-dados hidden></dl>
+          <p class="ord-nota" data-ord-legado hidden></p>
         </fieldset>
         <label class="op-obs"><span>{I.finalidade}</span><textarea name="finalidade" maxlength="1000" rows="2"></textarea></label>
         <div class="op-tipos op-sugestoes" data-sug-finalidade>{I.sugFinalidade.map((t: string) => <button type="button" aria-pressed="false" data-sug={t}>{t}</button>)}</div>
@@ -172,7 +177,12 @@ const I = T.inst;
         <div class="op-grade">
           <label><span>{I.emissor}</span><input name="bancoEmissor" maxlength="160" autocomplete="off" /></label>
           <label><span>{I.avisador}</span><input name="bancoAvisador" maxlength="160" autocomplete="off" /></label>
-          <label class="largo"><span>{I.contrato}</span><input name="contratoRef" maxlength="160" autocomplete="off" /></label>
+        </div>
+        <div class="inst-ref" data-inst-ref>
+          <label class="op-obs"><span>{I.contrato}</span><input name="contratoRef" maxlength="160" autocomplete="off" /></label>
+          <p class="ord-nota">{I.contratoDica}</p>
+          <label class="btn-linha inst-ref-anexar"><span data-ref-rotulo>{I.contratoAnexar}</span><input type="file" multiple accept="application/pdf,image/jpeg,image/png" hidden data-ref-arquivo /></label>
+          <ul class="inst-ref-lista" data-ref-lista></ul>
         </div>
         <label class="op-obs"><span>{I.obs}</span><textarea name="observacoes" maxlength="2000" rows="2"></textarea></label>
         <p class="inst-aviso pequeno">{I.aviso}</p>
@@ -410,15 +420,72 @@ const I = T.inst;
       if (s) {
         campo('instrumento').value = s.instrumento; campo('moeda').value = s.moeda; campo('valor').value = textoValor(s.valor); campo('validade').value = s.validade || '';
         const b = s.beneficiario || {}; campo('bNome').value = b.nome || ''; campo('bPais').value = b.pais || ''; campo('bEndereco').value = b.endereco || ''; campo('bBanco').value = b.banco || '';
-        const o = s.ordenante || {}; campo('oNome').value = o.nome || ''; campo('oId').value = o.identificacao || '';
         for (const [n, k] of [['finalidade', 'finalidade'], ['operacaoSubjacente', 'operacao_subjacente'], ['bancoEmissor', 'banco_emissor'], ['bancoAvisador', 'banco_avisador'], ['contratoRef', 'contrato_ref'], ['observacoes', 'observacoes']]) campo(n).value = s[k] || '';
       }
+      // ordenante: escolha PF/PJ (dados de Meu perfil); rascunho antigo com nome digitado aparece como estava
+      const o = (s && s.ordenante) || {};
+      const leg = $('[data-ord-legado]');
+      if (!o.tipo && o.nome) { leg.hidden = false; leg.textContent = `${I.ordLegado} ${[o.nome, o.identificacao].filter(Boolean).join(' · ')}`; } else leg.hidden = true;
+      escolherOrd(o.tipo || (o.nome ? '' : (ordPrev.pf ? 'pf' : '')));
+      desenharRef(s);
       fi.scrollIntoView({ block: 'start', behavior: 'smooth' });
     }
+    // ---- ordenante (pessoa física ou empresa): só a escolha vai ao servidor; ele monta os dados a partir do perfil
+    let ordPrev: { pf: any; pj: any } = { pf: null, pj: null };
+    function escolherOrd(t: string) {
+      campo('ordTipo').value = t;
+      fi.querySelectorAll<HTMLButtonElement>('[data-ord-tipo]').forEach((b) => {
+        b.setAttribute('aria-checked', String(b.dataset.ordTipo === t));
+        b.disabled = !ordPrev[b.dataset.ordTipo as 'pf' | 'pj'];
+      });
+      const dica = $('[data-ord-dica]'); const faltaPf = !ordPrev.pf, faltaPj = !ordPrev.pj;
+      dica.hidden = !(faltaPf || faltaPj); dica.textContent = [faltaPf ? I.ordPfDica : '', faltaPj ? I.ordPjDica : ''].filter(Boolean).join(' ');
+      const dl = $('[data-ord-dados]'); dl.replaceChildren();
+      const d = t ? ordPrev[t as 'pf' | 'pj'] : null;
+      dl.hidden = !d;
+      if (!d) return;
+      const R = I.ordRotulos;
+      const linhas: [string, string][] = t === 'pf' ? [[R.nome, d.nome], [R.passaporte, d.passaporte], [R.nacionalidade, d.nacionalidade]]
+        : [[R.empresa, d.nome], [R.registro, d.registro], [R.pais, d.pais], [R.representante, [d.representante, d.cargo].filter(Boolean).join(' · ')]];
+      for (const [k, v] of linhas) if (v) dl.append(el('dt', '', k), el('dd', '', v));
+    }
+    fi.querySelectorAll<HTMLButtonElement>('[data-ord-tipo]').forEach((b) => b.addEventListener('click', () => escolherOrd(b.dataset.ordTipo!)));
+    // ---- contrato de referência: anexos direto no formulário (salva o rascunho antes, se ainda não existir)
+    let solsI: any[] = [];
+    function desenharRef(s: any | null) {
+      const ul = $('[data-ref-lista]'); ul.replaceChildren();
+      const pode = !s || s.status === 'rascunho' || s.status === 'documentacao_solicitada';
+      for (const a of (s?.anexos || []).filter((x: any) => x.tipo_anexo === 'contrato_referencia')) {
+        const li = el('li'); const link = document.createElement('a'); link.href = `/api/cliente/documentos/${a.id}/arquivo`; link.textContent = a.nome; li.append(link);
+        if (pode) { const b = el('button', 'link', I.remover) as HTMLButtonElement; b.type = 'button'; b.dataset.refRemover = a.id;
+          b.onclick = async () => { const g = geracaoI; const r = await api('DELETE', `/${s.id}/anexos/${a.id}`); if (g !== geracaoI) return; if (r.status === 200) { avisoI(msgI, I.removido, 'ok'); await recarregarRef(s.id, g); } else avisoI(msgI, I.erros[r.d.erro] || I.erros.geral, 'erro'); };
+          li.append(b); }
+        ul.append(li);
+      }
+    }
+    async function recarregarRef(id: string, g: number) { await carregarInst(g); if (g === geracaoI && campo('id').value === id) desenharRef(solsI.find((x) => x.id === id) || null); }
+    const refArq = $('[data-ref-arquivo]') as HTMLInputElement;
+    refArq.addEventListener('change', async () => {
+      const arquivos = [...(refArq.files || [])]; refArq.value = ''; if (!arquivos.length) return;
+      const g = geracaoI; const rot = $('[data-ref-rotulo]'); rot.textContent = I.contratoEnviando;
+      try {
+        const id = campo('id').value || await salvarForm();   // rascunho novo: grava primeiro para ter onde anexar
+        if (!id || g !== geracaoI) return;
+        for (const f of arquivos) {
+          const r = await fetch(`/api/cliente/instrumentos/${id}/anexos?tipo=contrato_referencia`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': f.type || 'application/octet-stream', 'X-Nome-Arquivo': encodeURIComponent(f.name) }, body: f });
+          if (g !== geracaoI) return;
+          const d = await r.json().catch(() => ({}));
+          if (r.status !== 201) { avisoI(msgI, I.erros[d.erro] || (r.status === 422 ? I.erros.conteudo_nao_confere : I.erros.geral), 'erro'); break; }
+          avisoI(msgI, I.anexado, 'ok');
+        }
+        await recarregarRef(id, g);
+      } catch { avisoI(msgI, I.erros.geral, 'erro'); }
+      finally { rot.textContent = I.contratoAnexar; }
+    });
     const dadosForm = () => {
       const v = (n: string) => campo(n).value;
       const d: any = { moeda: v('moeda'), valor: v('valor').trim(), validade: v('validade'), beneficiario: { nome: v('bNome'), pais: v('bPais'), endereco: v('bEndereco'), banco: v('bBanco') },
-        ordenante: { nome: v('oNome'), identificacao: v('oId') }, finalidade: v('finalidade'), operacaoSubjacente: v('operacaoSubjacente'), bancoEmissor: v('bancoEmissor'), bancoAvisador: v('bancoAvisador'), contratoRef: v('contratoRef'), observacoes: v('observacoes') };
+        ordenante: v('ordTipo') ? { tipo: v('ordTipo') } : undefined, finalidade: v('finalidade'), operacaoSubjacente: v('operacaoSubjacente'), bancoEmissor: v('bancoEmissor'), bancoAvisador: v('bancoAvisador'), contratoRef: v('contratoRef'), observacoes: v('observacoes') };
       if (!(campo('instrumento') as unknown as HTMLSelectElement).disabled) d.instrumento = v('instrumento');
       return d;
     };
@@ -492,7 +559,7 @@ const I = T.inst;
       }
     }
     async function carregarInst(g: number) {
-      try { const r = await fetch('/api/cliente/instrumentos', { credentials: 'same-origin' }); if (!r.ok || g !== geracaoI) return; const d = await r.json(); if (g === geracaoI) desenharInst(d.solicitacoes || []); } catch {}
+      try { const r = await fetch('/api/cliente/instrumentos', { credentials: 'same-origin' }); if (!r.ok || g !== geracaoI) return; const d = await r.json(); if (g === geracaoI) { solsI = d.solicitacoes || []; ordPrev = d.ordenantes || { pf: null, pj: null }; if (fi.hidden) escolherOrd(''); desenharInst(solsI); } } catch {}
     }
     function prepararInst(d: any | null) {
       const g = ++geracaoI;
@@ -588,6 +655,18 @@ const I = T.inst;
   .inst[hidden] { display: none; }
   .inst-aviso { margin: 0.8rem 0; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(240, 211, 156, 0.6); background: rgba(181, 139, 77, 0.16); color: #f0d39c; font-size: 0.9rem; line-height: 1.45; }
   .inst-aviso.pequeno { font-size: 0.82rem; margin: 0; }
+  .op-tipos button:disabled { opacity: 0.45; cursor: not-allowed; }
+  .ord-nota { margin: 0.2rem 0 0.5rem; font-size: 0.84rem; color: #c9b49a; }
+  .ord-dados { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; margin: 0.6rem 0 0.2rem; padding: 0.7rem 0.9rem; border-radius: 10px; background: rgba(28, 16, 11, 0.38); border: 1px solid rgba(201, 164, 106, 0.3); font-size: 0.9rem; }
+  .ord-dados[hidden] { display: none; }
+  .ord-dados :global(dt) { color: #c9b49a; }
+  .ord-dados :global(dd) { margin: 0; color: #f3e6d2; overflow-wrap: anywhere; }
+  .inst-ref { margin: 0.4rem 0 0.8rem; }
+  .inst-ref-anexar { display: inline-flex; width: max-content; max-width: 100%; justify-self: start; cursor: pointer; font-size: 0.86rem; padding: 0.45rem 1rem; border-radius: 999px; border: 1px solid rgba(201, 164, 106, 0.5); color: #f3e6d2; }
+  .inst-ref-lista { list-style: none; margin: 0.5rem 0 0; padding: 0; display: grid; gap: 0.3rem; font-size: 0.88rem; }
+  .inst-ref-lista :global(li) { display: flex; gap: 1rem; align-items: center; }
+  .inst-ref-lista :global(a) { color: #d9ae6b; overflow-wrap: anywhere; }
+  .inst-ref-lista :global(button.link) { background: none; border: 0; padding: 0; font: inherit; color: #d9ae6b; text-decoration: underline; cursor: pointer; }
   .inst-botoes { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; }
   .inst-form h4 { color: #f0d39c; }
   .inst-form select:disabled { opacity: 0.7; }

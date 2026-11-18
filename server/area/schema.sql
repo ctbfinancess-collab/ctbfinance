@@ -288,6 +288,9 @@ create table if not exists instrumentos_anexos (
   primary key (solicitacao_id, documento_id)
 );
 
+-- anexos da solicitação com um tipo (ex.: 'contrato_referencia' = contrato com o trader/fornecedor)
+alter table instrumentos_anexos add column if not exists tipo text;
+
 -- Contratos gerados no papel timbrado (NDA etc.): preenchidos com o cadastro/solicitação, editáveis pela equipe,
 -- só aparecem para o cliente depois de "liberados". Cada gravação guarda uma versão (histórico).
 create sequence if not exists contratos_ref_seq;

@@ -75,13 +75,14 @@ try {
   const id1 = r1.dados.solicitacao.id;
   const S1 = async () => (await L(cAna)).find((x) => x.id === id1);
   const env0 = await C(cAna, 'POST', `/${id1}/enviar`);
-  await t('IN3', 'Enviar incompleto → 400 com a lista de campos obrigatórios', async () => env0.status === 400 && env0.dados.erro === 'campos_obrigatorios' && ['valor', 'beneficiarioNome', 'beneficiarioPais', 'finalidade', 'ordenanteNome'].every((c) => env0.dados.campos.includes(c)));
+  await t('IN3', 'Enviar incompleto → 400 com a lista de campos obrigatórios', async () => env0.status === 400 && env0.dados.erro === 'campos_obrigatorios' && ['valor', 'beneficiarioNome', 'beneficiarioPais', 'finalidade', 'ordenante'].every((c) => env0.dados.campos.includes(c)));
   const ruins = await Promise.all([
     C(cAna, 'PUT', `/${id1}`, { instrumento: 'XYZ' }), C(cAna, 'PUT', `/${id1}`, { moeda: 'BTC' }), C(cAna, 'PUT', `/${id1}`, { valor: '-5' }),
     C(cAna, 'PUT', `/${id1}`, { valor: 'mil' }), C(cAna, 'PUT', `/${id1}`, { validade: '2026-02-31' }),
   ]);
   await t('IN4', 'Validação: instrumento, moeda, valor negativo/texto, data inexistente → 400', async () => ruins.every((r) => r.status === 400) || ruins.map((r) => r.status));
-  const ed = await C(cAna, 'PUT', `/${id1}`, { valor: '1.000.000,00', beneficiario: { nome: 'Exemplo <b>Trading</b> Ltd', pais: 'Singapura' }, finalidade: 'Garantia de pagamento de importação', ordenante: { nome: 'Ana Teste', identificacao: 'X1234567' }, validade: '2027-06-30', bancoEmissor: 'Banco Exemplo' });
+  await req('PUT', '/api/cliente/perfil', { cookie: cAna, json: { display_name: 'Ana Teste', nationality: 'Brasileira', passportnumber: 'X1234567' } });
+  const ed = await C(cAna, 'PUT', `/${id1}`, { valor: '1.000.000,00', beneficiario: { nome: 'Exemplo <b>Trading</b> Ltd', pais: 'Singapura' }, finalidade: 'Garantia de pagamento de importação', ordenante: { tipo: 'pf', nome: 'Nome Forjado', identificacao: 'FORJADO1' }, validade: '2027-06-30', bancoEmissor: 'Banco Exemplo' });
   await t('IN5', 'Editar rascunho: valor 1.000.000,00 em centavos, campos gravados', async () => { const s = (await S1()); return ed.status === 200 && s.valor === '100000000' && s.beneficiario.pais === 'Singapura' && s.validade === '2027-06-30' && s.banco_emissor === 'Banco Exemplo' && s.faltando.length === 0; });
   const n0 = emails.length;
   const env1 = await C(cAna, 'POST', `/${id1}/enviar`);
@@ -150,9 +151,37 @@ try {
   console.log('--- Cancelar, recusar, limites, app');
   const id2 = r2.dados.solicitacao.id;
   await t('IN35', 'Cliente cancela o próprio rascunho', async () => (await C(cAna, 'POST', `/${id2}/cancelar`)).status === 200 && (await L(cAna)).find((s) => s.id === id2).status === 'cancelada');
-  const r3 = await C(cAna, 'POST', '', { instrumento: 'BG', moeda: 'EUR', valor: '250.000', beneficiario: { nome: 'Construtora Exemplo', pais: 'Portugal' }, finalidade: 'Garantia de execução', ordenante: { nome: 'Ana Teste' } });
+  const r3 = await C(cAna, 'POST', '', { instrumento: 'BG', moeda: 'EUR', valor: '250.000', beneficiario: { nome: 'Construtora Exemplo', pais: 'Portugal' }, finalidade: 'Garantia de execução', ordenante: { tipo: 'pf' } });
   await C(cAna, 'POST', `/${r3.dados.solicitacao.id}/enviar`);
   await t('IN36', 'Recusar sem motivo → 400; com motivo → cliente vê o motivo', async () => (await E('POST', `/instrumentos/${r3.dados.solicitacao.id}/status`, { json: { status: 'recusada' } })).status === 400 && (await E('POST', `/instrumentos/${r3.dados.solicitacao.id}/status`, { json: { status: 'recusada', texto: 'Documentação insuficiente.' } })).status === 200 && JSON.stringify((await L(cAna)).find((s) => s.id === r3.dados.solicitacao.id).eventos).includes('Documentação insuficiente.'));
+  console.log('--- Ordenante (PF/PJ pelo perfil) e contrato de referência');
+  const sEnv = (await req('GET', '/api/cliente/equipe/instrumentos/' + id1, { cookie: cChefe })).dados;
+  await t('IN41', 'Ordenante PF: retrato montado NO SERVIDOR a partir do perfil (nome/documento enviados pelo navegador ignorados)', async () => sEnv.ordenante.tipo === 'pf' && sEnv.ordenante.nome === 'Ana Teste' && sEnv.ordenante.passaporte === 'X1234567' && !JSON.stringify(sEnv.ordenante).includes('Forjado') || sEnv.ordenante);
+  await t('IN42', 'Cliente vê o passaporte do ordenante mascarado', async () => { const s = (await L(cAna)).find((x) => x.id === id1); return s.ordenante.passaporte === '•••• 567' && !JSON.stringify(s).includes('X1234567'); });
+  const rPj = await C(cAna, 'POST', '', { valor: '10.000', beneficiario: { nome: 'B', pais: 'UAE' }, finalidade: 'Teste', ordenante: { tipo: 'pj' } });
+  const idPj = rPj.dados.solicitacao?.id;
+  const envPj = await C(cAna, 'POST', `/${idPj}/enviar`);
+  const prev0 = (await C(cAna, 'GET')).dados.ordenantes;
+  await t('IN43', 'PJ sem empresa no perfil → não envia ("ordenanteEmpresa"); prévia PJ vazia', async () => envPj.status === 400 && envPj.dados.campos.includes('ordenanteEmpresa') && prev0.pj === null && prev0.pf.nome === 'Ana Teste');
+  await req('PUT', '/api/cliente/perfil', { cookie: cAna, json: { CompanyName: 'Ana Trading LLC', Companyregistrationnumber: 'REG-998', companycountry: 'Emirados Árabes Unidos', companyposition: 'CEO' } });
+  const envPj2 = await C(cAna, 'POST', `/${idPj}/enviar`);
+  const fPj = (await req('GET', '/api/cliente/equipe/instrumentos/' + idPj, { cookie: cChefe })).dados;
+  await t('IN44', 'Com a empresa cadastrada em Meu perfil → envia com retrato PJ (empresa, registro, país, representante, cargo)', async () => envPj2.status === 200 && fPj.ordenante.tipo === 'pj' && fPj.ordenante.nome === 'Ana Trading LLC' && fPj.ordenante.registro === 'REG-998' && fPj.ordenante.representante === 'Ana Teste' && fPj.ordenante.cargo === 'CEO');
+  await t('IN45', 'Ordenante com tipo inválido → 400', async () => (await C(cAna, 'POST', '', { ordenante: { tipo: 'xx' } })).status === 400);
+  const leg = (await db.q(`insert into instrumentos_solicitacoes(usuario_id, instrumento, categoria, moeda, valor_centavos, beneficiario, ordenante, finalidade) values ($1,'SBLC','garantia','USD',100000,'{"nome":"B","pais":"UAE"}','{"nome":"Nome Antigo","identificacao":"ID-1"}','Teste') returning id`, [ana])).rows[0].id;
+  const envLeg = await C(cAna, 'POST', `/${leg}/enviar`);
+  await t('IN46', 'Rascunho antigo com ordenante digitado continua funcionando (envia como estava)', async () => envLeg.status === 200 && (await req('GET', '/api/cliente/equipe/instrumentos/' + leg, { cookie: cChefe })).dados.ordenante.nome === 'Nome Antigo');
+  const rRef = await C(cAna, 'POST', '', {});
+  const idRef = rRef.dados.solicitacao?.id;
+  const up = await req('POST', `/api/cliente/instrumentos/${idRef}/anexos?tipo=contrato_referencia`, { cookie: cAna, corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'contrato-trader.pdf' } });
+  const upRuim = await req('POST', `/api/cliente/instrumentos/${idRef}/anexos?tipo=qualquer`, { cookie: cAna, corpo: PDF, headers: { 'Content-Type': 'application/pdf' } });
+  const sRef = (await L(cAna)).find((x) => x.id === idRef);
+  await t('IN47', 'Contrato de referência anexado no RASCUNHO, marcado como "contrato_referencia"; tipo inválido → 400', async () => up.status === 201 && upRuim.status === 400 && sRef.anexos.length === 1 && sRef.anexos[0].tipo_anexo === 'contrato_referencia' && sRef.anexos[0].nome === 'contrato-trader.pdf');
+  const docRef = sRef.anexos[0].id;
+  await t('IN48', 'Outra cliente não remove; a própria remove enquanto é rascunho', async () => (await C(cBia, 'DELETE', `/${idRef}/anexos/${docRef}`)).status === 404 && (await C(cAna, 'DELETE', `/${idRef}/anexos/${docRef}`)).status === 200 && (await L(cAna)).find((x) => x.id === idRef).anexos.length === 0);
+  const up2 = await req('POST', `/api/cliente/instrumentos/${idPj}/anexos?tipo=contrato_referencia`, { cookie: cAna, corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'contrato-navio.pdf' } });
+  const fPj2 = (await req('GET', '/api/cliente/equipe/instrumentos/' + idPj, { cookie: cChefe })).dados;
+  await t('IN49', 'Equipe vê o contrato de referência identificado na ficha; depois de enviada, a cliente não remove (409)', async () => up2.status === 201 && fPj2.anexos.some((a) => a.tipo_anexo === 'contrato_referencia' && a.nome === 'contrato-navio.pdf') && (await C(cAna, 'DELETE', `/${idPj}/anexos/${fPj2.anexos[0].id}`)).status === 409);
   const refs = (await L(cAna)).map((s) => s.referencia).filter(Boolean);
   await t('IN37', 'Referências únicas por instrumento (CTB-BG-…-00002)', async () => refs.some((r) => /^CTB-BG-\d{4}-00002$/.test(r)) && new Set(refs).size === refs.length);
   const extras = []; for (let i = 0; i < 9; i++) extras.push(await C(cAna, 'POST', '', {}));

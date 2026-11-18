@@ -25,7 +25,8 @@ const NDA = {
     { k: 'registro', rotulo: 'Nº de registro da empresa', origem: 'Meu perfil' },
     { k: 'endereco', rotulo: 'Endereço da empresa', origem: 'Meu perfil' },
     { k: 'prazo', rotulo: 'Vigência (anos)', padrao: 'two (2)' },
-    { k: 'representante', rotulo: 'Representante legal (CEO)', origem: 'Meu perfil: nome · ou ordenante da solicitação' },
+    { k: 'representante', rotulo: 'Representante legal', origem: 'Meu perfil: nome · ou ordenante da solicitação' },
+    { k: 'cargoRep', rotulo: 'Cargo do representante', padrao: 'CEO', origem: 'Meu perfil: cargo na empresa' },
     { k: 'passaporte', rotulo: 'Passaporte do representante', origem: 'Meu perfil (número completo)' },
     { k: 'ctbNome', rotulo: 'CTB — nome de quem assina', origem: 'Configuração de assinatura' },
     { k: 'ctbCargo', rotulo: 'CTB — cargo', padrao: 'EXECUTIVE DIRECTOR' },
@@ -122,7 +123,7 @@ Accordingly, in the event of any actual or threatened breach of this Agreement, 
 IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date first written above.`,
   assinaturas: (c) => [
     [`${c.ctbNome || '______________________'} - ${c.ctbCargo}`, `PIN - ${c.ctbPin}`, CTB.razao, `LICENSE No. ${CTB.licenca}`],
-    [c.empresa, `Registered No. ${c.registro}`, `CEO: ${c.representante}`, `Passport: ${c.passaporte}`],
+    [c.empresa, `Registered No. ${c.registro}`, `${c.cargoRep}: ${c.representante}`, `Passport: ${c.passaporte}`],
   ],
 };
 

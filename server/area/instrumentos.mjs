@@ -53,16 +53,39 @@ function lerCampos(b) {
   if (b.validade !== undefined) { if (!b.validade) out.validade = null; else if (!dataValida(b.validade)) e.validade = 1; else out.validade = b.validade; }
   const bn = b.beneficiario && typeof b.beneficiario === 'object' ? b.beneficiario : null;
   if (bn) out.beneficiario = { nome: txt(bn.nome, 160), pais: txt(bn.pais, 80), endereco: txt(bn.endereco, 200), banco: txt(bn.banco, 160) };
+  // ordenante: a cliente só ESCOLHE (pessoa física ou a empresa dela); nome/documento vêm do perfil, no servidor
   const od = b.ordenante && typeof b.ordenante === 'object' ? b.ordenante : null;
-  if (od) out.ordenante = { nome: txt(od.nome, 160), identificacao: txt(od.identificacao, 80) };
+  if (od) { if (!['pf', 'pj'].includes(od.tipo)) e.ordenante = 1; else out.ordenante = { tipo: od.tipo }; }
   for (const [k, n] of [['finalidade', 1000], ['banco_emissor', 160], ['banco_avisador', 160], ['operacao_subjacente', 1000], ['contrato_ref', 160], ['observacoes', 2000]]) {
     const chave = { banco_emissor: 'bancoEmissor', banco_avisador: 'bancoAvisador', operacao_subjacente: 'operacaoSubjacente', contrato_ref: 'contratoRef' }[k] || k;
     if (b[chave] !== undefined) out[k] = txt(b[chave], n) || null;
   }
   return { out, invalidos: Object.keys(e) };
 }
-/** Campos obrigatórios para ENVIAR (lista vazia = pode enviar). */
-function faltando(s) {
+/** Dados do ordenante tirados do perfil ("Meu perfil"): pessoa física ou a empresa (PJ) da cliente. */
+const s_ = (v) => (typeof v === 'string' ? v.trim() : '');
+export function ordenanteDoPerfil(tipo, p) {
+  p = p || {};
+  if (tipo === 'pf') {
+    if (!s_(p.display_name)) return null;
+    return { tipo: 'pf', nome: s_(p.display_name), identificacao: s_(p.passportnumber), passaporte: s_(p.passportnumber), nacionalidade: s_(p.nationality) };
+  }
+  if (tipo === 'pj') {
+    if (!s_(p.CompanyName)) return null;
+    const endereco = [[s_(p.companysadress), s_(p.companyaddressnumber)].filter(Boolean).join(', '), s_(p.companycity), s_(p.companyzipcode), s_(p.companycountry)].filter(Boolean).join(', ');
+    return { tipo: 'pj', nome: s_(p.CompanyName), identificacao: s_(p.Companyregistrationnumber), registro: s_(p.Companyregistrationnumber), pais: s_(p.companycountry),
+      endereco, representante: s_(p.display_name), cargo: s_(p.companyposition) };
+  }
+  return null;
+}
+/** O que a cliente vê do ordenante (passaporte mascarado, como em "Meu perfil"). */
+const mascarar = (o) => {
+  if (!o || o.tipo !== 'pf' || !o.passaporte) return o;
+  const m = '•••• ' + o.passaporte.slice(-3);
+  return { ...o, passaporte: m, identificacao: m };
+};
+/** Campos obrigatórios para ENVIAR (lista vazia = pode enviar). `perfil` = dados de "Meu perfil" da cliente. */
+function faltando(s, perfil) {
   const f = [];
   if (!s.instrumento) f.push('instrumento');
   if (!s.moeda) f.push('moeda');
@@ -70,7 +93,9 @@ function faltando(s) {
   if (!s.beneficiario?.nome) f.push('beneficiarioNome');
   if (!s.beneficiario?.pais) f.push('beneficiarioPais');
   if (!s.finalidade) f.push('finalidade');
-  if (!s.ordenante?.nome) f.push('ordenanteNome');
+  const o = s.ordenante || {};
+  if (o.tipo === 'pf' || o.tipo === 'pj') { if (!ordenanteDoPerfil(o.tipo, perfil)) f.push(o.tipo === 'pj' ? 'ordenanteEmpresa' : 'ordenantePerfil'); }
+  else if (!o.nome) f.push('ordenante');   // rascunho antigo com nome digitado continua valendo
   return f;
 }
 const COLS = `s.id, s.referencia, s.instrumento, s.categoria, s.moeda, s.valor_centavos::text as valor, s.beneficiario, s.ordenante, s.finalidade,
@@ -84,22 +109,26 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
   const responder = (res, e) => { if (e.status) return json(res, e.status, { erro: e.message, ...e.extra }); throw e; };
 
   // ============================================================== CLIENTE
+  const perfilDe = async (q, id) => (await q('select dados from perfis where usuario_id=$1', [id])).rows[0]?.dados || {};
   async function listarDoCliente(res, u) {
     const sols = (await db.q(`select ${COLS} from instrumentos_solicitacoes s where s.usuario_id=$1 order by s.criado_em desc limit 50`, [u.id])).rows;
+    const perfil = await perfilDe(db.q, u.id);
     if (sols.length) {
       const ids = sols.map((s) => s.id);
       const ev = (await db.q(`select solicitacao_id, tipo, status_de, status_para, texto, por_equipe, em from instrumentos_eventos
                                where solicitacao_id = any($1::uuid[]) and visivel_cliente order by em, id`, [ids])).rows;
       // anexos da própria cliente (os comprovantes internos da equipe não são listados para ela)
-      const ax = (await db.q(`select a.solicitacao_id, d.id, d.nome, d.tipo, d.tamanho, a.em from instrumentos_anexos a join documentos d on d.id=a.documento_id
+      const ax = (await db.q(`select a.solicitacao_id, d.id, d.nome, d.tipo, d.tamanho, a.tipo as tipo_anexo, a.em from instrumentos_anexos a join documentos d on d.id=a.documento_id
                                where a.solicitacao_id = any($1::uuid[]) and not a.por_equipe order by a.em`, [ids])).rows;
       for (const s of sols) {
         s.eventos = ev.filter((x) => x.solicitacao_id === s.id).map(({ solicitacao_id, ...x }) => x);
         s.anexos = ax.filter((x) => x.solicitacao_id === s.id).map(({ solicitacao_id, ...x }) => x);
-        s.faltando = s.status === 'rascunho' || s.status === 'documentacao_solicitada' ? faltando(s) : [];
+        s.faltando = s.status === 'rascunho' || s.status === 'documentacao_solicitada' ? faltando(s, perfil) : [];
+        s.ordenante = mascarar(s.ordenante);
       }
     }
-    return json(res, 200, { solicitacoes: sols });
+    // prévia do ordenante para o formulário (a escolha PF/PJ mostra estes dados, somente leitura)
+    return json(res, 200, { solicitacoes: sols, ordenantes: { pf: mascarar(ordenanteDoPerfil('pf', perfil)), pj: ordenanteDoPerfil('pj', perfil) } });
   }
   async function criar(req, res, u) {
     const b = await corpo(req);
@@ -159,8 +188,14 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
       r = await db.transacao(async (q) => {
         const s = await minha(q, u, id);
         if (!EDITAVEL_CLIENTE.includes(s.status)) throw erroHttp(409, 'ja_enviada');
-        const f = faltando(s);
+        const perfil = await perfilDe(q, u.id);
+        const f = faltando(s, perfil);
         if (f.length) throw erroHttp(400, 'campos_obrigatorios', { campos: f });
+        // retrato do ordenante no momento do envio, montado AQUI a partir do perfil (nunca do que o navegador mandou)
+        if (s.ordenante?.tipo === 'pf' || s.ordenante?.tipo === 'pj') {
+          s.ordenante = ordenanteDoPerfil(s.ordenante.tipo, perfil);
+          await q('update instrumentos_solicitacoes set ordenante=$2::jsonb where id=$1', [id, JSON.stringify(s.ordenante)]);
+        }
         const para = s.status === 'rascunho' ? 'enviada' : 'analise_documental';
         let ref = s.referencia;
         if (!ref) {
@@ -214,9 +249,12 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     } catch (e) { return responder(res, e); }
     return json(res, 201, { ok: true });
   }
+  const TIPOS_ANEXO = ['contrato_referencia'];
   async function anexoCliente(req, res, u, id) {
     // confere antes de receber (e de novo dentro da transação que grava o vínculo)
     if (!UUID.test(id)) return json(res, 404, { erro: 'nao_encontrado' });
+    const tipoAnexo = new URL(req.url, 'http://x').searchParams.get('tipo') || null;
+    if (tipoAnexo && !TIPOS_ANEXO.includes(tipoAnexo)) return json(res, 400, { erro: 'tipo_anexo_invalido' });
     const s = (await db.q('select status from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [id, u.id])).rows[0];
     if (!s) return json(res, 404, { erro: 'nao_encontrado' });
     if (FINAIS.includes(s.status)) return json(res, 409, { erro: 'nao_aceita_anexo' });
@@ -225,10 +263,25 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
       vincular: async (q, doc) => {
         const t = (await q('select status from instrumentos_solicitacoes where id=$1 and usuario_id=$2 for update', [id, u.id])).rows[0];
         if (!t || FINAIS.includes(t.status)) throw erroHttp(409, 'nao_aceita_anexo');
-        await q('insert into instrumentos_anexos(solicitacao_id, documento_id, por_equipe) values ($1,$2,false)', [id, doc.id]);
-        await evento(q, id, { tipo: 'anexo', texto: doc.nome, documento: doc.id, visivel: true, por: u.email, equipe: false });
+        await q('insert into instrumentos_anexos(solicitacao_id, documento_id, por_equipe, tipo) values ($1,$2,false,$3)', [id, doc.id, tipoAnexo]);
+        await evento(q, id, { tipo: 'anexo', texto: (tipoAnexo === 'contrato_referencia' ? 'Contrato de referência: ' : '') + doc.nome, documento: doc.id, visivel: true, por: u.email, equipe: false });
       },
     });
+  }
+  /** A cliente retira um anexo PRÓPRIO enquanto pode editar (rascunho / documentação solicitada). */
+  async function removerAnexoCliente(res, u, id, docId) {
+    if (!UUID.test(docId)) return json(res, 404, { erro: 'nao_encontrado' });
+    try {
+      await db.transacao(async (q) => {
+        const s = await minha(q, u, id);
+        if (!EDITAVEL_CLIENTE.includes(s.status)) throw erroHttp(409, 'nao_editavel');
+        const a = (await q(`delete from instrumentos_anexos a using documentos d where a.solicitacao_id=$1 and a.documento_id=$2 and not a.por_equipe and d.id=a.documento_id
+                            returning d.nome`, [id, docId])).rows[0];
+        if (!a) throw erroHttp(404, 'nao_encontrado');
+        await evento(q, id, { tipo: 'anexo', texto: 'Anexo removido: ' + a.nome, visivel: true, por: u.email, equipe: false });
+      });
+    } catch (e) { return responder(res, e); }
+    return json(res, 200, { ok: true });
   }
   async function cliente(req, res, rota, u) {
     const m = req.method;
@@ -240,6 +293,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     if (p.length === 2 && m === 'POST' && p[1] === 'cancelar') return cancelar(req, res, u, p[0]);
     if (p.length === 2 && m === 'POST' && p[1] === 'mensagens') return mensagemCliente(req, res, u, p[0]);
     if (p.length === 2 && m === 'POST' && p[1] === 'anexos') return anexoCliente(req, res, u, p[0]);
+    if (p.length === 3 && m === 'DELETE' && p[1] === 'anexos') return removerAnexoCliente(res, u, p[0], p[2]);
     return json(res, 404, { erro: 'rota' });
   }
 
@@ -277,7 +331,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     try { s = await daEquipe(db.q, id); } catch (e) { return responder(res, e); }
     s.nome = (await db.q(`select dados->>'display_name' as n from perfis where usuario_id=$1`, [s.usuario_id])).rows[0]?.n || null;
     s.eventos = (await db.q('select id, tipo, status_de, status_para, texto, visivel_cliente, documento_id, por_email, por_equipe, em from instrumentos_eventos where solicitacao_id=$1 order by em, id', [id])).rows;
-    s.anexos = (await db.q(`select d.id, d.nome, d.tipo, d.tamanho, a.por_equipe, a.evidencia_de, a.em from instrumentos_anexos a join documentos d on d.id=a.documento_id
+    s.anexos = (await db.q(`select d.id, d.nome, d.tipo, d.tamanho, a.por_equipe, a.evidencia_de, a.tipo as tipo_anexo, a.em from instrumentos_anexos a join documentos d on d.id=a.documento_id
                              where a.solicitacao_id=$1 order by a.em`, [id])).rows;
     s.transicoes = TRANSICOES[s.status] || [];
     s.podeAprovar = await podeAprovar(u);

@@ -46,15 +46,17 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
     const s_ = (v) => (typeof v === 'string' ? v.trim() : '');
     const pais = s_(p.companycountry);
     const endereco = [[s_(p.companysadress), s_(p.companyaddressnumber)].filter(Boolean).join(', '), s_(p.companycity), s_(p.companyzipcode), pais].filter(Boolean).join(', ');
-    const representante = s_(p.display_name) || s_(s?.ordenante?.nome);
+    const o = s?.ordenante || {};
+    const representante = s_(p.display_name) || s_(o.tipo === 'pj' ? o.representante : o.nome);
     const auto = {
       data: hojeDubai(),
-      empresa: s_(p.CompanyName) || s_(s?.ordenante?.nome) || s_(p.display_name),
+      empresa: s_(p.CompanyName) || s_(o.nome) || s_(p.display_name),
       jurisdicao: !pais || /^(brasil|brazil)$/i.test(pais) ? 'the Federative Republic of Brazil' : pais,
       registro: s_(p.Companyregistrationnumber),
       endereco,
       representante,
-      passaporte: s_(p.passportnumber) || (s_(s?.ordenante?.nome) && s_(s?.ordenante?.nome) === representante ? s_(s?.ordenante?.identificacao) : ''),
+      passaporte: s_(p.passportnumber) || (o.tipo === 'pf' ? s_(o.passaporte) : (!o.tipo && s_(o.nome) === representante ? s_(o.identificacao) : '')),
+      cargoRep: s_(p.companyposition) || (o.tipo === 'pj' ? s_(o.cargo) : ''),
       ctbNome: s_(cfg.nome), ctbCargo: s_(cfg.cargo), ctbPin: s_(cfg.pin),
     };
     const out = {};

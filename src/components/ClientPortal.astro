@@ -15,7 +15,7 @@ const { lang } = Astro.props;
 const p = portal[lang];
 
 const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'] as const;
-const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
+const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companyposition', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-lang={lang}
   data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos, formatos: p.formatos, periodos: p.periodos, apptChoose: p.apptChoose, contratos: p.contratos })}>
@@ -117,8 +117,9 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
           <label><span>{p.passportExpiry}</span><input type="date" name="passportexpirationdate" data-pass="validade" min="2000-01-01" max="2100-12-31" /></label>
         </div>
         <p class="note pass-locked" data-pass-locked hidden></p>
-        <div data-company hidden>
+        <div data-company>
           <h3>{p.companyTitle}</h3>
+          <p class="note">{p.companyNote}</p>
           <div class="grid">
             {companyFields.map((f) => <label><span>{p.fields[f]}</span><input type="text" name={f} maxlength="200" /></label>)}
           </div>
@@ -183,7 +184,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   document.addEventListener('click', (e) => { const t = e.target as HTMLInputElement; if (t instanceof HTMLInputElement && t.type === 'date' && !t.disabled && !t.readOnly) { try { t.showPicker(); } catch {} } });
   // Área do Cliente: API do próprio site no Railway. Sessão em cookie HttpOnly (o JavaScript não lê o cookie).
   const PROFILE = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'];
-  const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
+  const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companyposition', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
   const TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
   const MAX = 10 * 1024 * 1024;
 
@@ -219,7 +220,6 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       original = {};
       $('[data-name]').textContent = ''; $('[data-email]').textContent = '';
       root.querySelectorAll<HTMLInputElement>('[data-profile] input').forEach((i) => (i.value = ''));
-      $('[data-company]').hidden = true;
       $('[data-docs]').innerHTML = ''; $('[data-appts]').innerHTML = ''; $('[data-contratos]').innerHTML = ''; limparMsg($('[data-contratos-msg]'));
       ['[data-profile-msg]', '[data-docs-msg]', '[data-appt-msg]'].forEach((k) => limparMsg($(k)));
       apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false;
@@ -326,7 +326,6 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         original[k] = v;
         const input = root.querySelector<HTMLInputElement>(`[data-profile] [name="${k}"]`); if (input) input.value = v;
       }
-      $('[data-company]').hidden = !COMPANY.some((k) => original[k]);
     }
     profileForm.addEventListener('submit', async (e) => {
       e.preventDefault();

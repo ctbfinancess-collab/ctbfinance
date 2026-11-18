@@ -194,7 +194,7 @@ try {
   check('Cliente vê "concluida" e a recusada com o motivo', opsAna.some((o) => o.status === 'concluida') && opsAna.some((o) => o.status === 'recusada' && o.motivo === 'Fora do horário de câmbio.'));
   await shot('p3d-operacoes');
   console.log('--- Instrumentos financeiros');
-  const ni = await (await fetch(`${BASE}/api/cliente/instrumentos`, { method: 'POST', headers: { Cookie: cAnaOp, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify({ instrumento: 'SBLC', moeda: 'USD', valor: '1.000.000,00', beneficiario: { nome: 'Exemplo <i>Trading</i> Ltd', pais: 'Singapura' }, finalidade: 'Garantia de pagamento', ordenante: { nome: 'Ana Teste' } }) })).json();
+  const ni = await (await fetch(`${BASE}/api/cliente/instrumentos`, { method: 'POST', headers: { Cookie: cAnaOp, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify({ instrumento: 'SBLC', moeda: 'USD', valor: '1.000.000,00', beneficiario: { nome: 'Exemplo <i>Trading</i> Ltd', pais: 'Singapura' }, finalidade: 'Garantia de pagamento', ordenante: { tipo: 'pf' } }) })).json();
   const envI = await (await fetch(`${BASE}/api/cliente/instrumentos/${ni.solicitacao.id}/enviar`, { method: 'POST', headers: { Cookie: cAnaOp, Origin: BASE } })).json();
   await clicar('[data-aba=instrumentos]');
   check('Aba Instrumentos lista a solicitação enviada (referência, valor, beneficiário como texto)', await waitFor(`(()=>{const t=document.querySelector('[data-instrumentos]').innerText;return t.includes('${envI.referencia} · SBLC · USD 1.000.000,00') && t.includes('Exemplo <i>Trading</i> Ltd') && !document.querySelector('[data-instrumentos] i')})()`));

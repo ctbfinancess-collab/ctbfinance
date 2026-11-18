@@ -122,7 +122,7 @@ try {
     && (await E('PUT', `/contratos/${c1.id}`, { json: { campos: ed.dados.campos } })).status === 409);
 
   console.log('--- Automático na aprovação do instrumento');
-  const s = (await req('POST', '/api/cliente/instrumentos', { cookie: cAna, json: { valor: '1.000.000,00', beneficiario: { nome: 'Beneficiário Exemplo', pais: 'Singapura' }, finalidade: 'Garantia de pagamento', ordenante: { nome: 'Ana Teste', identificacao: 'FZ123456' } } })).dados.solicitacao;
+  const s = (await req('POST', '/api/cliente/instrumentos', { cookie: cAna, json: { valor: '1.000.000,00', beneficiario: { nome: 'Beneficiário Exemplo', pais: 'Singapura' }, finalidade: 'Garantia de pagamento', ordenante: { tipo: 'pf' } } })).dados.solicitacao;
   await req('POST', `/api/cliente/instrumentos/${s.id}/enviar`, { cookie: cAna });
   for (const st of ['analise_interna', 'encaminhada']) await E('POST', `/instrumentos/${s.id}/status`, { json: { status: st } });
   await adm.aprovadorInstrumentos('chefe@example.com', true);

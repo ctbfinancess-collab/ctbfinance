@@ -84,6 +84,7 @@ try {
   check('Abre na aba Início; sem dados lançados → aviso, sem número inventado', await waitFor(`document.querySelector('[data-tab=inicio]').getAttribute('aria-selected')==='true' && document.querySelector('[data-fin-saldo]').textContent==='—' && document.querySelector('[data-fin-contas-resumo]').innerText.includes('assim que a nossa equipe registrar')`));
   await ev(`document.querySelector('[data-tab=profile]').click(),1`);
   check('Passaporte conferido: mascarado, travado e com aviso; empresa visível', await ev(`(()=>{const n=document.querySelector('[data-pass="numero"]');return n.value==='•••• 456' && n.readOnly && document.querySelector('[data-pass="validade"]').readOnly && ${vis('[data-pass-locked]')} && /conferido pela equipe/.test(document.querySelector('[data-pass-locked]').textContent)})() && ${vis('[data-company]')}`));
+  check('Meu perfil: Pessoa física e Pessoa jurídica (opcional) com cargo e país de constituição', await ev(`(()=>{const t=document.querySelector('[data-panel=profile]').innerText;return t.includes('Pessoa física') && t.includes('Pessoa jurídica') && !!document.querySelector('[data-profile] input[name=companyposition]') && t.includes('País de constituição')})()`));
   await ev(`(()=>{const i=document.querySelector('[data-profile] [name=city]');i.value='Abu Dhabi';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
   check('Salvar cidade → "Dados atualizados."', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.'`));
   await adm.liberarPassaporte('ana@example.com');
@@ -125,12 +126,24 @@ try {
   check('Seção Instrumentos visível com o aviso de que o envio não é emissão', await waitFor(`${vis('[data-inst]')} && document.querySelector('[data-inst-aviso]').textContent.includes('não representa aprovação nem emissão') && document.querySelector('[data-inst-lista]').innerText.includes('Nenhuma solicitação de instrumento')`));
   await ev(`document.querySelector('[data-inst-nova]').click(),1`);
   check('Nova solicitação abre o formulário (SBLC/USD por padrão; declarações em grupo separado)', await waitFor(`${vis('[data-inst-form]')} && document.querySelector('[data-inst-form]').instrumento.value==='SBLC' && document.querySelector('[data-inst-form]').moeda.value==='USD' && [...document.querySelectorAll('[data-inst-form] optgroup')].length===2`));
+  check('Ordenante: "Pessoa física (eu)" já escolhida, dados de Meu perfil somente leitura (passaporte mascarado), sem campos de digitar', await waitFor(`(()=>{const f=document.querySelector('[data-inst-form]');const t=f.querySelector('[data-ord-dados]').innerText;return f.querySelector('[data-ord-tipo=pf]').getAttribute('aria-checked')==='true' && t.includes('Ana Teste') && t.includes('••••') && !f.oNome && !f.oId})()`));
+  await ev(`document.querySelector('[data-ord-tipo=pj]').click(),1`);
+  check('Ordenante "Minha empresa (PJ)" mostra a empresa de Meu perfil', await waitFor(`(()=>{const f=document.querySelector('[data-inst-form]');return f.querySelector('[data-ord-dados]').innerText.includes('Ana Trading LLC') && f.ordTipo.value==='pj'})()`));
+  await ev(`document.querySelector('[data-ord-tipo=pf]').click(),1`);
+  check('Campos do formulário com autocomplete desligado', await ev(`[...document.querySelectorAll('[data-inst-form] input:not([type=hidden]):not([type=file]):not([type=date])')].every(i=>i.getAttribute('autocomplete')==='off')`));
+  {
+    const { root: r0 } = await send('DOM.getDocument', { depth: -1, pierce: true });
+    const { nodeId: nRef } = await send('DOM.querySelector', { nodeId: r0.nodeId, selector: '[data-ref-arquivo]' });
+    await send('DOM.setFileInputFiles', { nodeId: nRef, files: [path.join(TMP, 'comprovante.pdf')] });
+  }
+  check('Contrato de referência anexado no formulário: rascunho salvo sozinho e arquivo listado com "Remover"', await waitFor(`(()=>{const f=document.querySelector('[data-inst-form]');const l=f.querySelector('[data-ref-lista]').innerText;return !!f.id.value && l.includes('comprovante.pdf') && l.includes('Remover')})()`));
+  check('Anexo gravado como contrato de referência', (await db.q(`select count(*)::int n from instrumentos_anexos where tipo='contrato_referencia'`)).rows[0].n === 1);
   await ev(`(()=>{const f=document.querySelector('[data-inst-form]');f.valor.value='1.000.000,00';document.querySelector('[data-inst-salvar]').click();return 1})()`);
   check('Salvar rascunho incompleto → "Rascunho salvo" e item Rascunho na lista', await waitFor(`document.querySelector('[data-inst-msg]').textContent.includes('Rascunho salvo') && document.querySelector('[data-inst-lista]').innerText.includes('Rascunho')`));
   await ev(`document.querySelector('[data-inst-enviar]').click(),1`);
   check('Enviar incompleto → lista o que falta preencher', await waitFor(`document.querySelector('[data-inst-msg]').textContent.includes('Para enviar, preencha') && document.querySelector('[data-inst-msg]').textContent.includes('nome do beneficiário')`));
   await ev(`document.querySelector('[data-inst-form]').scrollIntoView({block:'start'}),1`); await shot('2c0-instrumento-formulario');
-  await ev(`(()=>{const f=document.querySelector('[data-inst-form]');f.bNome.value='Exemplo Trading Ltd';f.bPais.value='Singapura';f.oNome.value='Ana Teste';f.finalidade.value='Garantia de pagamento de importação';document.querySelector('[data-inst-enviar]').click();return 1})()`);
+  await ev(`(()=>{const f=document.querySelector('[data-inst-form]');f.bNome.value='Exemplo Trading Ltd';f.bPais.value='Singapura';document.querySelector('[data-ord-tipo=pf]').click();f.finalidade.value='Garantia de pagamento de importação';document.querySelector('[data-inst-enviar]').click();return 1})()`);
   check('Enviar completo → referência CTB-SBLC e situação "Solicitação enviada"', await waitFor(`document.querySelector('[data-inst-msg-lista]').textContent.includes('Referência: CTB-SBLC-') && document.querySelector('[data-inst-lista]').innerText.includes('Solicitação enviada') && document.querySelector('[data-inst-form]').hidden`));
   check('Nenhum saldo mudou com o instrumento', (await db.q(`select saldo_centavos::text s from contas_cliente where id=$1`, [cAED])).rows[0].s === '2875000');
   await ev(`document.querySelector('[data-inst-lista] details').open=true,1`);

@@ -21,7 +21,7 @@ import { criarInstrumentos } from './instrumentos.mjs';
 import { criarContratos } from './contratos.mjs';
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
-export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
+export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20, companyposition: 80 };
 export const EDITAVEIS = { ...CAMPOS_PERFIL, ...CAMPOS_EMPRESA };
 // passaporte: editável pelo cliente SÓ enquanto a equipe não conferiu (validação de formato no servidor)
 export const CAMPOS_PASSAPORTE = ['passportnumber', 'passportexpirationdate'];

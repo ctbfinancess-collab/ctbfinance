@@ -422,7 +422,7 @@ import '../../styles/global.css';
           if (confirmar && !confirm(confirmar)) return;
           try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id, false); await atualizar(); } catch (e) { falhou(e); }
         } }, rotulo);
-        const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
+        const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['País da empresa', d.companycountry], ['Cargo na empresa', d.companyposition], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
         const lista = el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
         const btnEditar = el('button', { type: 'button', class: 'botao pequeno claro editar', onclick: () => { lista.replaceWith(formEdicao(c, () => abrirFicha(c.id, false))); btnEditar.remove(); } }, '✎ Editar dados');
         corpo.append(btnEditar, lista);
@@ -683,7 +683,7 @@ import '../../styles/global.css';
         ['address', 'Endereço'], ['residencenumber', 'Número'], ['city', 'Cidade'], ['country', 'País'], ['zipcode', 'CEP / Código postal'],
         ['passportnumber', 'Número do passaporte'], ['passportexpirationdate', 'Validade do passaporte', 'date'],
         ['CompanyName', 'Empresa (razão social)'], ['Companyregistrationnumber', 'Registro da empresa'], ['companysadress', 'Endereço da empresa'],
-        ['companyaddressnumber', 'Número (empresa)'], ['companycity', 'Cidade (empresa)'], ['companycountry', 'País (empresa)'], ['companyzipcode', 'CEP (empresa)'],
+        ['companyaddressnumber', 'Número (empresa)'], ['companycity', 'Cidade (empresa)'], ['companycountry', 'País de constituição (empresa)'], ['companyzipcode', 'CEP (empresa)'], ['companyposition', 'Cargo do cliente na empresa'],
       ];
       function formEdicao(c: any, depois: () => any) {
         const d = c.dados || {};
@@ -836,7 +836,7 @@ import '../../styles/global.css';
         const b = s.beneficiario || {}; const o = s.ordenante || {};
         const linhas: [string, string][] = [
           ['Situação', st[0]], ['Cliente', `${s.nome || '(sem nome)'} · ${s.email}`], ['Instrumento', `${s.instrumento} — ${INSTRUMENTOS[s.instrumento] || ''}`], ['Valor', valorInst(s)],
-          ['Beneficiário', [b.nome, b.pais, b.endereco, b.banco].filter(Boolean).join(' · ') || '—'], ['Ordenante', [o.nome, o.identificacao].filter(Boolean).join(' · ') || '—'],
+          ['Beneficiário', [b.nome, b.pais, b.endereco, b.banco].filter(Boolean).join(' · ') || '—'], ['Ordenante', o.tipo === 'pj' ? `Empresa (PJ): ${o.nome} · Reg. ${o.registro || '—'} · ${o.pais || '—'} · Representante: ${o.representante || '—'}${o.cargo ? ' (' + o.cargo + ')' : ''}` : o.tipo === 'pf' ? `Pessoa física: ${o.nome}${o.passaporte ? ' · Passaporte ' + o.passaporte : ''}${o.nacionalidade ? ' · ' + o.nacionalidade : ''}` : ([o.nome, o.identificacao].filter(Boolean).join(' · ') || '—')],
           ['Finalidade', s.finalidade || '—'], ['Operação subjacente', s.operacao_subjacente || '—'], ['Validade solicitada', s.validade ? dataCivil(s.validade) : '—'],
           ['Banco emissor proposto', s.banco_emissor || '—'], ['Banco avisador', s.banco_avisador || '—'], ['Contrato / referência', s.contrato_ref || '—'], ['Observações', s.observacoes || '—'],
           ['Enviada em', s.enviado_em ? dataHora(s.enviado_em) : '—'], ['Responsável', s.responsavel_email || '—'], ['Instituição financeira', s.instituicao || '—'],
@@ -848,7 +848,7 @@ import '../../styles/global.css';
         const ax = el('div', { class: 'bloco' }, el('h3', {}, 'Anexos'));
         if (!s.anexos.length) ax.append(el('p', { class: 'vazio' }, 'Nenhum anexo.'));
         for (const a of s.anexos) ax.append(el('div', { class: 'mini-linha' }, el('a', { href: `${API}/documentos/${a.id}/arquivo`, class: 'link-doc' }, a.nome),
-          el('span', {}, a.por_equipe ? (a.evidencia_de ? `Comprovante da equipe (${ST_INST[a.evidencia_de][0]})` : 'Documento interno da equipe') : 'Enviado pelo cliente'), el('small', {}, `${tamanho(a.tamanho)} · ${dataHora(a.em)}`)));
+          el('span', {}, a.por_equipe ? (a.evidencia_de ? `Comprovante da equipe (${ST_INST[a.evidencia_de][0]})` : 'Documento interno da equipe') : a.tipo_anexo === 'contrato_referencia' ? 'Contrato de referência (enviado pelo cliente)' : 'Enviado pelo cliente'), el('small', {}, `${tamanho(a.tamanho)} · ${dataHora(a.em)}`)));
         if (!FINAIS_INST.includes(s.status)) {
           const para = el('select', { 'aria-label': 'Tipo de comprovante' }, el('option', { value: 'aprovada' }, 'Comprovante de aprovação'), el('option', { value: 'concluida' }, 'Comprovante de conclusão'), el('option', { value: '' }, 'Documento interno')) as HTMLSelectElement;
           const arq = el('input', { type: 'file', accept: 'application/pdf,image/jpeg,image/png', 'data-inst-evidencia': '' }) as HTMLInputElement;
