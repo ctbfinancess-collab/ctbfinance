@@ -157,6 +157,11 @@ try {
   const pdfPw = await req('GET', `/api/cliente/equipe/contratos/${gpw.dados?.id}/pdf`, { cookie: cChefe });
   await t('CT23', 'Minuta SBLC para o banco: valor e extenso da solicitação, marca d\'água "DRAFT — NOT AN ISSUED INSTRUMENT", aviso de que não é instrumento e sem assinatura da CTB', async () => gpw.status === 201 && fpw.campos.moedaValor === 'USD 1,000,000.00' && fpw.campos.valorExtenso === 'ONE MILLION UNITED STATES DOLLARS' && fpw.texto.includes('It is NOT an issued instrument') && !fpw.texto.includes('MONEY MARKET') && !/validated and authenticated/i.test(fpw.texto) && pdfPw.status === 200
     && (!temPdftotext || (() => { const t = textoPdf(pdfPw.dados); const f = path.join(TMP, 'pw.pdf'); fs.writeFileSync(f, pdfPw.dados); const raw = execFileSync('pdftotext', ['-raw', f, '-']).toString(); return /^DRAFT/m.test(raw) && !t.includes('LICENSE No.'); })()));
+  const gth = await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'tabela_honorarios' } });
+  const fth = (await E('GET', `/contratos/${gth.dados?.id}`)).dados;
+  const pdfTh = await req('GET', `/api/cliente/equipe/contratos/${gth.dados?.id}/pdf`, { cookie: cChefe });
+  await t('CT24', 'Tabela de honorários: valores da titular em tabela no PDF, preparada para o cliente, sem assinaturas', async () => gth.status === 201 && fth.campos.empresa === 'Exemplo Comércio Ltda.' && fth.faltando.length === 0 && pdfTh.status === 200
+    && (!temPdftotext || (() => { const t = textoPdf(pdfTh.dados); return t.includes('US$ 501.000.000,00 a US$ 1.000.000.000,00') && t.includes('US$ 400.000,00') && t.includes('Preparada para: Exemplo Comércio Ltda.'); })()));
   console.log('--- Isolamento, auditoria, app');
   const gBia = await E('POST', '/contratos', { json: { usuarioId: bia, modelo: 'nda', solicitacaoId: s.id } });
   await t('CT21', 'Gerar para a Bia com a solicitação da Ana → 404; modelo inexistente → 400', async () => gBia.status === 404 && (await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'sblc' } })).status === 400);

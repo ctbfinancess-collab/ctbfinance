@@ -572,7 +572,36 @@ THE ORIGINAL INSTRUMENT AND ANY RELATED BANK COMMUNICATIONS SHALL BE TRANSMITTED
   assinaturas: () => [],
 };
 
-export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO, cease_desist: CEASE_DESIST, minuta_sblc: MINUTA_SBLC };
+/** Tabela de honorários de estruturação e intermediação (valores da titular, 18/11/2026). Documento informativo para o
+ *  cliente: sem assinaturas. Os valores ficam no texto (edição pelo "texto completo" no Admin, se mudarem). */
+const TABELA_HONORARIOS = {
+  titulo: 'Tabela de Honorários (intermediação)',
+  rotulo: 'TH',
+  campos: [
+    { k: 'data', rotulo: 'Data (DD/MM/AAAA)', origem: 'hoje (Dubai)' },
+    { k: 'empresa', rotulo: 'Preparada para (cliente)', origem: 'Meu perfil: empresa · senão nome do cliente' },
+  ],
+  texto: (c) => `# TABELA DE HONORÁRIOS
+# ESTRUTURAÇÃO E INTERMEDIAÇÃO DE INSTRUMENTOS FINANCEIROS
+
+Preparada para: ${c.empresa} · Data: ${c.data}
+
+| Valor do instrumento | Honorário |
+| US$ 1.000.000,00 a US$ 5.000.000,00 | US$ 100.000,00 |
+| US$ 6.000.000,00 a US$ 14.000.000,00 | US$ 150.000,00 |
+| US$ 15.000.000,00 a US$ 100.000.000,00 | US$ 200.000,00 |
+| US$ 101.000.000,00 a US$ 300.000.000,00 | US$ 250.000,00 |
+| US$ 301.000.000,00 a US$ 500.000.000,00 | US$ 300.000,00 |
+| US$ 501.000.000,00 a US$ 1.000.000.000,00 | US$ 400.000,00 |
+
+• Os honorários acima remuneram os serviços de estruturação e intermediação prestados pela CTB Finances, conforme o contrato de intermediação (Mandate and Service Agreement).
+• O instrumento financeiro é emitido exclusivamente por instituição financeira licenciada, mediante sua própria aprovação de crédito e compliance. A CTB Finances não emite, não garante e não custodia instrumentos.
+• Taxas, garantias e depósitos exigidos pela instituição emissora não estão incluídos e são pagos diretamente a ela.
+• Valores em dólares norte-americanos (US$). Tabela sujeita a alteração sem aviso prévio.`,
+  assinaturas: () => [],
+};
+
+export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO, cease_desist: CEASE_DESIST, minuta_sblc: MINUTA_SBLC, tabela_honorarios: TABELA_HONORARIOS };
 
 /** Quais modelos o sistema cria SOZINHO (como rascunho, para a equipe revisar e liberar) em cada evento. */
 export const AUTOMATICOS = {

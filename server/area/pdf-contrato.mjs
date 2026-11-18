@@ -19,6 +19,7 @@ const carregar = () => (ativos ||= {
 // A4 em pontos; área útil = parte creme do timbrado (cabeçalho até ~18% da altura, rodapé a partir de ~81%)
 const L = 595.28, A = 841.89;
 const MARGEM_E = 54, MARGEM_D = 54, TOPO = A - 150, BASE = 170;
+const OURO_CAB = rgb(0xb5 / 255, 0x8b / 255, 0x4d / 255), MARFIM = rgb(0xf6 / 255, 0xf0 / 255, 0xe6 / 255);
 const ESPRESSO = rgb(0x35 / 255, 0x24 / 255, 0x1d / 255), CAFE = rgb(0x62 / 255, 0x48 / 255, 0x3a / 255), BRONZE = rgb(0xa8 / 255, 0x74 / 255, 0x2f / 255);
 
 /** Quebra o texto em linhas que cabem na largura (respeita palavras; corta palavras longas demais). */
@@ -40,7 +41,8 @@ function quebrar(texto, fonte, tam, largura) {
   return linhas.length ? linhas : [''];
 }
 
-/** Interpreta a marcação do corpo: "# título", "## seção", "• item", parágrafos separados por linha em branco. */
+/** Interpreta a marcação do corpo: "# título", "## seção", "• item", "| a | b |" (tabela; 1ª linha = cabeçalho),
+ *  parágrafos separados por linha em branco. */
 export function blocos(texto) {
   const out = [];
   let par = [];
@@ -51,6 +53,13 @@ export function blocos(texto) {
     if (l.startsWith('## ')) { fechar(); out.push({ t: 'h', s: l.slice(3) }); continue; }
     if (l.startsWith('# ')) { fechar(); out.push({ t: 'titulo', s: l.slice(2) }); continue; }
     if (/^[•\-*] /.test(l)) { fechar(); out.push({ t: 'li', s: l.slice(2) }); continue; }
+    if (l.startsWith('|') && l.endsWith('|')) {
+      fechar();
+      const cels = l.slice(1, -1).split('|').map((x) => x.trim());
+      const ult = out[out.length - 1];
+      if (ult && ult.t === 'tabela') ult.linhas.push(cels); else out.push({ t: 'tabela', linhas: [cels] });
+      continue;
+    }
     par.push(l);
   }
   fechar();
@@ -98,6 +107,24 @@ export async function gerarPdf(c) {
       y -= 4;
       for (const s of ls) { linha(s, negrito, 10.5, CAFE); y -= 15; }
       y -= 3;
+    } else if (b.t === 'tabela') {
+      const n = Math.max(...b.linhas.map((r) => r.length));
+      const larg = n === 2 ? [largura * 0.62, largura * 0.38] : Array(n).fill(largura / n);
+      b.linhas.forEach((r, i) => {
+        const cab = i === 0;
+        const textos = r.map((s, j) => quebrar(s, cab || (n === 2 && j === 1) ? negrito : fonte, 9.5, larg[j] - 12));
+        const h = Math.max(...textos.map((t) => t.length)) * 13 + 12;
+        precisa(h + 2);
+        let x = MARGEM_E;
+        textos.forEach((ls, j) => {
+          pg.drawRectangle({ x, y: y - h, width: larg[j], height: h, color: cab ? OURO_CAB : (i % 2 ? MARFIM : rgb(1, 1, 1)), opacity: cab ? 0.85 : 0.75, borderColor: OURO_CAB, borderWidth: 0.6 });
+          const fnt = cab || (n === 2 && j === 1) ? negrito : fonte;
+          ls.forEach((s, k) => pg.drawText(s, { x: x + (larg[j] - fnt.widthOfTextAtSize(s, 9.5)) / 2, y: y - 15 - k * 13, size: 9.5, font: fnt, color: ESPRESSO }));
+          x += larg[j];
+        });
+        y -= h;
+      });
+      y -= 12;
     } else if (b.t === 'li') {
       const ls = quebrar(b.s, fonte, 9.5, largura - 14);
       for (let i = 0; i < ls.length; i++) {
