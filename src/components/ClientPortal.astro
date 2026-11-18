@@ -520,7 +520,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .msg[data-kind='err'] { border-left-color: #62483a; background: rgba(98, 72, 58, 0.12); }
 
   /* Painel do cliente — visual escuro (café · dourado · champanhe), igual ao app e ao Admin */
-  .dash { grid-column: 1 / -1; padding: clamp(1.6rem, 3vw, 2.6rem); background: linear-gradient(180deg, #24150e, #1c100b); border: 1px solid rgba(201, 164, 106, 0.32); border-radius: 16px; box-shadow: 0 30px 70px rgba(28, 16, 11, 0.35); color: #f3e6d2; }
+  .dash { grid-column: 1 / -1; padding: clamp(1.6rem, 3vw, 2.6rem); background: linear-gradient(180deg, #4a3326, #3d2a1f); border: 1px solid rgba(201, 164, 106, 0.38); border-radius: 16px; box-shadow: 0 30px 70px rgba(28, 16, 11, 0.35); color: #f3e6d2; }
   .dash__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 1rem; padding-bottom: 1.2rem; border-bottom: 1px solid rgba(201, 164, 106, 0.22); }
   .dash__head h2 { margin: 0.4rem 0 0; font-size: clamp(1.8rem, 3vw, 2.4rem); font-weight: 400; color: #f0d39c; }
   .dash__email { margin: 0.2rem 0 0; color: #c9b49a; font-size: 0.9rem; }
@@ -534,9 +534,9 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem 1.1rem; margin-bottom: 1rem; }
   .dash label { display: flex; flex-direction: column; gap: 0.35rem; }
   .dash label > span { font-size: 0.78rem; letter-spacing: 0.04em; color: #c9b49a; }
-  .dash input[type='text'], .dash input[type='date'], .dash select, .dash textarea { font: inherit; font-size: 0.95rem; color: #f3e6d2; background: rgba(14, 7, 4, 0.55); border: 1px solid rgba(201, 164, 106, 0.32); border-radius: 8px; padding: 0.65rem 0.8rem; min-height: 44px; color-scheme: dark; }
+  .dash input[type='text'], .dash input[type='date'], .dash select, .dash textarea { font: inherit; font-size: 0.95rem; color: #f3e6d2; background: rgba(28, 16, 11, 0.38); border: 1px solid rgba(201, 164, 106, 0.38); border-radius: 8px; padding: 0.65rem 0.8rem; min-height: 44px; color-scheme: dark; }
   .dash input::placeholder, .dash textarea::placeholder { color: rgba(201, 180, 154, 0.6); }
-  .dash input[readonly] { background: rgba(43, 26, 18, 0.9); color: #c9b49a; }
+  .dash input[readonly] { background: rgba(98, 72, 58, 0.45); color: #c9b49a; }
   .dash input:focus, .dash select:focus, .dash textarea:focus { outline: none; border-color: #d9ae6b; box-shadow: 0 0 0 3px rgba(217, 174, 107, 0.22); }
   .dash .note { color: #c9b49a; font-size: 0.86rem; }
   .dash .note a { color: #d9ae6b; }
@@ -549,12 +549,12 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .dash h4 { font-size: 1.15rem; font-weight: 500; margin: 0 0 0.9rem; color: #f3e6d2; }
   .pass-locked { margin-top: -0.4rem; }
   .pass-locked[data-travado='true'] { color: #f0d39c !important; }
-  .appt-form { margin: 1rem 0 0; padding: 1.2rem 1.2rem 0.6rem; border: 1px solid rgba(201, 164, 106, 0.28); border-radius: 12px; background: rgba(43, 26, 18, 0.7); }
+  .appt-form { margin: 1rem 0 0; padding: 1.2rem 1.2rem 0.6rem; border: 1px solid rgba(201, 164, 106, 0.28); border-radius: 12px; background: rgba(53, 36, 29, 0.55); }
   .chips { border: 0; margin: 0 0 1rem; padding: 0; display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .chips legend { padding: 0; margin-bottom: 0.45rem; font-size: 0.78rem; letter-spacing: 0.04em; color: #c9b49a; }
   .dash .chip { flex-direction: row; gap: 0; cursor: pointer; }
   .chip input { position: absolute; opacity: 0; width: 1px; height: 1px; }
-  .chip span { display: inline-block; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(201, 164, 106, 0.35); background: rgba(14, 7, 4, 0.45); font-size: 0.92rem; color: #f3e6d2; letter-spacing: 0 !important; transition: background 0.15s, color 0.15s; }
+  .chip span { display: inline-block; padding: 0.55rem 1.1rem; border-radius: 999px; border: 1px solid rgba(201, 164, 106, 0.35); background: rgba(28, 16, 11, 0.30); font-size: 0.92rem; color: #f3e6d2; letter-spacing: 0 !important; transition: background 0.15s, color 0.15s; }
   .chip:hover span { border-color: #d9ae6b; }
   .chip input:checked + span { background: #b9853f; color: #24120a; border-color: #f0d39c; font-weight: 600; }
   .chip input:focus-visible + span { box-shadow: 0 0 0 3px rgba(217, 174, 107, 0.35); }
