@@ -5,7 +5,7 @@ A Área do Cliente roda **no próprio servidor do site** (`server.mjs`), com ban
 ## Configurar (quando for autorizado publicar)
 1. No projeto do Railway, adicionar o serviço **PostgreSQL** e, no serviço do site, a variável `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (conexão interna).
 2. No serviço do site, criar um **Volume** montado em `/data` e a variável `ARQUIVOS_DIR=/data/arquivos`.
-3. Região: o Railway não tem região no Oriente Médio; a mais próxima de Dubai é **EU West (Amsterdã)**. Banco e site na mesma região.
+3. Região: **EU West (Amsterdã)** — confirmado pela titular em 17/11/2026 que os documentos podem ficar na Europa. Site, Postgres e volume na mesma região.
 4. Ativar **backups** do volume e do Postgres (diário/semanal/mensal) no painel.
 5. As variáveis do Resend já existentes (`RESEND_API_KEY`, `CONTACT_EMAIL_FROM`) enviam os convites e as redefinições de senha.
 6. Publicar. As tabelas são criadas sozinhas na primeira partida (`server/area/schema.sql`).
