@@ -10,7 +10,7 @@ export const CTB = {
   razao: 'CTB FINANCE BROKER L.L.C',
   registro: '1821506',
   licenca: '717060',
-  endereco: 'Dubai, United Arab Emirates',   // como consta no site (sem rua)
+  endereco: 'Boulevard Plaza Tower 1, Dubai, United Arab Emirates, P.O. Box 340733',
 };
 
 const NDA = {
@@ -40,7 +40,7 @@ Date: ${c.data}
 
 This Confidentiality Agreement ("Agreement") is made and entered into by and between:
 
-${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located in ${CTB.endereco} (hereinafter referred to as the "Receiving Party").
+${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located at ${CTB.endereco} (hereinafter referred to as the "Receiving Party").
 
 ## AND
 
@@ -157,7 +157,7 @@ Place: ${c.local}.
 
 Date: ${c.data}
 
-${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located in ${CTB.endereco} (hereinafter referred to as the "CTB FINANCES").
+${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located at ${CTB.endereco} (hereinafter referred to as the "CTB FINANCES").
 
 CLIENT: ${c.empresa}, a company duly incorporated and existing under the laws of ${c.jurisdicao}, registered under No. ${c.registro}, with its principal place of business located at ${c.endereco}.
 
@@ -291,7 +291,7 @@ Date: ${c.data}
 
 Request reference: ${c.refSolicitacao}
 
-${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located in ${CTB.endereco} (hereinafter referred to as "CTB FINANCES" or the "INTERMEDIARY").
+${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located at ${CTB.endereco} (hereinafter referred to as "CTB FINANCES" or the "INTERMEDIARY").
 
 ## AND
 
