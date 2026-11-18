@@ -79,6 +79,14 @@ export function criarAdmin({ db, arquivos, api, avisarCliente = null }) {
       await registrar(u, 'revogado');
       return { email: u.email, equipe: false };
     },
+    /** Permissão para marcar instrumentos como "aprovada"/"concluída" (só para quem já é da equipe). */
+    async aprovadorInstrumentos(email, sim = true) {
+      const u = await usuarioPorEmail(email);
+      const r = await db.q('update equipe set aprova_instrumentos=$2 where usuario_id=$1 and ativo returning usuario_id', [u.id, sim]);
+      if (!r.rowCount) throw new Error('não é da equipe (conceda equipe primeiro)');
+      await registrar(u, sim ? 'aprova_instrumentos_concedido' : 'aprova_instrumentos_revogado');
+      return { email: u.email, aprovaInstrumentos: sim };
+    },
     async listarEquipe() { return (await db.q('select u.email from equipe e join usuarios u on u.id=e.usuario_id where e.ativo order by u.email')).rows; },
 
     // ---- documentos

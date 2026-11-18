@@ -230,3 +230,60 @@ create table if not exists operacoes_cliente (
 );
 create index if not exists operacoes_cliente_usuario on operacoes_cliente(usuario_id, criado_em desc);
 create index if not exists operacoes_cliente_status on operacoes_cliente(status, criado_em desc);
+
+-- Instrumentos financeiros internacionais (SBLC, LC, BG…): SOMENTE solicitação, análise e acompanhamento.
+-- O sistema nunca emite garantia, nunca gera mensagem SWIFT e nunca mexe em saldo/extrato.
+alter table equipe add column if not exists aprova_instrumentos boolean not null default false;
+-- documentos anexados a uma solicitação de instrumento não aparecem na aba Documentos (origem marcada)
+alter table documentos add column if not exists origem text;
+create sequence if not exists instrumentos_ref_seq;
+create table if not exists instrumentos_solicitacoes (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  referencia text unique,
+  instrumento text not null,
+  categoria text not null check (categoria in ('garantia','declaracao')),
+  moeda text not null default 'USD',
+  valor_centavos bigint check (valor_centavos is null or valor_centavos > 0),
+  beneficiario jsonb not null default '{}'::jsonb,
+  ordenante jsonb not null default '{}'::jsonb,
+  finalidade text,
+  banco_emissor text,
+  banco_avisador text,
+  validade date,
+  operacao_subjacente text,
+  contrato_ref text,
+  observacoes text,
+  status text not null default 'rascunho' check (status in ('rascunho','enviada','analise_documental','documentacao_solicitada','analise_interna',
+    'encaminhada','aguardando_instituicao','aprovada','recusada','cancelada','concluida')),
+  responsavel_email text,
+  instituicao text,
+  criado_em timestamptz not null default now(),
+  enviado_em timestamptz,
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text
+);
+create index if not exists instrumentos_usuario on instrumentos_solicitacoes(usuario_id, criado_em desc);
+create index if not exists instrumentos_status on instrumentos_solicitacoes(status, atualizado_em desc);
+create table if not exists instrumentos_eventos (
+  id bigserial primary key,
+  solicitacao_id uuid not null references instrumentos_solicitacoes(id) on delete cascade,
+  tipo text not null check (tipo in ('status','mensagem','nota_interna','anexo','pedido_documento')),
+  status_de text,
+  status_para text,
+  texto text,
+  visivel_cliente boolean not null,
+  documento_id uuid,
+  por_email text,
+  por_equipe boolean not null,
+  em timestamptz not null default now()
+);
+create index if not exists instrumentos_eventos_sol on instrumentos_eventos(solicitacao_id, em);
+create table if not exists instrumentos_anexos (
+  solicitacao_id uuid not null references instrumentos_solicitacoes(id) on delete cascade,
+  documento_id uuid not null references documentos(id) on delete restrict,
+  por_equipe boolean not null,
+  evidencia_de text check (evidencia_de is null or evidencia_de in ('aprovada','concluida')),
+  em timestamptz not null default now(),
+  primary key (solicitacao_id, documento_id)
+);

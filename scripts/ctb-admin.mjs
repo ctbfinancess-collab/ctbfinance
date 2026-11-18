@@ -16,6 +16,7 @@
  *   usuarios:passaporte-conferir <email>   (confere o que o cliente informou; trava o campo)
  *   usuarios:passaporte-liberar <email>    (destrava: o cliente volta a poder editar)
  *   equipe:conceder <email>          equipe:revogar <email>          equipe:listar
+ *   instrumentos:aprovador <email>   instrumentos:aprovador-revogar <email>   (quem pode marcar Aprovada/Concluída)
  *   docs:listar [status]             docs:baixar <id> <pasta>
  *   docs:aprovar <id>                docs:rejeitar <id> "<orientação PT>" ["<orientação EN>"]
  *   agenda:listar [--todos]          (padrão: só os pedidos sem horário confirmado)
@@ -53,6 +54,7 @@ const C = {
   'usuarios:passaporte-conferir': () => adm.conferirPassaporte(a[0], quem),
   'usuarios:passaporte-liberar': () => adm.liberarPassaporte(a[0]),
   'equipe:conceder': () => adm.concederEquipe(a[0]), 'equipe:revogar': () => adm.revogarEquipe(a[0]), 'equipe:listar': () => adm.listarEquipe(),
+  'instrumentos:aprovador': () => adm.aprovadorInstrumentos(a[0], true), 'instrumentos:aprovador-revogar': () => adm.aprovadorInstrumentos(a[0], false),
   'docs:listar': () => adm.listarDocumentos(a[0]), 'docs:baixar': () => adm.baixarDocumento(a[0], a[1] || '.'),
   'docs:aprovar': () => adm.decidir(a[0], 'aprovado', { por: quem }),
   'docs:rejeitar': () => adm.decidir(a[0], 'rejeitado', { orientacaoPt: a[1], orientacaoEn: a[2], por: quem }),

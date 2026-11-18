@@ -29,7 +29,7 @@ const fmtValor = (c, moeda) => { const n = BigInt(c); const a = n < 0n ? -n : n;
 const semSaldo = (saldo, moeda) => `Débito maior que o saldo disponível (${fmtValor(saldo, moeda)}). Confira o valor — o saldo não pode ficar negativo.`;
 const texto = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : '');
 
-export function criarPainel({ db, adm, json, lerJson, log = console }) {
+export function criarPainel({ db, adm, json, lerJson, instrumentos = null, log = console }) {
   const registrar = (u, acao, alvo, detalhes = {}) =>
     db.q('insert into acoes_equipe(por_usuario, por_email, acao, alvo, detalhes) values ($1,$2,$3,$4,$5::jsonb)', [u.id, u.email, acao, alvo || null, JSON.stringify(detalhes)]);
   const usuarioPorId = async (id) => {
@@ -44,11 +44,12 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const r = (await db.q(`select
         (select count(*) from usuarios u where not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo))::int as clientes,
         (select count(*) from usuarios where senha_hash is null)::int as convites_pendentes,
-        (select count(*) from documentos where status='disponivel_analise')::int as documentos_em_analise,
+        (select count(*) from documentos where status='disponivel_analise' and origem is null)::int as documentos_em_analise,
         (select count(*) from agendamentos where horario_confirmado is null)::int as agendamentos_pendentes,
         (select count(*) from perfis where coalesce(dados->>'passportnumber','')<>'' and passaporte_conferido_em is null)::int as passaportes_a_conferir`)).rows[0];
     r.interessados_novos = (await db.q(`select count(*)::int n from interessados where status='novo'`)).rows[0].n;
     r.operacoes_abertas = (await db.q(`select count(*)::int n from operacoes_cliente where status in ('recebida','em_analise')`)).rows[0].n;
+    r.instrumentos_abertos = instrumentos ? await instrumentos.abertas() : 0;
     // painel inicial: só dados reais do sistema
     r.clientes_ativos = (await db.q(`select count(*)::int n from usuarios u where senha_hash is not null and not bloqueado
                                        and not exists (select 1 from equipe e where e.usuario_id=u.id and e.ativo)`)).rows[0].n;
@@ -70,7 +71,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const r = await db.q(`select u.id, u.email, u.idioma, u.bloqueado, u.criado_em, (u.senha_hash is not null) as ativo,
              coalesce(e.ativo, false) as equipe, p.dados->>'display_name' as nome,
              coalesce(p.dados->>'passportnumber','')<>'' as tem_passaporte, p.passaporte_conferido_em,
-             (select count(*) from documentos d where d.usuario_id=u.id and d.status='disponivel_analise')::int as docs_em_analise,
+             (select count(*) from documentos d where d.usuario_id=u.id and d.status='disponivel_analise' and d.origem is null)::int as docs_em_analise,
              (select count(*) from agendamentos a where a.usuario_id=u.id and a.horario_confirmado is null)::int as agend_pendentes
         from usuarios u left join perfis p on p.usuario_id=u.id left join equipe e on e.usuario_id=u.id
        where $1 = '' or u.email like '%' || $1 || '%' or lower(coalesce(p.dados->>'display_name','')) like '%' || $1 || '%'
@@ -82,7 +83,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const c = await usuarioPorId(id);
     if (!c) return erro(res, 404, 'nao_encontrado');
     const p = (await db.q('select dados, passaporte_conferido_em, passaporte_conferido_por, atualizado_em from perfis where usuario_id=$1', [c.id])).rows[0] || {};
-    const docs = (await db.q('select id, nome, tipo, tamanho, status, motivo, orientacao, recebido_em, decidido_por, decidido_em from documentos where usuario_id=$1 order by recebido_em desc', [c.id])).rows;
+    const docs = (await db.q('select id, nome, tipo, tamanho, status, motivo, orientacao, recebido_em, decidido_por, decidido_em from documentos where usuario_id=$1 and origem is null order by recebido_em desc', [c.id])).rows;
     const ags = (await db.q(`select id, tipo, descricao, formato, periodo, to_char(data_solicitada,'YYYY-MM-DD') as data_solicitada, horario_confirmado, confirmado_por, solicitado_pelo_cliente, criado_em
                                from agendamentos where usuario_id=$1 order by criado_em desc`, [c.id])).rows;
     const eq = (await db.q('select ativo from equipe where usuario_id=$1', [c.id])).rows[0];
@@ -381,7 +382,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const r = await db.q(`select d.id, u.id as cliente_id, u.email, p.dados->>'display_name' as nome, d.nome as arquivo, d.tipo, d.tamanho, d.status, d.motivo,
              d.orientacao, d.recebido_em, d.decidido_por, d.decidido_em, (d.chave_arquivo is not null) as tem_arquivo
         from documentos d join usuarios u on u.id=d.usuario_id left join perfis p on p.usuario_id=u.id
-       ${status ? 'where d.status=$1' : ''} order by d.recebido_em ${status === 'disponivel_analise' ? 'asc' : 'desc'} limit 300`, status ? [status] : []);
+       where d.origem is null ${status ? 'and d.status=$1' : ''} order by d.recebido_em ${status === 'disponivel_analise' ? 'asc' : 'desc'} limit 300`, status ? [status] : []);
     return json(res, 200, { documentos: r.rows });
   }
   async function decidirDocumento(req, res, u, id) {
@@ -509,6 +510,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (p.length === 3 && p[2] === 'status' && m === 'POST') return statusOperacao(req, res, u, p[1]);
       if (p.length === 3 && p[2] === 'lancar' && m === 'POST') return lancarOperacao(req, res, u, p[1]);
     }
+    if (p[0] === 'instrumentos' && instrumentos) return instrumentos.equipe(req, res, url, u, p, registrar);
     if (p[0] === 'registro' && p.length === 1 && m === 'GET') return registro(res);
     return json(res, 404, { erro: 'rota' });
   };

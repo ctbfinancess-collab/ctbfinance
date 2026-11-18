@@ -18,7 +18,8 @@
     "test:navegador-painel": "npm run build && node tests/navegador-painel.mjs",
     "test:app": "node tests/app-mobile.test.mjs",
     "test:financeiro": "node tests/financeiro.test.mjs",
-    "test:operacoes": "node tests/operacoes.test.mjs"
+    "test:operacoes": "node tests/operacoes.test.mjs",
+    "test:instrumentos": "node tests/instrumentos.test.mjs"
   },
   "dependencies": {
     "astro": "^7.4.12",

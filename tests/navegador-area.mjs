@@ -66,7 +66,7 @@ const login = (e, s) => ev(`(()=>{const f=document.querySelector('[data-login]')
 const sair = () => ev(`document.querySelector('[data-signout]').click(),1`);
 const nav = async (u) => { await send('Page.navigate', { url: u }); await waitFor(`document.querySelector('[data-portal]')?.dataset.ready==='1' && !document.querySelector('[data-login-fs]').disabled || ${vis('[data-view="senha"]')}`, 20000); };
 const linha = (n) => `[...document.querySelectorAll('[data-docs] li')].find(l=>l.querySelector('.name')?.textContent==='${n}')`;
-const MARCAS_ANA = ['28.750,00', 'Bond 2030', 'Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
+const MARCAS_ANA = ['Exemplo Trading', 'CTB-SBLC', '28.750,00', 'Bond 2030', 'Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
 const temAna = `(()=>{const r=document.querySelector('[data-portal]');const txt=r.textContent+' '+[...r.querySelectorAll('input')].map(i=>i.value).join(' ');return ${JSON.stringify(MARCAS_ANA)}.filter(m=>txt.includes(m))})()`;
 async function vigiar(ms) { const v = new Set(); const t0 = Date.now(); while (Date.now() - t0 < ms) { (await ev(temAna) || []).forEach((m) => v.add(m)); await sleep(40); } return [...v]; }
 
@@ -121,6 +121,21 @@ try {
   check('Enviar solicitação → confirmação e item "Recebida" na lista', await waitFor(`document.querySelector('[data-op-msg]').textContent.includes('Solicitação recebida') && document.querySelector('[data-op-lista]').innerText.includes('Transferência internacional (SWIFT)') && document.querySelector('[data-op-lista]').innerText.includes('Recebida')`));
   check('Nada debitado: saldo continua AED 28.750,00 e nenhum lançamento novo', (await db.q(`select saldo_centavos::text s from contas_cliente where id=$1`, [cAED])).rows[0].s === '2875000' && (await db.q(`select count(*)::int n from movimentos_cliente where usuario_id=$1`, [uAna])).rows[0].n === 2);
   await shot('2b-operacoes');
+  console.log('--- Instrumentos financeiros (cliente)');
+  check('Seção Instrumentos visível com o aviso de que o envio não é emissão', await waitFor(`${vis('[data-inst]')} && document.querySelector('[data-inst-aviso]').textContent.includes('não representa aprovação nem emissão') && document.querySelector('[data-inst-lista]').innerText.includes('Nenhuma solicitação de instrumento')`));
+  await ev(`document.querySelector('[data-inst-nova]').click(),1`);
+  check('Nova solicitação abre o formulário (SBLC/USD por padrão; declarações em grupo separado)', await waitFor(`${vis('[data-inst-form]')} && document.querySelector('[data-inst-form]').instrumento.value==='SBLC' && document.querySelector('[data-inst-form]').moeda.value==='USD' && [...document.querySelectorAll('[data-inst-form] optgroup')].length===2`));
+  await ev(`(()=>{const f=document.querySelector('[data-inst-form]');f.valor.value='1.000.000,00';document.querySelector('[data-inst-salvar]').click();return 1})()`);
+  check('Salvar rascunho incompleto → "Rascunho salvo" e item Rascunho na lista', await waitFor(`document.querySelector('[data-inst-msg]').textContent.includes('Rascunho salvo') && document.querySelector('[data-inst-lista]').innerText.includes('Rascunho')`));
+  await ev(`document.querySelector('[data-inst-enviar]').click(),1`);
+  check('Enviar incompleto → lista o que falta preencher', await waitFor(`document.querySelector('[data-inst-msg]').textContent.includes('Para enviar, preencha') && document.querySelector('[data-inst-msg]').textContent.includes('nome do beneficiário')`));
+  await ev(`document.querySelector('[data-inst-form]').scrollIntoView({block:'start'}),1`); await shot('2c0-instrumento-formulario');
+  await ev(`(()=>{const f=document.querySelector('[data-inst-form]');f.bNome.value='Exemplo Trading Ltd';f.bPais.value='Singapura';f.oNome.value='Ana Teste';f.finalidade.value='Garantia de pagamento de importação';document.querySelector('[data-inst-enviar]').click();return 1})()`);
+  check('Enviar completo → referência CTB-SBLC e situação "Solicitação enviada"', await waitFor(`document.querySelector('[data-inst-msg-lista]').textContent.includes('Referência: CTB-SBLC-') && document.querySelector('[data-inst-lista]').innerText.includes('Solicitação enviada') && document.querySelector('[data-inst-form]').hidden`));
+  check('Nenhum saldo mudou com o instrumento', (await db.q(`select saldo_centavos::text s from contas_cliente where id=$1`, [cAED])).rows[0].s === '2875000');
+  await ev(`document.querySelector('[data-inst-lista] details').open=true,1`);
+  await ev(`document.querySelector('[data-inst]').scrollIntoView({block:'start'}),1`);
+  await shot('2c-instrumentos');
   console.log('--- Documentos');
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   const { root } = await send('DOM.getDocument', { depth: -1, pierce: true });
@@ -187,7 +202,7 @@ try {
   const v2 = await vigiar(2500);
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   check('Bruno não vê o financeiro da Ana (saldo vazio)', await waitFor(`document.querySelector('[data-fin-saldo]').textContent==='—'`));
-  check('Bruno não vê as solicitações da Ana', await waitFor(`!document.querySelector('[data-op-lista]').innerText.includes('Maria Silva')`));
+  check('Bruno não vê as solicitações da Ana', await waitFor(`!document.querySelector('[data-op-lista]').innerText.includes('Maria Silva') && !document.querySelector('[data-inst-lista]').innerText.includes('Exemplo Trading')`));
   check(`S2 Resposta atrasada da Ana descartada (vistos: ${JSON.stringify(v2)}); lista do Bruno só com o dele`, v2.length === 0 && await waitFor(`document.querySelector('[data-docs]').innerText.includes('contrato-bruno') && !document.querySelector('[data-docs]').innerText.includes('comprovante')`));
   await sair(); await waitFor(vis('[data-view="login"]'));
   // S3: Ana usa o painel; depois a leitura de documentos do Bruno FALHA

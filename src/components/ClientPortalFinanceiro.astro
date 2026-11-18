@@ -31,6 +31,20 @@ const T = en ? {
   tipos: { digital: 'Digital Account', global: 'Global Account', investimentos: 'Investment Account' },
   classes: { renda_fixa: 'Fixed income', renda_variavel: 'Equities', fundos: 'Funds', alternativos: 'Alternatives', exterior: 'International' },
   situacoes: { ativo: 'Active', bloqueado: 'Locked', em_emissao: 'Being issued' },
+  inst: {
+    titulo: 'International financial instruments', intro: 'Request SBLC, LC, bank guarantees and other instruments and follow each step here. You can save a draft and send it when it is complete.',
+    aviso: 'Sending a request does not represent approval or issuance of the instrument. Issuance is carried out exclusively by a licensed financial institution.',
+    nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
+    instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
+    ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', finalidade: 'Purpose', operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
+    salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
+    faltam: 'To send, fill in:', minhas: 'My instrument requests', nenhuma: 'No instrument requests yet.', rascunho: 'Draft', anexar: 'Attach file (PDF, JPG, PNG)', anexado: 'File attached.', cancelar: 'Cancel request', cancelarConf: 'Cancel this request?', cancelada: 'Request cancelled.',
+    historico: 'History', anexos: 'Attachments', mensagem: 'Message to our team', enviarMsg: 'Send message', msgOk: 'Message sent.', equipe: 'CTB team', voce: 'You', aDefinir: 'to be defined',
+    campos: { instrumento: 'instrument', moeda: 'currency', valor: 'amount', beneficiarioNome: 'beneficiary name', beneficiarioPais: 'beneficiary country', finalidade: 'purpose', ordenanteNome: 'applicant name' },
+    erros: { campos_invalidos: 'Check the highlighted information (amount e.g. 1,000,000.00; valid date).', limite_instrumentos: 'You already have several open requests. Please wait for our review.', nao_editavel: 'This request can no longer be edited.', ja_enviada: 'This request has already been sent.', nao_cancelavel: 'This request can no longer be cancelled.', tipo_nao_aceito: 'Only PDF, JPG or PNG files.', muito_grande: 'File larger than 10 MB.', conteudo_nao_confere: 'The file content does not match its type.', cota: 'Daily upload limit reached.', limite_mensagens: 'Daily message limit reached.', geral: 'We could not complete this. Please try again.' },
+    status: { rascunho: 'Draft', enviada: 'Request sent', analise_documental: 'Document review', documentacao_solicitada: 'Additional documents requested', analise_interna: 'Internal review', encaminhada: 'Forwarded to the financial institution', aguardando_instituicao: 'Awaiting the institution', aprovada: 'Approved by the institution', recusada: 'Declined', cancelada: 'Cancelled', concluida: 'Completed' },
+    garantiasLista: { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee' }, declaracoesLista: { RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' },
+  },
 } : {
   saldo: 'Saldo disponível', semDados: 'Seus saldos aparecerão aqui assim que a nossa equipe registrar.', atualizado: 'Atualizado em',
   atalhos: 'Acesso rápido', extrato: 'Extrato', transferencias: 'Transferências', investimentos: 'Investimentos', cambio: 'Câmbio', cartoes: 'Cartões',
@@ -52,7 +66,22 @@ const T = en ? {
   tipos: { digital: 'Conta Digital', global: 'Conta Global', investimentos: 'Conta Investimentos' },
   classes: { renda_fixa: 'Renda fixa', renda_variavel: 'Renda variável', fundos: 'Fundos', alternativos: 'Alternativos', exterior: 'Exterior' },
   situacoes: { ativo: 'Ativo', bloqueado: 'Bloqueado', em_emissao: 'Em emissão' },
+  inst: {
+    titulo: 'Instrumentos financeiros internacionais', intro: 'Solicite SBLC, LC, garantias bancárias e outros instrumentos e acompanhe cada etapa aqui. Você pode salvar um rascunho e enviar quando estiver completo.',
+    aviso: 'O envio da solicitação não representa aprovação nem emissão do instrumento. A emissão é feita exclusivamente por instituição financeira habilitada.',
+    nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
+    instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
+    ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', finalidade: 'Finalidade', operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
+    salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
+    faltam: 'Para enviar, preencha:', minhas: 'Minhas solicitações de instrumentos', nenhuma: 'Nenhuma solicitação de instrumento ainda.', rascunho: 'Rascunho', anexar: 'Anexar arquivo (PDF, JPG, PNG)', anexado: 'Arquivo anexado.', cancelar: 'Cancelar solicitação', cancelarConf: 'Cancelar esta solicitação?', cancelada: 'Solicitação cancelada.',
+    historico: 'Histórico', anexos: 'Anexos', mensagem: 'Mensagem para a nossa equipe', enviarMsg: 'Enviar mensagem', msgOk: 'Mensagem enviada.', equipe: 'Equipe CTB', voce: 'Você', aDefinir: 'a definir',
+    campos: { instrumento: 'instrumento', moeda: 'moeda', valor: 'valor', beneficiarioNome: 'nome do beneficiário', beneficiarioPais: 'país do beneficiário', finalidade: 'finalidade', ordenanteNome: 'nome do ordenante' },
+    erros: { campos_invalidos: 'Confira as informações (valor ex.: 1.000.000,00; data válida).', limite_instrumentos: 'Você já tem várias solicitações em aberto. Aguarde a nossa análise.', nao_editavel: 'Esta solicitação não pode mais ser editada.', ja_enviada: 'Esta solicitação já foi enviada.', nao_cancelavel: 'Esta solicitação não pode mais ser cancelada.', tipo_nao_aceito: 'Somente arquivos PDF, JPG ou PNG.', muito_grande: 'Arquivo maior que 10 MB.', conteudo_nao_confere: 'O conteúdo do arquivo não confere com o tipo.', cota: 'Limite diário de envios atingido.', limite_mensagens: 'Limite diário de mensagens atingido.', geral: 'Não foi possível concluir. Tente de novo.' },
+    status: { rascunho: 'Rascunho', enviada: 'Solicitação enviada', analise_documental: 'Em análise documental', documentacao_solicitada: 'Documentação complementar solicitada', analise_interna: 'Em análise interna', encaminhada: 'Encaminhada à instituição financeira', aguardando_instituicao: 'Aguardando resposta da instituição', aprovada: 'Aprovada pela instituição', recusada: 'Recusada', cancelada: 'Cancelada', concluida: 'Concluída' },
+    garantiasLista: { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee' }, declaracoesLista: { RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' },
+  },
 };
+const I = T.inst;
 ---
 <div class="fin" data-fin data-lang={lang} data-t={JSON.stringify(T)}>
   <!-- Início -->
@@ -132,6 +161,60 @@ const T = en ? {
     </form>
     <h4 class="sub">{T.opsMinhas}</h4>
     <ul class="op-lista" data-op-lista></ul>
+    <!-- Instrumentos financeiros: só solicitação e acompanhamento (nada é emitido pelo sistema) -->
+    <div class="inst" data-inst>
+      <h3>{I.titulo}</h3>
+      <p class="real">{I.intro}</p>
+      <p class="inst-aviso" data-inst-aviso>{I.aviso}</p>
+      <button type="button" class="btn-ouro" data-inst-nova>{I.nova}</button>
+      <form class="op-form inst-form" data-inst-form hidden novalidate>
+        <h4 data-inst-form-titulo>{I.nova}</h4>
+        <input type="hidden" name="id" />
+        <div class="op-grade">
+          <label class="largo"><span>{I.instrumento}</span><select name="instrumento">
+            <optgroup label={I.garantias}>{Object.entries(I.garantiasLista).map(([k, v]) => <option value={k}>{k} — {v}</option>)}</optgroup>
+            <optgroup label={I.declaracoes}>{Object.entries(I.declaracoesLista).map(([k, v]) => <option value={k}>{k} — {v}</option>)}</optgroup>
+          </select></label>
+          <label><span>{I.moeda}</span><select name="moeda">{['USD', 'EUR', 'AED', 'GBP'].map((m) => <option value={m}>{m}</option>)}</select></label>
+          <label><span>{I.valor}</span><input name="valor" inputmode="decimal" autocomplete="off" placeholder={en ? 'e.g. 1,000,000.00' : 'ex.: 1.000.000,00'} /></label>
+          <label><span>{I.validade}</span><input name="validade" type="date" /></label>
+        </div>
+        <fieldset class="op-benef">
+          <legend>{I.benef}</legend>
+          <div class="op-grade">
+            <label class="largo"><span>{I.nome}</span><input name="bNome" maxlength="160" autocomplete="off" /></label>
+            <label><span>{I.pais}</span><input name="bPais" maxlength="80" autocomplete="off" /></label>
+            <label class="largo"><span>{I.endereco}</span><input name="bEndereco" maxlength="200" autocomplete="off" /></label>
+            <label><span>{I.banco}</span><input name="bBanco" maxlength="160" autocomplete="off" /></label>
+          </div>
+        </fieldset>
+        <fieldset class="op-benef">
+          <legend>{I.ordenante}</legend>
+          <div class="op-grade">
+            <label class="largo"><span>{I.ordNome}</span><input name="oNome" maxlength="160" autocomplete="off" /></label>
+            <label><span>{I.ordId}</span><input name="oId" maxlength="80" autocomplete="off" /></label>
+          </div>
+        </fieldset>
+        <label class="op-obs"><span>{I.finalidade}</span><textarea name="finalidade" maxlength="1000" rows="2"></textarea></label>
+        <label class="op-obs"><span>{I.operacao}</span><textarea name="operacaoSubjacente" maxlength="1000" rows="2"></textarea></label>
+        <div class="op-grade">
+          <label><span>{I.emissor}</span><input name="bancoEmissor" maxlength="160" autocomplete="off" /></label>
+          <label><span>{I.avisador}</span><input name="bancoAvisador" maxlength="160" autocomplete="off" /></label>
+          <label class="largo"><span>{I.contrato}</span><input name="contratoRef" maxlength="160" autocomplete="off" /></label>
+        </div>
+        <label class="op-obs"><span>{I.obs}</span><textarea name="observacoes" maxlength="2000" rows="2"></textarea></label>
+        <p class="inst-aviso pequeno">{I.aviso}</p>
+        <div class="inst-botoes">
+          <button type="button" class="btn-linha" data-inst-salvar>{I.salvar}</button>
+          <button type="submit" class="btn-ouro" data-inst-enviar>{I.enviar}</button>
+          <button type="button" class="link" data-inst-fechar>{I.fechar}</button>
+        </div>
+        <p class="op-msg" data-inst-msg role="status" aria-live="polite" hidden></p>
+      </form>
+      <p class="op-msg" data-inst-msg-lista role="status" aria-live="polite" hidden></p>
+      <h4 class="sub">{I.minhas}</h4>
+      <ul class="op-lista inst-lista" data-inst-lista></ul>
+    </div>
     <div class="ops-acoes">
       <button type="button" class="btn-ouro" data-ir-aba="appointments">{T.agendar}</button>
       <a class="btn-linha" href={routes.contact[lang]}>{T.falar}</a>
@@ -290,7 +373,124 @@ const T = en ? {
       } catch { aviso(T.opsErros.geral, 'erro'); }
       finally { btn.disabled = false; btn.textContent = T.opsEnviar; }
     });
-    window.addEventListener('ctb:financeiro', (e) => { const d = (e as CustomEvent).detail; render(d); prepararOps(d); });
+
+    // ---- Instrumentos financeiros (só solicitação e acompanhamento)
+    const I = T.inst;
+    const fi = raiz.querySelector<HTMLFormElement>('[data-inst-form]')!;
+    const listaI = $('[data-inst-lista]');
+    const msgI = $('[data-inst-msg]'); const msgL = $('[data-inst-msg-lista]');
+    const FINAIS_I = ['recusada', 'cancelada', 'concluida'];
+    let geracaoI = 0;
+    const avisoI = (box: HTMLElement, t: string, tipo: 'ok' | 'erro') => { box.hidden = false; box.textContent = t; box.dataset.tipo = tipo; };
+    const campo = (n: string) => fi.elements.namedItem(n) as HTMLInputElement;
+    const textoValor = (c: string | null) => { if (!c) return ''; const n = BigInt(c); return `${(n / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, en ? ',' : '.')}${en ? '.' : ','}${(n % 100n).toString().padStart(2, '0')}`; };
+    const nomeInst = (k: string) => `${k} — ${I.garantiasLista[k] || I.declaracoesLista[k] || ''}`;
+    const quando = (s: string) => new Date(s).toLocaleString(loc, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Dubai' });
+    const api = async (metodo: string, rota: string, corpo?: any) => {
+      const r = await fetch('/api/cliente/instrumentos' + rota, { method: metodo, credentials: 'same-origin', headers: corpo !== undefined ? { 'Content-Type': 'application/json' } : {}, body: corpo !== undefined ? JSON.stringify(corpo) : undefined });
+      return { status: r.status, d: await r.json().catch(() => ({})) };
+    };
+    const erroI = (d: any) => d.erro === 'campos_obrigatorios' ? `${I.faltam} ${(d.campos || []).map((c: string) => I.campos[c] || c).join(', ')}.` : (I.erros[d.erro] || I.erros.geral);
+    function abrirForm(s: any | null) {
+      fi.reset(); msgI.hidden = true; fi.hidden = false;
+      campo('id').value = s ? s.id : '';
+      $('[data-inst-form-titulo]').textContent = s ? `${I.editar}${s.referencia ? ' · ' + s.referencia : ''}` : I.nova;
+      (campo('instrumento') as unknown as HTMLSelectElement).disabled = !!(s && s.status !== 'rascunho');
+      ($('[data-inst-enviar]') as HTMLButtonElement).textContent = s && s.status === 'documentacao_solicitada' ? I.reenviar : I.enviar;
+      if (s) {
+        campo('instrumento').value = s.instrumento; campo('moeda').value = s.moeda; campo('valor').value = textoValor(s.valor); campo('validade').value = s.validade || '';
+        const b = s.beneficiario || {}; campo('bNome').value = b.nome || ''; campo('bPais').value = b.pais || ''; campo('bEndereco').value = b.endereco || ''; campo('bBanco').value = b.banco || '';
+        const o = s.ordenante || {}; campo('oNome').value = o.nome || ''; campo('oId').value = o.identificacao || '';
+        for (const [n, k] of [['finalidade', 'finalidade'], ['operacaoSubjacente', 'operacao_subjacente'], ['bancoEmissor', 'banco_emissor'], ['bancoAvisador', 'banco_avisador'], ['contratoRef', 'contrato_ref'], ['observacoes', 'observacoes']]) campo(n).value = s[k] || '';
+      }
+      fi.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+    const dadosForm = () => {
+      const v = (n: string) => campo(n).value;
+      const d: any = { moeda: v('moeda'), valor: v('valor').trim(), validade: v('validade'), beneficiario: { nome: v('bNome'), pais: v('bPais'), endereco: v('bEndereco'), banco: v('bBanco') },
+        ordenante: { nome: v('oNome'), identificacao: v('oId') }, finalidade: v('finalidade'), operacaoSubjacente: v('operacaoSubjacente'), bancoEmissor: v('bancoEmissor'), bancoAvisador: v('bancoAvisador'), contratoRef: v('contratoRef'), observacoes: v('observacoes') };
+      if (!(campo('instrumento') as unknown as HTMLSelectElement).disabled) d.instrumento = v('instrumento');
+      return d;
+    };
+    async function salvarForm(): Promise<string | null> {
+      const id = campo('id').value;
+      const r = id ? await api('PUT', '/' + id, dadosForm()) : await api('POST', '', dadosForm());
+      if (r.status !== 200 && r.status !== 201) { avisoI(msgI, erroI(r.d), 'erro'); return null; }
+      if (!id) campo('id').value = r.d.solicitacao.id;
+      return campo('id').value;
+    }
+    $('[data-inst-nova]').addEventListener('click', () => abrirForm(null));
+    $('[data-inst-fechar]').addEventListener('click', () => { fi.hidden = true; });
+    $('[data-inst-salvar]').addEventListener('click', async () => { const g = geracaoI; const id = await salvarForm(); if (g !== geracaoI) return; if (id) { avisoI(msgI, I.salvo, 'ok'); carregarInst(g); } });
+    fi.addEventListener('submit', async (e) => {
+      e.preventDefault(); const g = geracaoI;
+      const btn = $('[data-inst-enviar]') as HTMLButtonElement; btn.disabled = true;
+      try {
+        const id = await salvarForm(); if (!id || g !== geracaoI) return;
+        const r = await api('POST', `/${id}/enviar`);
+        if (g !== geracaoI) return;
+        if (r.status !== 200) { avisoI(msgI, erroI(r.d), 'erro'); carregarInst(g); return; }
+        fi.hidden = true; avisoI(msgL, r.d.status === 'enviada' ? `${I.enviado} ${r.d.referencia}` : I.reenviado, 'ok'); carregarInst(g);
+      } catch { avisoI(msgI, I.erros.geral, 'erro'); }
+      finally { btn.disabled = false; }
+    });
+    function desenharInst(sols: any[]) {
+      listaI.replaceChildren();
+      if (!sols.length) { listaI.append(Object.assign(el('li', 'vazio-li'), { textContent: I.nenhuma })); return; }
+      for (const s of sols) {
+        const li = el('li'); li.dataset.instId = s.id;
+        const topo = el('div', 'op-topo');
+        const st = el('span', 'op-status', I.status[s.status] || s.status); st.dataset.s = s.status;
+        topo.append(el('strong', '', `${nomeInst(s.instrumento)}`), st);
+        li.append(topo, el('span', 'op-det', [s.referencia || I.rascunho, s.valor ? valor(s.valor, s.moeda) : `${s.moeda} · ${I.aDefinir}`, s.beneficiario?.nome ? `${I.benef}: ${s.beneficiario.nome}${s.beneficiario.pais ? ' (' + s.beneficiario.pais + ')' : ''}` : ''].filter(Boolean).join(' · ')));
+        // último pedido/mensagem da equipe em destaque
+        const ultEq = [...(s.eventos || [])].reverse().find((e: any) => e.por_equipe && e.texto);
+        if (ultEq && s.status !== 'concluida') li.append(el('span', 'op-motivo', `${I.equipe}: ${ultEq.texto}`));
+        const acoes = el('div', 'inst-acoes');
+        if (s.status === 'rascunho' || s.status === 'documentacao_solicitada') { const b = el('button', 'link', I.editar) as HTMLButtonElement; b.type = 'button'; b.dataset.instEditar = s.id; b.onclick = () => abrirForm(s); acoes.append(b); }
+        if (!FINAIS_I.includes(s.status)) {
+          const lab = el('label', 'link inst-anexar', I.anexar); const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,image/jpeg,image/png'; inp.hidden = true; inp.dataset.instAnexo = s.id;
+          inp.onchange = async () => { const f = inp.files?.[0]; if (!f) return; const g = geracaoI;
+            try { const r = await fetch(`/api/cliente/instrumentos/${s.id}/anexos`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': f.type || 'application/octet-stream', 'X-Nome-Arquivo': encodeURIComponent(f.name) }, body: f });
+              const d = await r.json().catch(() => ({})); if (g !== geracaoI) return;
+              if (r.status === 201) { avisoI(msgL, I.anexado, 'ok'); carregarInst(g); } else avisoI(msgL, I.erros[d.erro] || (r.status === 422 ? I.erros.conteudo_nao_confere : I.erros.geral), 'erro');
+            } catch { avisoI(msgL, I.erros.geral, 'erro'); } };
+          lab.append(inp); acoes.append(lab);
+        }
+        if (!FINAIS_I.includes(s.status) && s.status !== 'aprovada') { const b = el('button', 'link', I.cancelar) as HTMLButtonElement; b.type = 'button'; b.onclick = async () => { if (!confirm(I.cancelarConf)) return; const g = geracaoI; const r = await api('POST', `/${s.id}/cancelar`, {}); if (g !== geracaoI) return; avisoI(msgL, r.status === 200 ? I.cancelada : erroI(r.d), r.status === 200 ? 'ok' : 'erro'); carregarInst(g); }; acoes.append(b); }
+        li.append(acoes);
+        const det = el('details', 'inst-hist') as HTMLDetailsElement; det.append(el('summary', '', `${I.historico} (${(s.eventos || []).length})`));
+        const ul = el('ul', 'inst-eventos');
+        for (const e of s.eventos || []) {
+          const t = e.tipo === 'status' || e.tipo === 'pedido_documento' ? `${I.status[e.status_para] || e.status_para}${e.texto ? ' — ' + e.texto : ''}` : e.texto || '';
+          const x = el('li'); x.append(el('small', '', `${quando(e.em)} · ${e.por_equipe ? I.equipe : I.voce}`), el('span', '', t)); ul.append(x);
+        }
+        det.append(ul);
+        if ((s.anexos || []).length) {
+          det.append(el('h5', '', I.anexos)); const ua = el('ul', 'inst-eventos');
+          for (const a of s.anexos) { const x = el('li'); const ln = el('a', '', a.nome) as HTMLAnchorElement; ln.href = `/api/cliente/documentos/${a.id}/arquivo`; x.append(ln); ua.append(x); }
+          det.append(ua);
+        }
+        if (s.status !== 'rascunho' && !FINAIS_I.includes(s.status)) {
+          const fm = el('form', 'inst-msg') as HTMLFormElement; const ta = document.createElement('textarea'); ta.maxLength = 2000; ta.rows = 2; ta.setAttribute('aria-label', I.mensagem); ta.placeholder = I.mensagem;
+          const bt = el('button', 'btn-linha', I.enviarMsg) as HTMLButtonElement; bt.type = 'submit';
+          fm.onsubmit = async (ev) => { ev.preventDefault(); if (!ta.value.trim()) return; const g = geracaoI; const r = await api('POST', `/${s.id}/mensagens`, { texto: ta.value }); if (g !== geracaoI) return; if (r.status === 201) { avisoI(msgL, I.msgOk, 'ok'); carregarInst(g); } else avisoI(msgL, erroI(r.d), 'erro'); };
+          fm.append(ta, bt); det.append(fm);
+        }
+        li.append(det);
+        listaI.append(li);
+      }
+    }
+    async function carregarInst(g: number) {
+      try { const r = await fetch('/api/cliente/instrumentos', { credentials: 'same-origin' }); if (!r.ok || g !== geracaoI) return; const d = await r.json(); if (g === geracaoI) desenharInst(d.solicitacoes || []); } catch {}
+    }
+    function prepararInst(d: any | null) {
+      const g = ++geracaoI;
+      listaI.replaceChildren(); fi.reset(); fi.hidden = true; msgI.hidden = true; msgL.hidden = true;
+      $('[data-inst]').hidden = !d;
+      if (d) carregarInst(g);
+    }
+    window.addEventListener('ctb:financeiro', (e) => { const d = (e as CustomEvent).detail; render(d); prepararOps(d); prepararInst(d); });
   }
 </script>
 
@@ -371,6 +571,31 @@ const T = en ? {
   .op-lista :global(.op-status[data-s='recusada']) { background: rgba(98, 72, 58, 0.6); color: #e8d6b7; border-color: rgba(168, 116, 47, 0.7); }
   .btn-ouro { font: inherit; font-weight: 600; border: 1px solid #f0d39c; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550 60%, #a8742f); }
   .btn-linha { display: inline-flex; align-items: center; font-weight: 500; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.7rem 1.4rem; color: #f3e6d2; text-decoration: none; }
+  .inst { margin-top: 2.2rem; padding-top: 0.4rem; border-top: 1px solid rgba(201, 164, 106, 0.28); }
+  .inst[hidden] { display: none; }
+  .inst-aviso { margin: 0.8rem 0; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(240, 211, 156, 0.6); background: rgba(181, 139, 77, 0.16); color: #f0d39c; font-size: 0.9rem; line-height: 1.45; }
+  .inst-aviso.pequeno { font-size: 0.82rem; margin: 0; }
+  .inst-botoes { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; }
+  .inst-form h4 { color: #f0d39c; }
+  .inst-form select:disabled { opacity: 0.7; }
+  .inst-lista :global(button.link), .inst-lista :global(label.link) { background: none; border: 0; padding: 0; font: inherit; font-size: 0.86rem; color: #d9ae6b; text-decoration: underline; cursor: pointer; }
+  .inst-lista :global(.btn-linha) { font: inherit; font-size: 0.86rem; font-weight: 500; background: transparent; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.5rem 1.1rem; color: #f3e6d2; cursor: pointer; }
+  [data-inst-msg-lista] { margin: 0.8rem 0 0; }
+  .inst-lista :global(.inst-acoes) { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.2rem; font-size: 0.86rem; }
+  .inst-lista :global(.inst-anexar) { cursor: pointer; }
+  .inst-lista :global(.inst-hist) { margin-top: 0.3rem; }
+  .inst-lista :global(.inst-hist summary) { cursor: pointer; color: #d9ae6b; font-size: 0.86rem; }
+  .inst-lista :global(.inst-hist h5) { margin: 0.6rem 0 0.2rem; color: #f0d39c; font-size: 0.86rem; font-weight: 500; }
+  .inst-lista :global(.inst-eventos) { list-style: none; margin: 0.4rem 0 0; padding: 0 0 0 0.8rem; border-left: 2px solid rgba(201, 164, 106, 0.35); display: grid; gap: 0.45rem; }
+  .inst-lista :global(.inst-eventos li) { display: flex; flex-direction: column; gap: 0.1rem; padding: 0; border: 0; font-size: 0.86rem; overflow-wrap: anywhere; }
+  .inst-lista :global(.inst-eventos small) { color: #c9b49a; font-size: 0.74rem; }
+  .inst-lista :global(.inst-eventos a) { color: #d9ae6b; }
+  .inst-lista :global(.inst-msg) { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.7rem; align-items: flex-end; }
+  .inst-lista :global(.inst-msg textarea) { flex: 1 1 260px; font: inherit; font-size: 0.92rem; padding: 0.55rem 0.7rem; border-radius: 10px; border: 1px solid rgba(201, 164, 106, 0.4); background: rgba(20, 11, 7, 0.55); color: #f6f0e6; }
+  .op-lista :global(.op-status[data-s='documentacao_solicitada']) { background: rgba(217, 174, 107, 0.16); color: #f0d39c; }
+  .op-lista :global(.op-status[data-s='aprovada']), .op-lista :global(.op-status[data-s='enviada']) { border-color: #d9ae6b; color: #f0d39c; }
+  .op-lista :global(.op-status[data-s='cancelada']), .op-lista :global(.op-status[data-s='rascunho']) { background: rgba(98, 72, 58, 0.45); color: #e8d6b7; }
+  .btn-linha { font: inherit; background: transparent; cursor: pointer; }
   @media (max-width: 800px) {
     .atalhos { grid-template-columns: repeat(3, 1fr); }
     .duas, .cartao-grid { grid-template-columns: 1fr; }

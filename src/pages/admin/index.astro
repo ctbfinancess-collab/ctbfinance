@@ -47,6 +47,7 @@ import '../../styles/global.css';
           <button role="tab" data-aba="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Interessados</span><b data-cont="interessados_novos"></b></button>
           <button role="tab" data-aba="clientes"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.5"/><path d="M15.5 14.2c2.9.3 5.5 2.6 5.5 5.8"/></svg><span>Clientes</span></button>
           <button role="tab" data-aba="operacoes"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Operações</span><b data-cont="operacoes_abertas"></b></button>
+          <button role="tab" data-aba="instrumentos"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="M9 11h6M9 14h4"/></svg><span>Instrumentos</span><b data-cont="instrumentos_abertos"></b></button>
           <button role="tab" data-aba="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Agendamentos</span><b data-cont="agendamentos_pendentes"></b></button>
           <button role="tab" data-aba="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Documentos</span><b data-cont="documentos_em_analise"></b></button>
           <button role="tab" data-aba="registro"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/><circle cx="18" cy="18" r="3"/></svg><span>Registro</span></button>
@@ -96,6 +97,7 @@ import '../../styles/global.css';
                   <button type="button" data-ir="interessados"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Ver interessados</span></button>
                   <button type="button" data-rapida="convidar"><svg viewBox="0 0 24 24"><circle cx="10" cy="8" r="3.2"/><path d="M4 20c0-3.3 2.7-6 6-6 1.2 0 2.3.3 3.2.9M18 14v6M15 17h6"/></svg><span>Cadastrar cliente</span></button>
                   <button type="button" data-ir="operacoes"><svg viewBox="0 0 24 24"><path d="M4 8h14l-3-3M20 16H6l3 3"/></svg><span>Analisar operações</span></button>
+                  <button type="button" data-ir="instrumentos"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="M9 11h6M9 14h4"/></svg><span>Instrumentos financeiros</span></button>
                   <button type="button" data-ir="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Confirmar agendamentos</span></button>
                   <button type="button" data-ir="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Analisar documentos</span></button>
                   <button type="button" data-ir="clientes"><svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><circle cx="12" cy="10" r="3"/><path d="M9 17h6"/></svg><span>Conferir passaportes</span></button>
@@ -144,6 +146,31 @@ import '../../styles/global.css';
             <div data-operacoes></div>
           </div>
 
+          <div data-painel="instrumentos" hidden>
+            <div class="filtro">
+              <select data-inst-status aria-label="Situação">
+                <option value="abertas">Em aberto</option>
+                <option value="finalizadas">Finalizadas</option>
+                <option value="todas">Todas</option>
+                <option value="enviada">Solicitação enviada</option>
+                <option value="analise_documental">Em análise documental</option>
+                <option value="documentacao_solicitada">Documentação solicitada</option>
+                <option value="analise_interna">Em análise interna</option>
+                <option value="encaminhada">Encaminhada à instituição</option>
+                <option value="aguardando_instituicao">Aguardando instituição</option>
+                <option value="aprovada">Aprovada pela instituição</option>
+                <option value="recusada">Recusadas</option>
+                <option value="cancelada">Canceladas</option>
+                <option value="concluida">Concluídas</option>
+              </select>
+              <select data-inst-tipo aria-label="Instrumento"><option value="">Todos os instrumentos</option></select>
+              <select data-inst-moeda aria-label="Moeda"><option value="">Todas as moedas</option><option>USD</option><option>EUR</option><option>AED</option><option>GBP</option></select>
+              <input type="search" data-inst-busca placeholder="Cliente, e-mail ou referência" maxlength="80" />
+            </div>
+            <p class="nota">Solicitações de SBLC, LC, garantias e declarações feitas pelos clientes. O sistema <b>não emite</b> instrumentos nem mexe em saldos: a equipe analisa, encaminha à instituição e registra cada etapa. "Aprovada" e "Concluída" exigem permissão de aprovador e o comprovante da instituição anexado.</p>
+            <div data-instrumentos></div>
+          </div>
+
           <div data-painel="clientes" hidden>
           <form class="quadro convite" data-form-convite novalidate>
             <h2>Convidar cliente</h2>
@@ -189,6 +216,13 @@ import '../../styles/global.css';
       <p class="msg msg-janela" data-msg-ficha hidden role="status" aria-live="polite"></p>
     </dialog>
 
+    <!-- Ficha da solicitação de instrumento -->
+    <dialog class="ficha" data-inst-ficha>
+      <div class="ficha__topo"><h2 data-inst-titulo></h2><button type="button" class="fechar" data-fechar aria-label="Fechar">×</button></div>
+      <div data-inst-corpo></div>
+      <p class="msg msg-janela" data-msg-inst hidden role="status" aria-live="polite"></p>
+    </dialog>
+
     <!-- Rejeitar documento -->
     <dialog class="ficha pequena" data-rejeitar>
       <form method="dialog" data-form-rejeitar>
@@ -218,7 +252,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato', ver_instrumento: 'Abriu solicitação de instrumento', instrumento_mensagem: 'Enviou mensagem (instrumento)', instrumento_nota_interna: 'Registrou nota interna (instrumento)', instrumento_responsavel: 'Atribuiu responsável (instrumento)', instrumento_instituicao: 'Registrou instituição (instrumento)', instrumento_evidencia: 'Anexou comprovante (instrumento)', instrumento_analise_documental: 'Instrumento: análise documental', instrumento_documentacao_solicitada: 'Instrumento: pediu documentos', instrumento_analise_interna: 'Instrumento: análise interna', instrumento_encaminhada: 'Instrumento: encaminhou à instituição', instrumento_aguardando_instituicao: 'Instrumento: aguardando instituição', instrumento_aprovada: 'Instrumento: aprovada pela instituição', instrumento_recusada: 'Instrumento: recusou', instrumento_cancelada: 'Instrumento: cancelou', instrumento_concluida: 'Instrumento: concluiu' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -228,7 +262,8 @@ import '../../styles/global.css';
       const aviso = (t: string, tipo: 'ok' | 'erro' = 'ok') => {
         // com a ficha aberta, a mensagem aparece DENTRO dela (fixa embaixo); senão, no topo da página
         const fichaAberta = (document.querySelector('[data-ficha]') as HTMLDialogElement | null)?.open;
-        const m = fichaAberta ? $('[data-msg-ficha]') : $('[data-msg]');
+        const instAberta = (document.querySelector('[data-inst-ficha]') as HTMLDialogElement | null)?.open;
+        const m = instAberta ? $('[data-msg-inst]') : fichaAberta ? $('[data-msg-ficha]') : $('[data-msg]');
         m.hidden = false; m.textContent = (tipo === 'ok' ? '✓ ' : '⚠ ') + t; m.dataset.tipo = tipo;
         clearTimeout((m as any).t); (m as any).t = setTimeout(() => (m.hidden = true), tipo === 'ok' ? 4000 : 9000);
       };
@@ -260,9 +295,9 @@ import '../../styles/global.css';
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
-      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', operacoes: 'Operações — transferências e câmbio solicitados pelos clientes', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
+      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', operacoes: 'Operações — transferências e câmbio solicitados pelos clientes', instrumentos: 'Instrumentos financeiros — SBLC, LC, garantias (solicitação e acompanhamento)', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
       // histórico: cada aba e cada ficha viram um passo; "Voltar" (e o botão do navegador) retornam ao anterior
-      const ABAS = ['geral', 'interessados', 'operacoes', 'clientes', 'agendamentos', 'documentos', 'registro'];
+      const ABAS = ['geral', 'interessados', 'operacoes', 'instrumentos', 'clientes', 'agendamentos', 'documentos', 'registro'];
       let passos = 0;
       const btnVoltar = $('[data-voltar]');
       const marcarVoltar = () => (btnVoltar.hidden = passos <= 0 && abaAtual === 'geral' && !ficha.open);
@@ -316,7 +351,7 @@ import '../../styles/global.css';
         $$('[data-k]').forEach((e) => { e.textContent = String(r[e.dataset.k!] ?? 0); e.closest('.kpi')!.classList.toggle('alerta', e.dataset.k !== 'clientes' && r[e.dataset.k!] > 0); });
         const sub = $('[data-k-sub]'); sub.textContent = `${r.clientes_ativos} com acesso ativo`;
         $('[data-grafico]').replaceChildren(grafico(r.clientes_mes || []));
-        const dem: [string, number, string][] = [['Novos interessados', r.interessados_novos, 'interessados'], ['Operações a analisar', r.operacoes_abertas, 'operacoes'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
+        const dem: [string, number, string][] = [['Novos interessados', r.interessados_novos, 'interessados'], ['Operações a analisar', r.operacoes_abertas, 'operacoes'], ['Instrumentos em andamento', r.instrumentos_abertos || 0, 'instrumentos'], ['Agendamentos a confirmar', r.agendamentos_pendentes, 'agendamentos'], ['Documentos em análise', r.documentos_em_analise, 'documentos'], ['Passaportes a conferir', r.passaportes_a_conferir, 'clientes'], ['Convites sem senha criada', r.convites_pendentes, 'clientes']];
         $('[data-demandas]').replaceChildren(...dem.map(([t, n, aba]) => el('button', { type: 'button', class: 'demanda' + (n ? ' tem' : ''), onclick: () => abrirAba(aba) }, el('span', {}, t), el('b', {}, String(n)))));
         const at = $('[data-atividade]');
         at.replaceChildren(...(r.atividade.length ? r.atividade.map((a: any) => el('div', { class: 'mini-linha' }, el('span', { class: 'quando' }, dataHora(a.em)), el('span', {}, ACOES[a.acao] || a.acao), el('small', {}, a.por_email))) : [el('p', { class: 'vazio' }, 'Nenhuma ação registrada ainda.')]));
@@ -661,6 +696,118 @@ import '../../styles/global.css';
       };
       $('[data-op-status]').addEventListener('change', () => carregar.operacoes().catch(falhou));
 
+
+      // ---- instrumentos financeiros (só solicitação e acompanhamento; nada é emitido pelo sistema)
+      const INSTRUMENTOS: Record<string, string> = { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee', RWA: 'Ready, Willing and Able (declaração)', BCL: 'Bank Comfort Letter (declaração)', POF: 'Proof of Funds (declaração)' };
+      const ST_INST: Record<string, [string, string]> = { rascunho: ['Rascunho', ''], enviada: ['Solicitação enviada', 'erro'], analise_documental: ['Em análise documental', 'aviso'], documentacao_solicitada: ['Documentação complementar solicitada', 'aviso'], analise_interna: ['Em análise interna', 'aviso'], encaminhada: ['Encaminhada à instituição financeira', 'aviso'], aguardando_instituicao: ['Aguardando resposta da instituição', 'aviso'], aprovada: ['Aprovada pela instituição', 'ok'], recusada: ['Recusada', ''], cancelada: ['Cancelada', ''], concluida: ['Concluída', 'ok'] };
+      const FINAIS_INST = ['recusada', 'cancelada', 'concluida'];
+      for (const [k, v] of Object.entries(INSTRUMENTOS)) $('[data-inst-tipo]').append(el('option', { value: k }, `${k} — ${v}`));
+      const valorInst = (s: any) => (s.valor ? valorOp(s.valor, s.moeda) : `${s.moeda} · a definir`);
+      function linhaInstrumento(s: any) {
+        const st = ST_INST[s.status] || [s.status, ''];
+        const b = s.beneficiario || {};
+        const caixa = el('div', { class: 'item' + (FINAIS_INST.includes(s.status) ? ' feito' : ''), dataset: { instId: s.id } },
+          el('div', { class: 'item__txt' },
+            el('strong', {}, `${s.referencia || '—'} · ${s.instrumento} · ${valorInst(s)}`),
+            el('span', {}, `${s.nome || '(sem nome)'} · ${s.email}`),
+            b.nome ? el('span', {}, `Beneficiário: ${b.nome}${b.pais ? ' · ' + b.pais : ''}`) : null,
+            el('span', {}, `Enviada em ${s.enviado_em ? dataHora(s.enviado_em) : '—'}${s.responsavel_email ? ' · Responsável: ' + s.responsavel_email : ''}${s.instituicao ? ' · Instituição: ' + s.instituicao : ''}`)),
+          el('span', { class: 'etiqueta', dataset: { t: st[1] } }, st[0]));
+        caixa.append(el('div', { class: 'item__acao' }, el('button', { type: 'button', class: 'botao pequeno', onclick: () => abrirInstrumento(s.id) }, 'Abrir solicitação'), el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => abrirFicha(s.usuario_id) }, 'Ficha do cliente')));
+        return caixa;
+      }
+      let buscaInstT: any;
+      carregar.instrumentos = async () => {
+        const q = new URLSearchParams({ status: $<HTMLSelectElement>('[data-inst-status]').value });
+        const tipo = $<HTMLSelectElement>('[data-inst-tipo]').value; if (tipo) q.set('instrumento', tipo);
+        const moeda = $<HTMLSelectElement>('[data-inst-moeda]').value; if (moeda) q.set('moeda', moeda);
+        const busca = $<HTMLInputElement>('[data-inst-busca]').value.trim(); if (busca) q.set('q', busca);
+        const v = nova('instrumentos'); const { solicitacoes } = await chamar('/equipe/instrumentos?' + q); if (!vigente('instrumentos', v)) return;
+        const box = $('[data-instrumentos]'); box.replaceChildren();
+        if (!solicitacoes.length) box.append(el('p', { class: 'vazio' }, 'Nenhuma solicitação de instrumento.'));
+        for (const s of solicitacoes) box.append(linhaInstrumento(s));
+      };
+      ['[data-inst-status]', '[data-inst-tipo]', '[data-inst-moeda]'].forEach((x) => $(x).addEventListener('change', () => carregar.instrumentos().catch(falhou)));
+      $('[data-inst-busca]').addEventListener('input', () => { clearTimeout(buscaInstT); buscaInstT = setTimeout(() => carregar.instrumentos().catch(falhou), 300); });
+      const fichaInst = $<HTMLDialogElement>('[data-inst-ficha]');
+      fichaInst.addEventListener('close', () => { if (abaAtual === 'instrumentos') carregar.instrumentos().catch(() => {}); atualizarResumo().catch(() => {}); });
+      async function abrirInstrumento(id: string) {
+        const v = nova('inst-ficha');
+        const s = await chamar(`/equipe/instrumentos/${id}`).catch((e) => { falhou(e); return null; });
+        if (!s || !vigente('inst-ficha', v)) return;
+        const recarregar = () => abrirInstrumento(id);
+        const st = ST_INST[s.status] || [s.status, ''];
+        $('[data-inst-titulo]').textContent = `${s.referencia || 'Solicitação'} · ${s.instrumento}`;
+        const b = s.beneficiario || {}; const o = s.ordenante || {};
+        const linhas: [string, string][] = [
+          ['Situação', st[0]], ['Cliente', `${s.nome || '(sem nome)'} · ${s.email}`], ['Instrumento', `${s.instrumento} — ${INSTRUMENTOS[s.instrumento] || ''}`], ['Valor', valorInst(s)],
+          ['Beneficiário', [b.nome, b.pais, b.endereco, b.banco].filter(Boolean).join(' · ') || '—'], ['Ordenante', [o.nome, o.identificacao].filter(Boolean).join(' · ') || '—'],
+          ['Finalidade', s.finalidade || '—'], ['Operação subjacente', s.operacao_subjacente || '—'], ['Validade solicitada', s.validade ? dataCivil(s.validade) : '—'],
+          ['Banco emissor proposto', s.banco_emissor || '—'], ['Banco avisador', s.banco_avisador || '—'], ['Contrato / referência', s.contrato_ref || '—'], ['Observações', s.observacoes || '—'],
+          ['Enviada em', s.enviado_em ? dataHora(s.enviado_em) : '—'], ['Responsável', s.responsavel_email || '—'], ['Instituição financeira', s.instituicao || '—'],
+        ];
+        const dl = el('dl', { class: 'dados' }); for (const [k, x] of linhas) dl.append(el('dt', {}, k), el('dd', {}, x));
+        const corpo = $('[data-inst-corpo]'); corpo.replaceChildren(dl);
+        corpo.append(el('p', { class: 'nota' }, 'O sistema não emite instrumentos, não gera mensagens SWIFT e não altera saldos. Registre aqui cada etapa com a instituição responsável.'));
+        // anexos
+        const ax = el('div', { class: 'bloco' }, el('h3', {}, 'Anexos'));
+        if (!s.anexos.length) ax.append(el('p', { class: 'vazio' }, 'Nenhum anexo.'));
+        for (const a of s.anexos) ax.append(el('div', { class: 'mini-linha' }, el('a', { href: `${API}/documentos/${a.id}/arquivo`, class: 'link-doc' }, a.nome),
+          el('span', {}, a.por_equipe ? (a.evidencia_de ? `Comprovante da equipe (${ST_INST[a.evidencia_de][0]})` : 'Documento interno da equipe') : 'Enviado pelo cliente'), el('small', {}, `${tamanho(a.tamanho)} · ${dataHora(a.em)}`)));
+        if (!FINAIS_INST.includes(s.status)) {
+          const para = el('select', { 'aria-label': 'Tipo de comprovante' }, el('option', { value: 'aprovada' }, 'Comprovante de aprovação'), el('option', { value: 'concluida' }, 'Comprovante de conclusão'), el('option', { value: '' }, 'Documento interno')) as HTMLSelectElement;
+          const arq = el('input', { type: 'file', accept: 'application/pdf,image/jpeg,image/png', 'data-inst-evidencia': '' }) as HTMLInputElement;
+          const enviarEv = el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => {
+            const f = arq.files?.[0]; if (!f) { aviso('Escolha o arquivo do comprovante.', 'erro'); return; }
+            const r = await fetch(`${API}/equipe/instrumentos/${id}/evidencias${para.value ? '?para=' + para.value : ''}`, { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': f.type || 'application/octet-stream', 'X-Nome-Arquivo': encodeURIComponent(f.name) }, body: f });
+            if (r.status === 401) return sessaoCaiu();
+            if (r.status === 201) { await recarregar(); aviso('Comprovante anexado.'); } else { const d = await r.json().catch(() => ({})); aviso(d.mensagem || (r.status === 415 ? 'Somente PDF, JPG ou PNG.' : r.status === 422 ? 'O conteúdo do arquivo não confere com o tipo.' : r.status === 413 ? 'Arquivo maior que 10 MB.' : 'Não foi possível anexar.'), 'erro'); }
+          } }, 'Anexar');
+          ax.append(el('div', { class: 'fin-form' }, el('label', {}, el('span', {}, 'Tipo'), para), el('label', { class: 'largo' }, el('span', {}, 'Arquivo (PDF, JPG, PNG)'), arq), enviarEv));
+        }
+        corpo.append(ax);
+        // ações
+        if (!FINAIS_INST.includes(s.status)) {
+          const ac = el('div', { class: 'bloco' }, el('h3', {}, 'Andamento'));
+          const sel = el('select', { name: 'status', 'data-inst-novo-status': '' }) as HTMLSelectElement;
+          for (const t of s.transicoes) { const restrito = (t === 'aprovada' || t === 'concluida') && !s.podeAprovar; sel.append(el('option', { value: t, disabled: restrito }, ST_INST[t][0] + (restrito ? ' (somente aprovador)' : ''))); }
+          const txt = el('textarea', { rows: 2, maxlength: 2000, placeholder: 'Mensagem ao cliente (obrigatória para recusar, cancelar ou pedir documentos)', 'data-inst-texto-status': '' }) as HTMLTextAreaElement;
+          const mudar = el('button', { type: 'button', class: 'botao pequeno', 'data-inst-mudar': '', onclick: async () => {
+            if (!sel.value) return;
+            if ((sel.value === 'aprovada' || sel.value === 'concluida') && !confirm(`Marcar como "${ST_INST[sel.value][0]}"? Confirme que o comprovante da instituição está anexado.`)) return;
+            try { await chamar(`/equipe/instrumentos/${id}/status`, { metodo: 'POST', corpo: { status: sel.value, texto: txt.value } }); await recarregar(); aviso('Situação atualizada. O cliente já vê a mudança.'); }
+            catch (e: any) { falhou(e); }
+          } }, 'Atualizar situação');
+          ac.append(el('div', { class: 'fin-form' }, el('label', { class: 'largo' }, el('span', {}, 'Nova situação'), sel), el('label', { class: 'largo' }, el('span', {}, 'Mensagem'), txt), mudar));
+          if (!s.podeAprovar) ac.append(el('p', { class: 'nota' }, '"Aprovada" e "Concluída" só podem ser marcadas por quem tem permissão de aprovador.'));
+          // mensagem / nota interna
+          const msgT = el('textarea', { rows: 2, maxlength: 2000, placeholder: 'Escreva aqui', 'data-inst-msg-texto': '' }) as HTMLTextAreaElement;
+          const interna = el('input', { type: 'checkbox', 'data-inst-interna': '' }) as HTMLInputElement;
+          ac.append(el('div', { class: 'fin-form' }, el('label', { class: 'largo' }, el('span', {}, 'Mensagem ao cliente ou nota interna'), msgT), el('label', { class: 'check' }, interna, el('span', {}, 'Nota interna (o cliente não vê)')),
+            el('button', { type: 'button', class: 'botao pequeno claro', 'data-inst-enviar-msg': '', onclick: async () => {
+              if (!msgT.value.trim()) { aviso('Escreva a mensagem.', 'erro'); return; }
+              try { await chamar(`/equipe/instrumentos/${id}/mensagem`, { metodo: 'POST', corpo: { texto: msgT.value, interna: interna.checked } }); await recarregar(); aviso(interna.checked ? 'Nota interna registrada.' : 'Mensagem enviada ao cliente.'); } catch (e: any) { falhou(e); }
+            } }, 'Registrar')));
+          // responsável e instituição
+          const resp = el('select', { 'aria-label': 'Responsável' }, el('option', { value: '' }, '— sem responsável —'), ...s.equipe.map((e: string) => el('option', { value: e }, e))) as HTMLSelectElement; resp.value = s.responsavel_email || '';
+          const inst = el('input', { maxlength: 160, value: s.instituicao || '', placeholder: 'ex.: Banco Exemplo' }) as HTMLInputElement;
+          ac.append(el('div', { class: 'fin-form' },
+            el('label', {}, el('span', {}, 'Responsável'), resp), el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => { try { await chamar(`/equipe/instrumentos/${id}/responsavel`, { metodo: 'POST', corpo: { email: resp.value } }); await recarregar(); aviso('Responsável atualizado.'); } catch (e: any) { falhou(e); } } }, 'Salvar'),
+            el('label', {}, el('span', {}, 'Instituição financeira'), inst), el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => { try { await chamar(`/equipe/instrumentos/${id}/instituicao`, { metodo: 'POST', corpo: { instituicao: inst.value } }); await recarregar(); aviso('Instituição registrada.'); } catch (e: any) { falhou(e); } } }, 'Salvar')));
+          corpo.append(ac);
+        }
+        // linha do tempo
+        const tl = el('div', { class: 'bloco' }, el('h3', {}, 'Linha do tempo'));
+        for (const e of [...s.eventos].reverse()) {
+          const t = e.tipo === 'status' || e.tipo === 'pedido_documento' ? `${e.status_de ? (ST_INST[e.status_de]?.[0] || e.status_de) + ' → ' : ''}${ST_INST[e.status_para]?.[0] || e.status_para}` : e.tipo === 'anexo' ? 'Anexo' : e.tipo === 'nota_interna' ? 'Nota interna' : 'Mensagem';
+          tl.append(el('div', { class: 'evento' + (e.visivel_cliente ? '' : ' interno') },
+            el('small', {}, `${dataHora(e.em)} · ${e.por_equipe ? e.por_email : 'Cliente'}${e.visivel_cliente ? '' : ' · interno (cliente não vê)'}`),
+            el('strong', {}, t), e.texto ? el('span', {}, e.texto) : null));
+        }
+        corpo.append(tl);
+        if (!fichaInst.open) fichaInst.showModal();
+      }
+
       // ---- agendamentos
       const inicioPeriodo = (p: string) => (p === 'tarde' ? '14:00' : '10:00');
       function linhaAgendamento(a: any, depois: () => Promise<void> | void) {
@@ -951,6 +1098,15 @@ import '../../styles/global.css';
       .fin-chip[aria-pressed='true'] { background: linear-gradient(135deg, #c99550, #e2c08a); color: #2a140d; border-color: transparent; font-weight: 600; }
       .bloco.acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
       .bloco.acoes h3 { width: 100%; }
+      .evento { display: flex; flex-direction: column; gap: 0.15rem; padding: 0.55rem 0 0.55rem 0.8rem; border-left: 2px solid rgba(201, 164, 106, 0.45); margin-bottom: 0.3rem; font-size: 0.88rem; overflow-wrap: anywhere; }
+      .evento small { color: var(--texto-2); }
+      .evento strong { font-weight: 500; color: var(--ouro-claro); }
+      .evento span { white-space: pre-wrap; }
+      .evento.interno { border-left-style: dashed; background: rgba(98, 72, 58, 0.25); }
+      .link-doc { color: var(--ouro-claro); overflow-wrap: anywhere; }
+      .fin-form textarea { font: inherit; padding: 0.45rem 0.7rem; border-radius: 8px; border: 1px solid rgba(201, 164, 106, 0.45); background: rgba(20, 11, 7, 0.6); color: #f6f0e6; }
+      .fin-form .check { flex-direction: row; align-items: center; gap: 0.45rem; display: flex; }
+      [data-inst-busca] { font: inherit; padding: 0.45rem 0.7rem; border-radius: 8px; border: 1px solid rgba(201, 164, 106, 0.45); background: rgba(20, 11, 7, 0.6); color: #f6f0e6; min-width: 220px; }
       dialog form { display: grid; gap: 0.8rem; }
       .acoes { display: flex; gap: 0.8rem; align-items: center; }
 

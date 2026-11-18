@@ -17,6 +17,7 @@ import {
   conferirSenha, gerarHashSenha, politicaSenha, novoToken, hashToken, cookieSessao, cookieApagar, lerCookie,
   SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES, ipDoVisitante, chaveDeIp,
 } from './nucleo.mjs';
+import { criarInstrumentos } from './instrumentos.mjs';
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
 export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
@@ -77,7 +78,7 @@ export async function limparRegistrosAntigos(db) {
 const LIBERADOS = ['disponivel_analise', 'aprovado'];
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 
-export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, avisarOperacao = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
+export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, avisarOperacao = null, avisarInstrumento = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
   const json = (res, status, body, extra = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...SEG, ...extra });
     res.end(JSON.stringify(body));
@@ -300,11 +301,14 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
 
   const docPublico = (d) => ({ id: d.id, nome: d.nome, tipo: d.tipo, tamanho: d.tamanho, status: d.status, motivo: d.motivo, orientacao: d.orientacao, recebidoEm: d.recebido_em, baixavel: LIBERADOS.includes(d.status) || (d.status === 'rejeitado' && d.motivo === 'analise_equipe') });
   async function listarDocumentos(res, u) {
-    const r = await db.q('select * from documentos where usuario_id=$1 order by recebido_em desc', [u.id]);
+    const r = await db.q('select * from documentos where usuario_id=$1 and origem is null order by recebido_em desc', [u.id]);
     return json(res, 200, { documentos: r.rows.map(docPublico) });
   }
   const emAndamento = new Map();
-  async function enviarDocumento(req, res, u) {
+  /** opcoes: dono (usuário a quem o arquivo pertence; padrão: quem envia), origem (marca anexos de instrumentos),
+   *  vincular(q, doc) — roda na MESMA transação que grava o documento (se falhar, nada fica gravado). */
+  async function enviarDocumento(req, res, u, opcoes = {}) {
+    const dono = opcoes.dono || u.id;
     const tipo = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
     if (!FORMATOS[tipo]) return recusar(req, res, 415, { erro: 'tipo_nao_aceito' }, 2 * MAX_ARQUIVO);
     const declarado = Number(req.headers['content-length'] || 0);
@@ -313,16 +317,16 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const cota = async (q) => (await q(`select count(*) filter (where chave_arquivo is not null)::int n,
                                               coalesce(sum(tamanho) filter (where chave_arquivo is not null),0)::bigint b,
                                               count(*) filter (where chave_arquivo is null)::int recusados
-                                         from documentos where usuario_id=$1 and recebido_em > now() - interval '1 day'`, [u.id])).rows[0];
+                                         from documentos where usuario_id=$1 and recebido_em > now() - interval '1 day'`, [dono])).rows[0];
     const c0 = await cota(db.q);
     if (c0.n >= COTA_ARQUIVOS_DIA || c0.recusados >= RECUSAS_DIA || Number(c0.b) + Math.max(declarado, 0) > COTA_BYTES_DIA) return recusar(req, res, 429, { erro: 'cota' }, 2 * MAX_ARQUIVO);
     // no máximo 3 envios em andamento por cliente (limita o espaço temporário em disco)
     if ((emAndamento.get(u.id) || 0) >= ENVIOS_SIMULTANEOS) return recusar(req, res, 429, { erro: 'envios_simultaneos' }, 2 * MAX_ARQUIVO);
     emAndamento.set(u.id, (emAndamento.get(u.id) || 0) + 1);
-    try { return await receberDocumento(req, res, u, tipo, cota); }
+    try { return await receberDocumento(req, res, u, tipo, cota, { ...opcoes, dono }); }
     finally { const n = (emAndamento.get(u.id) || 1) - 1; if (n > 0) emAndamento.set(u.id, n); else emAndamento.delete(u.id); }
   }
-  async function receberDocumento(req, res, u, tipo, cota) {
+  async function receberDocumento(req, res, u, tipo, cota, { dono, origem = null, vincular = null }) {
     let nome = 'documento';
     try { nome = decodeURIComponent(String(req.headers['x-nome-arquivo'] || 'documento')); } catch { /* mantém padrão */ }
     nome = nome.normalize('NFC').replace(/[\\/\u0000-\u001f]/g, '_').slice(-120) || 'documento';
@@ -348,18 +352,20 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     const sha = hash.digest('hex');
     if (!conteudoConfere(tipo, inicio, fim)) {
       await arquivos.apagar(tmp);
-      const r = await db.q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, status, motivo, orientacao, validado_em)
-                            values ($1,$2,$3,$4,$5,'rejeitado','conteudo_nao_confere',$6, now()) returning *`, [u.id, nome, tipo, tamanho, sha, JSON.stringify(ORIENTACOES.conteudo_nao_confere)]);
+      const r = await db.q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, status, motivo, orientacao, validado_em, origem)
+                            values ($1,$2,$3,$4,$5,'rejeitado','conteudo_nao_confere',$6, now(), $7) returning *`, [dono, nome, tipo, tamanho, sha, JSON.stringify(ORIENTACOES.conteudo_nao_confere), origem]);
       return json(res, 422, { documento: docPublico(r.rows[0]) });
     }
     const chave = await arquivos.efetivar(tmp);
     try {
       const r = await db.transacao(async (q) => {
-        await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', ['cota:' + u.id]);
+        await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', ['cota:' + dono]);
         const c = await cota(q);
         if (c.n >= COTA_ARQUIVOS_DIA || Number(c.b) + tamanho > COTA_BYTES_DIA) return null;
-        return q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, chave_arquivo, status, validado_em)
-                  values ($1,$2,$3,$4,$5,$6,'disponivel_analise', now()) returning *`, [u.id, nome, tipo, tamanho, sha, chave]);
+        const d = await q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, chave_arquivo, status, validado_em, origem)
+                  values ($1,$2,$3,$4,$5,$6,'disponivel_analise', now(), $7) returning *`, [dono, nome, tipo, tamanho, sha, chave, origem]);
+        if (vincular) await vincular(q, d.rows[0]);
+        return d;
       });
       if (!r) { await arquivos.apagar(arquivos.caminho(chave)); return json(res, 429, { erro: 'cota' }); }
       return json(res, 201, { documento: docPublico(r.rows[0]) });
@@ -369,7 +375,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     if (!/^[0-9a-f-]{36}$/.test(id)) return json(res, 404, { erro: 'nao_encontrado' });
     const d = (await db.q('select * from documentos where id=$1', [id])).rows[0];
     // outro cliente recebe o mesmo 404 de "não existe" (não revela a existência)
-    if (!d || (d.usuario_id !== u.id && !u.equipe)) return json(res, 404, { erro: 'nao_encontrado' });
+    if (!d || (d.usuario_id !== u.id && !u.equipe) || (d.origem === 'instrumento_equipe' && !u.equipe)) return json(res, 404, { erro: 'nao_encontrado' });
     if (!docPublico(d).baixavel || !d.chave_arquivo) return json(res, 409, { erro: 'nao_liberado', status: d.status });
     // abre ANTES de enviar qualquer cabeçalho: ausência ou falha de abertura vira resposta controlada
     let fh;
@@ -534,6 +540,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       if (rota === '/api/cliente/operacoes' && m === 'GET') return await operacoes(res, u);
       if (rota === '/api/cliente/operacoes' && m === 'POST') return await solicitarOperacao(req, res, u);
       if (rota === '/api/cliente/agendamentos' && m === 'POST') return await solicitarAgendamento(req, res, u);
+      if (rota === '/api/cliente/instrumentos' || rota.startsWith('/api/cliente/instrumentos/')) return await instrumentos.cliente(req, res, rota, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {
       if (e.status) return e.fechar ? recusar(req, res, e.status, { erro: e.message }, 0) : json(res, e.status, { erro: e.message });
@@ -542,9 +549,10 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       res.destroy();
     }
   }
+  const instrumentos = criarInstrumentos({ db, json, lerJson, receberArquivo: enviarDocumento, avisarEquipe: avisarInstrumento, log });
   let painel = null;
-  /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson). */
-  const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson }); };
+  /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson, instrumentos). */
+  const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson, instrumentos }); };
   /** Guarda um pedido dos formulários do site (já validado pelo servidor do site) para a equipe ver no Admin. */
   async function registrarInteressado(d) {
     const t = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);
