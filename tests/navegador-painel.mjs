@@ -69,8 +69,8 @@ try {
   await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false });
   await send('Emulation.setTimezoneOverride', { timezoneId: 'America/Sao_Paulo' });
   console.log('--- Acesso');
-  await send('Page.navigate', { url: BASE + '/painel/' });
-  check('Sem sessão: tela "Painel da equipe" para entrar', await waitFor(vis('[data-vista="entrar"]')));
+  await send('Page.navigate', { url: BASE + '/admin/' });
+  check('Sem sessão: tela "Admin" para entrar', await waitFor(vis('[data-vista="entrar"]')));
   check('Página fora dos buscadores (noindex)', await ev(`document.querySelector('meta[name=robots]').content.includes('noindex')`));
   await entrarPainel('bruno@example.com', 'Outra2026Conta');
   check('Cliente comum entra → "Esta conta não tem acesso"; o painel não abre e a Área do Cliente dele continua conectada', await waitFor(`(document.querySelector('[data-msg-entrar]')||{}).textContent?.includes('não tem acesso')`) && !(await ev(`!document.querySelector('[data-vista="painel"]').hidden`)) && (await ev(`fetch('/api/cliente/equipe/resumo').then(r=>r.status)`)) === 404 && (await ev(`fetch('/api/cliente/sessao').then(r=>r.status)`)) === 200);

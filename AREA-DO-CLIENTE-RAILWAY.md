@@ -10,10 +10,10 @@ A Área do Cliente roda **no próprio servidor do site** (`server.mjs`), com ban
 5. As variáveis do Resend já existentes (`RESEND_API_KEY`, `CONTACT_EMAIL_FROM`) enviam os convites e as redefinições de senha.
 6. Publicar. As tabelas são criadas sozinhas na primeira partida (`server/area/schema.sql`).
 
-## Painel da equipe (`/painel/`)
+## Admin — painel da equipe (`/admin/`)
 
 Página fora dos buscadores, só para contas com papel de equipe (`equipe:conceder <email>`). Mesmo login da Área do Cliente;
-outras contas recebem "Esta conta não tem acesso" e as rotas `/api/cliente/equipe/*` respondem 404.
+outras contas recebem "Esta conta não tem acesso ao Admin" e as rotas `/api/cliente/equipe/*` respondem 404.
 Faz pelo site o mesmo que os comandos abaixo: convidar/reenviar acesso, bloquear/desbloquear, ver a ficha (inclui o número
 completo do passaporte), conferir/destravar passaporte, confirmar agendamento (com ou sem e-mail ao cliente), baixar,
 aprovar e rejeitar documentos (rejeição exige orientação). Cada ação fica em `acoes_equipe` (aba Registro).

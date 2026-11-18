@@ -1,6 +1,6 @@
 ---
 /**
- * Painel da equipe CTB Finances (somente contas com papel de equipe). Fora dos buscadores e do sitemap.
+ * Admin da CTB Finances (/admin/; somente contas com papel de equipe). Fora dos buscadores e do sitemap.
  * Tudo vem da API /api/cliente/equipe/* (sessão HttpOnly; conta sem papel de equipe recebe 404).
  * Dados de clientes são inseridos na página sempre como TEXTO (nunca como HTML).
  */
@@ -13,7 +13,7 @@ import '../../styles/global.css';
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="no-referrer" />
-    <title>Painel da equipe · CTB Finances</title>
+    <title>Admin · CTB Finances</title>
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,14 +21,14 @@ import '../../styles/global.css';
   </head>
   <body>
     <header class="topo">
-      <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="72" height="34" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /><em>Painel da equipe</em></a>
+      <a href="/" class="marca"><img src="/brand/ctb-eagle.png" alt="" width="72" height="34" /><img src="/brand/ctb-wordmark-ouro.png" alt="CTB Finances" class="palavra" /><em>Admin</em></a>
       <div class="quem" data-quem hidden><span data-email></span><button type="button" class="sair" data-sair>Sair</button></div>
     </header>
 
     <main class="corpo">
       <!-- Entrar -->
       <section class="cartao entrar" data-vista="entrar" hidden>
-        <h1>Painel da equipe</h1>
+        <h1>Admin</h1>
         <p class="nota">Acesso restrito à equipe da CTB Finances.</p>
         <form data-form-entrar novalidate>
           <label><span>E-mail</span><input type="email" name="email" autocomplete="username" required /></label>
@@ -53,7 +53,7 @@ import '../../styles/global.css';
 
         <div data-painel="geral">
           <div class="numeros" data-numeros></div>
-          <p class="nota">Os números se atualizam a cada ação. A sessão do painel encerra após 30 minutos sem uso.</p>
+          <p class="nota">Os números se atualizam a cada ação. A sessão do Admin encerra após 30 minutos sem uso.</p>
         </div>
 
         <div data-painel="clientes" hidden>
@@ -369,7 +369,7 @@ import '../../styles/global.css';
         const s = await r.json();
         if (!s.equipe) {
           // não encerra a sessão: o cliente continua conectado na Área do Cliente
-          vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Esta conta não tem acesso ao painel da equipe.'; return;
+          vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Esta conta não tem acesso ao Admin.'; return;
         }
         eu = { email: s.email }; $('[data-email]').textContent = s.email; $('[data-quem]').hidden = false;
         vista('painel'); abrirAba('geral');
@@ -414,7 +414,7 @@ import '../../styles/global.css';
       .abas b:empty { display: none; }
       .numeros { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 0.9rem; }
       .numero { text-align: left; font: inherit; cursor: pointer; background: #fbf8f2; border: 1px solid rgba(98, 72, 58, 0.16); padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; }
-      .numero strong { font-family: var(--font-display); font-size: 2.4rem; font-weight: 500; line-height: 1; }
+      .numero strong { font-family: var(--font-body); font-size: 2rem; font-weight: 500; line-height: 1; font-variant-numeric: lining-nums tabular-nums; color: var(--color-espresso); }
       .numero span { font-size: 0.85rem; color: var(--color-cafe); }
       .numero.alerta { border-color: rgba(199, 113, 79, 0.55); background: #fbefe9; }
       .convite h2 { font-size: 1.4rem; margin: 0 0 0.8rem; }
