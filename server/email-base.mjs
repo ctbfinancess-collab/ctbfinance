@@ -23,6 +23,21 @@ export async function sendEmail(payload, label) {
   }
 }
 
+/** Aviso INTERNO para a equipe: HTML leve, só texto (sem imagens grandes nem fonte externa), para não cair no
+ *  filtro de spam da caixa da equipe. Os e-mails para clientes continuam com a moldura completa (brandedHtml). */
+export function internoHtml(title, paragraphs) {
+  const body = paragraphs.map((x) => (typeof x === 'object' ? x.html : `<p style="margin:0 0 10px;font-family:Georgia,'Times New Roman',serif;font-size:15px;line-height:1.45;color:#35241D">${x}</p>`)).join('');
+  return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head>
+<body style="margin:0;padding:0;background:#F6F0E6">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#F6F0E6"><tr><td align="center" style="padding:20px 10px">
+<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:600px;background:#FFFFFF;border:1px solid #E8D6B7">
+<tr><td style="padding:18px 24px 6px;border-bottom:2px solid #B58B4D"><p style="margin:0;font-family:Georgia,serif;font-size:13px;letter-spacing:2px;color:#62483A">CTB FINANCES · EQUIPE</p>
+<h1 style="margin:6px 0 8px;font-family:Georgia,serif;font-size:22px;font-weight:600;color:#35241D">${title}</h1></td></tr>
+<tr><td style="padding:16px 24px 10px">${body}</td></tr>
+<tr><td style="padding:10px 24px 16px;border-top:1px solid #E8D6B7;font-family:Georgia,serif;font-size:12px;color:#62483A">CTB FINANCE BROKER L.L.C. · Dubai, United Arab Emirates · ctbfinances.ae<br>Aviso automático do sistema para a equipe.</td></tr>
+</table></td></tr></table></body></html>`;
+}
+
 /** Moldura visual dos e-mails da CTB Finances (arte aprovada: águia + CTB FINANCES + DUBAI, pergaminho,
  *  robô com Dubai e onda dourada). PT/EN pelo parâmetro lang. Layout em tabelas (Gmail, Outlook, Apple Mail,
  *  Hostinger). Imagens servidas em /email/. Sem dados enviados pelo visitante no corpo (evita uso indevido). */

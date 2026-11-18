@@ -1,5 +1,5 @@
 /** E-mails de acesso da Área do Cliente (convite e redefinição de senha), na moldura visual aprovada. */
-import { sendEmail, brandedHtml, fromAddress, teamList, replyToTeam, SITE } from '../email-base.mjs';
+import { sendEmail, brandedHtml, internoHtml, fromAddress, teamList, replyToTeam, SITE } from '../email-base.mjs';
 
 export async function enviarEmailAcesso({ to, finalidade, lang, link, horas }) {
   const en = lang === 'en';
@@ -32,7 +32,7 @@ export async function avisarEquipeAgendamento({ email, nome, assunto, data, form
   const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px;font-family:Georgia,serif;font-size:15px;color:#35241D">${linhas.map(([k, v]) => `<tr><td style="padding:3px 14px 3px 0;color:#7a5a45;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:3px 0;white-space:pre-wrap">${esc(v)}</td></tr>`).join('')}</table>` };
   const ok = await sendEmail({
     from: fromAddress(), to: para, reply_to: email, subject: `Pedido de agendamento · ${nome || email}`,
-    html: brandedHtml('pt', 'Pedido de agendamento', ['Um cliente pediu um agendamento pela Área do Cliente:', tabela, 'Para confirmar o horário (horário de Dubai), use o comando agenda:confirmar. O cliente vê a confirmação na Área do Cliente.']),
+    html: internoHtml('Pedido de agendamento', ['Um cliente pediu um agendamento pela Área do Cliente:', tabela, 'Para confirmar o horário (horário de Dubai), use o comando agenda:confirmar. O cliente vê a confirmação na Área do Cliente.']),
     text: `Pedido de agendamento (Área do Cliente)\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nConfirme o horário com agenda:confirmar.`,
   }, 'aviso-agendamento');
   if (!ok) throw new Error('falha ao enviar aviso de agendamento');
@@ -69,7 +69,7 @@ export async function avisarEquipeOperacao({ email, nome, tipo, valor, moeda, mo
   const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px;font-family:Georgia,serif;font-size:15px;color:#35241D">${linhas.map(([k, v]) => `<tr><td style="padding:3px 14px 3px 0;color:#7a5a45;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:3px 0">${esc(v)}</td></tr>`).join('')}</table>` };
   const ok = await sendEmail({
     from: fromAddress(), to: para, reply_to: email, subject: `Solicitação de operação · ${nome || email}`,
-    html: brandedHtml('pt', 'Solicitação de operação', ['Um cliente fez uma solicitação pela Área do Cliente. Nada foi executado — analise no Admin (aba Operações):', tabela, `${SITE}/admin/#operacoes`]),
+    html: internoHtml('Solicitação de operação', ['Um cliente fez uma solicitação pela Área do Cliente. Nada foi executado — analise no Admin (aba Operações):', tabela, `${SITE}/admin/#operacoes`]),
     text: `Solicitação de operação (Área do Cliente)\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nAnalise no Admin: ${SITE}/admin/#operacoes`,
   }, 'aviso-operacao');
   if (!ok) throw new Error('falha ao enviar aviso de operação');
@@ -83,7 +83,7 @@ export async function avisarEquipeInstrumento({ email, nome, referencia, instrum
   const titulo = alterada ? 'Instrumento: solicitação alterada pelo cliente' : reenvio ? 'Instrumento: documentação reenviada' : 'Solicitação de instrumento financeiro';
   const ok = await sendEmail({
     from: fromAddress(), to: para, reply_to: email, subject: `${titulo} · ${referencia}`,
-    html: brandedHtml('pt', titulo, [alterada ? 'O cliente alterou a solicitação antes do início da análise. Confira os dados atualizados:' : reenvio ? 'O cliente reenviou a solicitação com a documentação complementar.' : 'Um cliente enviou uma solicitação pela Área do Cliente. Nada foi emitido — analise no Admin (aba Instrumentos):', tabela, `${SITE}/admin/#instrumentos`]),
+    html: internoHtml(titulo, [alterada ? 'O cliente alterou a solicitação antes do início da análise. Confira os dados atualizados:' : reenvio ? 'O cliente reenviou a solicitação com a documentação complementar.' : 'Um cliente enviou uma solicitação pela Área do Cliente. Nada foi emitido — analise no Admin (aba Instrumentos):', tabela, `${SITE}/admin/#instrumentos`]),
     text: `${titulo}\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nAnalise no Admin: ${SITE}/admin/#instrumentos`,
   }, 'aviso-instrumento');
   if (!ok) throw new Error('falha ao enviar aviso de instrumento');
