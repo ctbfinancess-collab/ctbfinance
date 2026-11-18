@@ -3,7 +3,7 @@
  * Sem eles, /api/cliente/status responde { ativo: false } e o portal mostra "acesso em preparação".
  */
 import { criarBanco, criarArquivos } from './nucleo.mjs';
-import { criarApi } from './api.mjs';
+import { criarApi, limparRegistrosAntigos } from './api.mjs';
 import { enviarEmailAcesso } from './emails.mjs';
 
 export async function iniciarAreaCliente({ origens }) {
@@ -14,6 +14,8 @@ export async function iniciarAreaCliente({ origens }) {
   const db = criarBanco();
   await db.migrar();
   const arquivos = criarArquivos();
+  const limpar = () => limparRegistrosAntigos(db).catch((e) => console.error('[area-cliente] limpeza:', e.message));
+  limpar(); setInterval(limpar, 60 * 60 * 1000).unref();
   console.log('[area-cliente] ativa');
   return criarApi({ db, arquivos, origens, enviarEmail: enviarEmailAcesso });
 }

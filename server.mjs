@@ -125,6 +125,7 @@ function validate(f) {
 
 import { SITE, RESEND_API, fromAddress, teamList, replyToTeam, sendEmail, brandedHtml } from './server/email-base.mjs';
 import { iniciarAreaCliente } from './server/area/iniciar.mjs';
+import { ipDoVisitante } from './server/area/nucleo.mjs';
 
 // Limite por destinatário para as confirmações automáticas (no máx. 3 por dia por e-mail)
 const recipientHits = new Map();
@@ -174,7 +175,7 @@ async function handleContact(req, res) {
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
 
-  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const ip = ipDoVisitante(req);
   if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limit' });
 
   let fields;
@@ -256,7 +257,7 @@ const newsletterReady = () => Boolean(process.env.RESEND_API_KEY && process.env.
 async function handleNewsletter(req, res) {
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
-  const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const ip = ipDoVisitante(req);
   if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limit' });
   let f;
   try {
@@ -371,7 +372,9 @@ try { areaCliente = await iniciarAreaCliente({ origens: ALLOWED_ORIGINS }); }
 catch (e) { console.error('[area-cliente] não iniciou:', e.message); }
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url, 'http://localhost');
+  let url;
+  try { url = new URL(req.url, 'http://localhost'); }
+  catch { res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8', Connection: 'close' }); return void res.end('Bad Request'); }
   if (url.pathname.startsWith('/api/cliente/')) {
     if (!areaCliente) return sendJson(res, url.pathname === '/api/cliente/status' ? 200 : 503, url.pathname === '/api/cliente/status' ? { ativo: false } : { erro: 'indisponivel' });
     return void areaCliente.tratar(req, res, url);

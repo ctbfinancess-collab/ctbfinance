@@ -57,6 +57,8 @@ function cliente() {
   return f;
 }
 const linkDe = (to, tipo) => { const e = [...emails].reverse().find((m) => m.to.includes(to)); const m = e && e.text.match(new RegExp(`[?&]${tipo}=([A-Za-z0-9_-]+)`)); return m ? m[1] : null; };
+// o e-mail de "esqueci a senha" sai em segundo plano (não revela pela demora se a conta existe): espera chegar
+const esperarEmails = async (n, ms = 3000) => { const t0 = Date.now(); while (emails.length < n && Date.now() - t0 < ms) await sleep(50); };
 const PDF = Buffer.from('%PDF-1.7\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF\n');
 let ok = 0, falhas = 0;
 async function t(id, desc, fn) { try { const r = await fn(); if (r !== true) throw new Error('condição não atendida' + (r && r !== false ? ' ' + JSON.stringify(r).slice(0, 160) : '')); ok++; console.log(`✅ ${id} ${desc}`); } catch (e) { falhas++; console.log(`❌ ${id} ${desc} → ${String(e.message).slice(0, 200)}`); } }
@@ -83,11 +85,11 @@ try {
   await t('C10', 'Cookie forjado → 401', async () => { const x = cliente(); x.definirCookie('ctb_sessao=' + crypto.randomBytes(32).toString('base64url')); return (await x('GET', '/api/cliente/perfil')).status === 401; });
   await t('C11', 'Pedido que altera dados SEM Origin ou com Origin de outro site → 403 (proteção CSRF)', async () => (await ana('PUT', '/api/cliente/perfil', { json: { city: 'X' }, origem: null })).status === 403 && (await ana('PUT', '/api/cliente/perfil', { json: { city: 'X' }, origem: 'https://site-malicioso.example' })).status === 403);
   const antes = emails.length;
-  await t('C12', 'Esqueci a senha: mesma resposta para conta existente e inexistente; e-mail só para a existente', async () => { const a = await anon('POST', '/api/cliente/esqueci', { json: { email: 'ana@example.com' } }); const b = await anon('POST', '/api/cliente/esqueci', { json: { email: 'naoexiste@example.com' } }); return a.status === 200 && b.status === 200 && JSON.stringify(a.dados) === JSON.stringify(b.dados) && emails.length === antes + 1 && emails[emails.length - 1].to.includes('ana@example.com'); });
+  await t('C12', 'Esqueci a senha: mesma resposta para conta existente e inexistente; e-mail só para a existente', async () => { const a = await anon('POST', '/api/cliente/esqueci', { json: { email: 'ana@example.com' } }); const b = await anon('POST', '/api/cliente/esqueci', { json: { email: 'naoexiste@example.com' } }); await esperarEmails(antes + 1); await sleep(300); return a.status === 200 && b.status === 200 && JSON.stringify(a.dados) === JSON.stringify(b.dados) && emails.length === antes + 1 && emails[emails.length - 1].to.includes('ana@example.com'); });
   const sessaoAntiga = cliente(); await sessaoAntiga('POST', '/api/cliente/entrar', { json: { email: 'ana@example.com', senha: 'SenhaForte2026' } });
   const red = linkDe('ana@example.com', 'redefinir');
   await t('C13', 'Redefinir senha: funciona uma vez e ENCERRA as outras sessões abertas', async () => { const r = await ana('POST', '/api/cliente/redefinir', { json: { token: red, senha: 'NovaSenha2026x' } }); const reuso = await anon('POST', '/api/cliente/redefinir', { json: { token: red, senha: 'OutraSenha2026' } }); return r.status === 200 && reuso.dados.erro === 'link_invalido' && (await sessaoAntiga('GET', '/api/cliente/sessao')).status === 401 && (await ana('GET', '/api/cliente/sessao')).status === 200; });
-  await anon('POST', '/api/cliente/esqueci', { json: { email: 'bruno@example.com' } });
+  const nAntesB = emails.length; await anon('POST', '/api/cliente/esqueci', { json: { email: 'bruno@example.com' } }); await esperarEmails(nAntesB + 1);
   const redB = linkDe('bruno@example.com', 'redefinir');
   await db.q(`update tokens_senha set expira_em = now() - interval '1 minute' where hash=$1`, [crypto.createHash('sha256').update(redB).digest('hex')]);
   await t('C14', 'Link de redefinição vencido (1 h) → inválido', async () => (await anon('POST', '/api/cliente/redefinir', { json: { token: redB, senha: 'ChaveSegura2027' } })).dados.erro === 'link_invalido');

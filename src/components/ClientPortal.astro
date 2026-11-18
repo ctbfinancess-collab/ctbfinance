@@ -17,7 +17,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -325,7 +325,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         renderDocs(lista, s, email);
         if (r.status === 201) msg(dm, M.uploaded);
         else if (r.status === 422) msg(dm, M.st.rejeitado + ' — ' + M.resendHint, 'err');
-        else msg(dm, r.status === 413 ? M.tooBig : r.status === 415 ? M.badType : M.genericError, 'err');
+        else msg(dm, r.status === 413 ? M.tooBig : r.status === 415 ? M.badType : r.status === 429 ? M.quota : M.genericError, 'err');
       } catch { if (vigente(s, email)) msg(dm, M.genericError, 'err'); }
       finally { if (vigente(s, email)) upLabel.textContent = M.upload; }
     });

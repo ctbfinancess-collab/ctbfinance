@@ -15,26 +15,52 @@ import fs from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import {
   conferirSenha, gerarHashSenha, politicaSenha, novoToken, hashToken, cookieSessao, cookieApagar, lerCookie,
-  SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES,
+  SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES, ipDoVisitante,
 } from './nucleo.mjs';
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
 export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
 const EDITAVEIS = { ...CAMPOS_PERFIL, ...CAMPOS_EMPRESA };
 const MAX_ARQUIVO = 10 * 1024 * 1024;
+// cota de envios por cliente (24 h): evita lotar o volume
+const COTA_ARQUIVOS_DIA = 30;
+const COTA_BYTES_DIA = 200 * 1024 * 1024;
+// cabeçalhos de segurança de toda resposta da API
+const SEG = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Strict-Transport-Security': 'max-age=31536000', 'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'", 'Referrer-Policy': 'no-referrer' };
+
+/** Limpeza periódica: tentativas (>1 dia), sessões encerradas/vencidas (>7 dias), links de senha usados/vencidos (>30 dias). */
+export async function limparRegistrosAntigos(db) {
+  await db.q(`delete from tentativas_login where em < now() - interval '1 day'`);
+  await db.q(`delete from sessoes where (revogada_em is not null or expira_em < now()) and criada_em < now() - interval '7 days'`);
+  await db.q(`delete from tokens_senha where (usado_em is not null or expira_em < now()) and criado_em < now() - interval '30 days'`);
+}
 const LIBERADOS = ['disponivel_analise', 'aprovado'];
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 
 export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
   const json = (res, status, body, extra = {}) => {
-    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...extra });
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...SEG, ...extra });
     res.end(JSON.stringify(body));
   };
-  const ip = (req) => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  // recusa um corpo que não será usado: responde, descarta o restante só até um TETO (para o cliente conseguir ler a
+  // resposta) e então fecha a conexão. Envio sem fim (sem Content-Length) não é mais lido além do teto nem de 10 s.
+  const recusar = (req, res, status, body, tetoDescarte = 1024 * 1024) => {
+    json(res, status, body, { Connection: 'close' });
+    if (req.complete) return;
+    let n = 0;
+    const cortar = () => { clearTimeout(relogio); req.destroy(); };
+    const relogio = setTimeout(cortar, 10_000); relogio.unref();
+    req.on('data', (c) => { n += c.length; if (n > tetoDescarte) cortar(); });
+    req.on('end', () => clearTimeout(relogio));
+    req.on('error', () => clearTimeout(relogio));
+    req.resume();
+  };
+  const ip = ipDoVisitante;
   const origemValida = (req) => origens.has(req.headers.origin || '');
   const lerJson = (req, max = 20000) => new Promise((ok, erro) => {
-    let t = '', n = 0;
-    req.on('data', (c) => { n += c.length; if (n > max) { erro(Object.assign(new Error('grande'), { status: 413 })); req.destroy(); } else t += c; });
+    let t = '', n = 0, grande = false;
+    // acima do limite: para de acumular e devolve 413 (a conexão é fechada DEPOIS que a resposta sai)
+    req.on('data', (c) => { if (grande) return; n += c.length; if (n > max) { grande = true; req.pause(); erro(Object.assign(new Error('grande'), { status: 413, fechar: true })); } else t += c; });
     req.on('end', () => { try { ok(t ? JSON.parse(t) : {}); } catch { erro(Object.assign(new Error('json'), { status: 400 })); } });
     req.on('error', erro);
   });
@@ -98,8 +124,12 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
   async function entrar(req, res) {
     const b = await lerJson(req);
     const email = String(b.email || '').trim().toLowerCase().slice(0, 160), senha = String(b.senha || '');
-    // limite: 5 verificações por conta e 30 por IP a cada 15 min (reserva atômica ANTES de verificar a senha)
-    const reservas = await reservarTentativa([[`email:${email}`, 5, 15], [`ip:${ip(req)}`, 30, 15]]);
+    // limites (15 min, reserva atômica ANTES de verificar a senha):
+    //  - 5 por conta a partir do MESMO IP  → força bruta de um lugar só
+    //  - 30 por IP                           → um IP testando muitas contas
+    //  - 30 por conta somando todos os IPs   → ataque distribuído; terceiros só bloqueiam o cliente gastando 30 tentativas
+    //    de vários IPs (e o cliente continua entrando do próprio IP até lá)
+    const reservas = await reservarTentativa([[`email-ip:${email}|${ip(req)}`, 5, 15], [`ip:${ip(req)}`, 30, 15], [`email:${email}`, 30, 15]]);
     if (!reservas) return json(res, 429, { erro: 'muitas_tentativas' });
     const r = await db.q('select id, senha_hash, bloqueado from usuarios where email=$1', [email]);
     const u = r.rows[0];
@@ -120,8 +150,13 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     const lang = b.lang === 'en' ? 'en' : 'pt';
     // mesma resposta exista ou não a conta
     if (EMAIL_RE.test(email) && (await reservarTentativa([[`esqueci:${email}`, 3, 60], [`esqueci-ip:${ip(req)}`, 10, 60]]))) {
-      const u = (await db.q('select id, email, bloqueado, senha_hash from usuarios where email=$1', [email])).rows[0];
-      if (u && !u.bloqueado) await enviarLinkSenha(u, u.senha_hash ? 'redefinir' : 'convite', lang).catch((e) => log.error('e-mail de senha', e.message));
+      // em segundo plano: a resposta não espera banco nem e-mail (não revela pela demora se a conta existe)
+      setImmediate(async () => {
+        try {
+          const u = (await db.q('select id, email, bloqueado, senha_hash from usuarios where email=$1', [email])).rows[0];
+          if (u && !u.bloqueado) await enviarLinkSenha(u, u.senha_hash ? 'redefinir' : 'convite', lang);
+        } catch (e) { log.error('[area-cliente] e-mail de senha', e.message); }
+      });
     }
     return json(res, 200, { ok: true });
   }
@@ -164,7 +199,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     const b = await lerJson(req);
     const alteracoes = {};
     for (const [k, v] of Object.entries(b && typeof b === 'object' ? b : {})) {
-      if (!(k in EDITAVEIS)) return json(res, 400, { erro: 'campo_nao_permitido', campo: k });
+      if (!Object.hasOwn(EDITAVEIS, k)) return json(res, 400, { erro: 'campo_nao_permitido', campo: String(k).slice(0, 40) });
       if (typeof v !== 'string' || v.length > EDITAVEIS[k]) return json(res, 400, { erro: 'valor_invalido', campo: k });
       alteracoes[k] = v.trim();
     }
@@ -181,9 +216,12 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
   }
   async function enviarDocumento(req, res, u) {
     const tipo = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
-    if (!FORMATOS[tipo]) { req.resume(); return json(res, 415, { erro: 'tipo_nao_aceito' }); }
+    if (!FORMATOS[tipo]) return recusar(req, res, 415, { erro: 'tipo_nao_aceito' }, 2 * MAX_ARQUIVO);
     const declarado = Number(req.headers['content-length'] || 0);
-    if (declarado > MAX_ARQUIVO) { req.resume(); return json(res, 413, { erro: 'muito_grande' }); }
+    if (declarado > MAX_ARQUIVO) return recusar(req, res, 413, { erro: 'muito_grande' }, 2 * MAX_ARQUIVO);
+    const cota = async (q) => (await q(`select count(*)::int n, coalesce(sum(tamanho),0)::bigint b from documentos where usuario_id=$1 and recebido_em > now() - interval '1 day'`, [u.id])).rows[0];
+    const c0 = await cota(db.q);
+    if (c0.n >= COTA_ARQUIVOS_DIA || Number(c0.b) + Math.max(declarado, 0) > COTA_BYTES_DIA) return recusar(req, res, 429, { erro: 'cota' }, 2 * MAX_ARQUIVO);
     let nome = 'documento';
     try { nome = decodeURIComponent(String(req.headers['x-nome-arquivo'] || 'documento')); } catch { /* mantém padrão */ }
     nome = nome.normalize('NFC').replace(/[\\/\u0000-\u001f]/g, '_').slice(-120) || 'documento';
@@ -195,7 +233,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
       await new Promise((ok, erro) => {
         req.on('data', (c) => {
           tamanho += c.length;
-          if (tamanho > MAX_ARQUIVO) { excedeu = true; req.unpipe(saida); saida.destroy(); req.resume(); return ok(); }
+          if (tamanho > MAX_ARQUIVO) { excedeu = true; req.unpipe(saida); saida.destroy(); req.pause(); return ok(); }
           hash.update(c);
           if (inicio.length < 16) inicio = Buffer.concat([inicio, c]).subarray(0, 16);
           fim = Buffer.concat([fim, c]); if (fim.length > 1024) fim = fim.subarray(fim.length - 1024);
@@ -204,7 +242,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
         saida.on('finish', ok); saida.on('error', erro); req.on('error', erro);
       });
     } catch (e) { await arquivos.apagar(tmp); throw e; }
-    if (excedeu) { await arquivos.apagar(tmp); return json(res, 413, { erro: 'muito_grande' }); }
+    if (excedeu) { await arquivos.apagar(tmp); return recusar(req, res, 413, { erro: 'muito_grande' }, MAX_ARQUIVO); }
     if (tamanho === 0) { await arquivos.apagar(tmp); return json(res, 400, { erro: 'vazio' }); }
     const sha = hash.digest('hex');
     if (!conteudoConfere(tipo, inicio, fim)) {
@@ -215,8 +253,14 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     }
     const chave = await arquivos.efetivar(tmp);
     try {
-      const r = await db.q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, chave_arquivo, status, validado_em)
-                            values ($1,$2,$3,$4,$5,$6,'disponivel_analise', now()) returning *`, [u.id, nome, tipo, tamanho, sha, chave]);
+      const r = await db.transacao(async (q) => {
+        await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', ['cota:' + u.id]);
+        const c = await cota(q);
+        if (c.n >= COTA_ARQUIVOS_DIA || Number(c.b) + tamanho > COTA_BYTES_DIA) return null;
+        return q(`insert into documentos(usuario_id, nome, tipo, tamanho, sha256, chave_arquivo, status, validado_em)
+                  values ($1,$2,$3,$4,$5,$6,'disponivel_analise', now()) returning *`, [u.id, nome, tipo, tamanho, sha, chave]);
+      });
+      if (!r) { await arquivos.apagar(arquivos.caminho(chave)); return json(res, 429, { erro: 'cota' }); }
       return json(res, 201, { documento: docPublico(r.rows[0]) });
     } catch (e) { await arquivos.apagar(arquivos.caminho(chave)); throw e; }
   }
@@ -277,7 +321,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
       if (rota === '/api/cliente/agendamentos' && m === 'GET') return await agendamentos(res, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {
-      if (e.status) return json(res, e.status, { erro: e.message });
+      if (e.status) return e.fechar ? recusar(req, res, e.status, { erro: e.message }) : json(res, e.status, { erro: e.message });
       log.error('[area-cliente]', e);
       if (!res.headersSent) return json(res, 500, { erro: 'interno' });
       res.destroy();

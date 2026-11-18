@@ -2,8 +2,10 @@
  * Operações da equipe CTB (rodam no servidor do Railway ou num computador autorizado com DATABASE_URL).
  * Nunca expostas pela web. Usadas pelo script scripts/ctb-admin.mjs e pelos testes.
  */
+import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
+import { FORMATOS } from './nucleo.mjs';
 
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 const norm = (e) => String(e || '').trim().toLowerCase();
@@ -67,9 +69,11 @@ export function criarAdmin({ db, arquivos, api }) {
       const d = (await db.q('select * from documentos where id=$1', [id])).rows[0];
       if (!d) throw new Error('documento não encontrado');
       if (!d.chave_arquivo || !['disponivel_analise', 'aprovado', 'rejeitado'].includes(d.status) || (d.status === 'rejeitado' && d.motivo !== 'analise_equipe')) throw new Error(`documento não liberado (${d.status})`);
-      const destino = path.join(pasta, path.basename(d.nome));
-      await fsp.copyFile(arquivos.caminho(d.chave_arquivo), destino);
-      return { salvo: destino };
+      // nome definido pelo servidor (id + extensão do tipo); nunca o nome escolhido pelo cliente; não sobrescreve nada
+      const destino = path.join(pasta, `${d.id}.${(FORMATOS[d.tipo] || { ext: 'bin' }).ext}`);
+      try { await fsp.copyFile(arquivos.caminho(d.chave_arquivo), destino, fs.constants.COPYFILE_EXCL); }
+      catch (e) { if (e.code === 'EEXIST') throw new Error(`já existe um arquivo em ${destino}`); throw e; }
+      return { salvo: destino, nomeOriginal: d.nome };
     },
     /** Decisão: só sobre "disponivel_analise"; rejeição exige orientação ao cliente; nunca refeita por engano. */
     async decidir(id, decisao, { orientacaoPt, orientacaoEn, por } = {}) {

@@ -20,6 +20,9 @@ const AQUI = path.dirname(fileURLToPath(import.meta.url));
 export function criarBanco(url = process.env.DATABASE_URL) {
   const ssl = /sslmode=require/.test(url || '') ? { rejectUnauthorized: false } : undefined;
   const pool = new pg.Pool({ connectionString: url, max: 10, ssl });
+  // conexão parada encerrada pelo banco (reinício/manutenção/rede) NÃO pode derrubar o site: registra e segue;
+  // o pool abre conexões novas na próxima consulta
+  pool.on('error', (e) => console.error('[area-cliente] conexão do Postgres encerrada:', e.code || e.message));
   return {
     pool,
     q: (sql, params) => pool.query(sql, params),
@@ -32,6 +35,16 @@ export function criarBanco(url = process.env.DATABASE_URL) {
     async migrar() { await pool.query(fs.readFileSync(path.join(AQUI, 'schema.sql'), 'utf8')); },
     fechar: () => pool.end(),
   };
+}
+
+// ------------------------------------------------------------------ IP do visitante
+// No Railway, o proxy de borda SUBSTITUI X-Real-IP pelo IP real do visitante (com Cloudflare na frente, pelo
+// CF-Connecting-IP). X-Forwarded-For pode trazer valores enviados pelo próprio visitante e NÃO é usado.
+const IP_RE = /^[0-9a-fA-F:.]{2,45}$/;
+export function ipDoVisitante(req) {
+  const nome = (process.env.AREA_CABECALHO_IP || 'x-real-ip').toLowerCase();
+  const v = String(req.headers[nome] || '').trim();
+  return IP_RE.test(v) ? v : String(req.socket.remoteAddress || '');
 }
 
 // ------------------------------------------------------------------ senhas e tokens
