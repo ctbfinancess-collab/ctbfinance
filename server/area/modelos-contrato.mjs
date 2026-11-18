@@ -127,9 +127,137 @@ IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date firs
   ],
 };
 
-export const MODELOS = { nda: NDA };
+/** Abertura de conta — texto da titular com os ajustes combinados em 18/11/2026 (CTB como corretora/intermediária,
+ *  não banco nem custodiante; instrumentos emitidos por instituição licenciada). */
+const ABERTURA_CONTA = {
+  titulo: 'Account Opening Agreement',
+  rotulo: 'AO',
+  umPorCliente: true,   // gerado automaticamente só se o cliente ainda não tiver um (não cancelado)
+  campos: [
+    { k: 'data', rotulo: 'Data (DD/MM/AAAA)', origem: 'hoje (Dubai)' },
+    { k: 'local', rotulo: 'Local', padrao: 'Dubai - United Arab Emirates (UAE)' },
+    { k: 'conta', rotulo: 'Número da conta', origem: 'gerado pelo sistema (fixo por cliente)' },
+    { k: 'empresa', rotulo: 'Cliente — empresa (ou nome)', origem: 'Meu perfil: empresa · senão nome do cliente' },
+    { k: 'jurisdicao', rotulo: 'Constituída sob as leis de', padrao: 'the Federative Republic of Brazil', origem: 'Meu perfil: país da empresa' },
+    { k: 'registro', rotulo: 'Nº de registro da empresa', origem: 'Meu perfil' },
+    { k: 'endereco', rotulo: 'Endereço da empresa', origem: 'Meu perfil' },
+    { k: 'representante', rotulo: 'Representante legal', origem: 'Meu perfil: nome' },
+    { k: 'cargoRep', rotulo: 'Cargo do representante', padrao: 'CEO', origem: 'Meu perfil: cargo na empresa' },
+    { k: 'passaporte', rotulo: 'Passaporte do representante', origem: 'Meu perfil (número completo)' },
+    { k: 'nacionalidade', rotulo: 'Nacionalidade do representante', origem: 'Meu perfil' },
+    { k: 'telefone', rotulo: 'Telefone', origem: 'Meu perfil' },
+    { k: 'ctbNome', rotulo: 'CTB — nome de quem assina', origem: 'Configuração de assinatura' },
+    { k: 'ctbCargo', rotulo: 'CTB — cargo', padrao: 'EXECUTIVE DIRECTOR' },
+    { k: 'ctbPin', rotulo: 'CTB — PIN', padrao: '301224' },
+  ],
+  texto: (c) => `# INVESTMENT ACCOUNT FOR FINANCIAL COLLATERAL OPERATIONS
+# AGREEMENT OF ESTABLISHMENT
+
+Place: ${c.local}.
+
+Date: ${c.data}
+
+${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located at ${CTB.endereco} (hereinafter referred to as the "CTB FINANCES").
+
+CLIENT: ${c.empresa}, a company duly incorporated and existing under the laws of ${c.jurisdicao}, registered under No. ${c.registro}, with its principal place of business located at ${c.endereco}.
+
+## ACCOUNT NUMBER: ${c.conta}
+
+The aforementioned parties have mutually entered into this INVESTMENT ACCOUNT FOR FINANCIAL COLLATERAL OPERATIONS - AGREEMENT OF ESTABLISHMENT, which shall govern the following clauses:
+
+1. CTB FINANCES, a financial brokerage and consulting company, provides credit consulting, credit management, risk selection, accounts payable and receivable management support, and intermediation of guarantee and financial-instrument operations with licensed financial institutions.
+
+2. The Client seeks guarantee and financial-instrument intermediation services and wishes to contract the services of CTB FINANCES, the receivables, assets and financial guarantees offered by the Client being held by licensed custodian or issuing financial institutions, with CTB FINANCES recording and following up such operations and, if necessary, assigning the rights related thereto in accordance with the applicable agreements.
+
+3. The Client wishes to open their Investment Account for Financial Collateral Operations with CTB FINANCES, hereinafter referred to as the "INVESTMENT ACCOUNT". The term "INVESTMENT ACCOUNT" is a purely commercial nomenclature.
+
+4. The INVESTMENT ACCOUNT is linked to the records of the receivables, assets and guarantees offered by the Client and held by licensed custodian institutions, for the fulfillment of the terms of the GUARANTEE AGREEMENT to be entered into between the Parties.
+
+5. Opening an Investment Account does not guarantee the issuance of any instrument by a financial institution. The financial analysis of the Client's operations will follow CTB FINANCES standards and will depend on the quality of the credits, assets, and counter-guarantees offered by the Client, as well as the prevailing commercial and market context.
+
+6. The specific terms of ancillary charges will complement this Contract.
+
+7. The Client shall reimburse and indemnify CTB FINANCES within 24 hours in case of default on credits guaranteed by financial guarantee instruments issued at the Client's request through CTB FINANCES' intermediation, or upon presentation of these financial instruments for payment. For this item, the Client undertakes to reimburse and indemnify CTB FINANCES for the total value of the financial guarantee.
+
+8. This Contract does not constitute a promise of payment of interest, profits, dividends, or any other income on investments or financial securities.
+
+9. The Client is fully aware that, should the request to open an Investment Account be approved at the sole discretion of CTB FINANCES, after due Compliance due diligence, the Investment Account will be governed by the clauses and conditions established herein, as well as by current United Arab Emirates laws and international legislation applicable to the Contract.
+
+10. The Client authorizes CTB FINANCES to create a client database based on the data and information provided and to consult and obtain all other data and information from central and registration bodies available in the UNITED ARAB EMIRATES, whether public or private. This authorization includes, but is not limited to, the possibility of consulting, obtaining and providing data to or from Credit Protection Agencies and Risk Centers.
+
+11. After signing this Agreement, the Client will provide a completed Client Information Form, corporate documents, and other KYC (Know Your Customer) documents for analysis by CTB FINANCES.
+
+12. CTB FINANCES will conduct a compliance investigation of the Client's documents and issue a positive or negative response within 20 (twenty) business days. In case of a positive response, CTB FINANCES will open an Investment Account for the Client.
+
+13. The Client must provide adequate guarantees within 5 (five) business days after the opening of the Account, as per items 5 and 6.
+
+14. The guarantee must include at least one promissory note as collateral for the total amount associated with the Investment Account and one promissory note as collateral for the commission associated with the issuance of the guarantee instruments.
+
+15. The Client declares, under penalty of EMIRATE civil and criminal law, that the information and data provided for the opening of the investment account are accurate.
+
+16. In case of any changes to the data, the Client agrees to immediately notify CTB FINANCES using the email addresses used for contact between the Parties.
+
+17. After acceptance of the Client's registration, CTB FINANCES will inform the Client of their Investment Account number and access data for online inquiries/consultations.
+
+18. If the registration is not accepted, CTB FINANCES reserves the right not to justify or clarify the reasons for its decision.
+
+19. The Client will be solely responsible for the correct provision, confirmation, use, updating, and access to the contact email provided, exempting CTB FINANCES from any liability arising from the use of this communication system, as previously agreed between the parties.
+
+20. In case of any change, the Client must immediately communicate the new email address to CTB FINANCES, without prejudice to the stipulations regarding liability in the previous clause.
+
+21. The Investment Account will exclusively record the balance of the counter-guarantees offered by the Client and accepted by CTB FINANCES.
+
+22. The Account will be opened and maintained exclusively as an individual account and represented only by individuals over 18 years of age or by a legal entity/business, and CTB FINANCES will not provide the Client with a magnetic bank card nor perform any banking operations.
+
+23. The Client must send to CTB FINANCES, by email, to the address of the legal department, a legible digital copy of all documents pertaining to the opening of the Investment Account, in addition to those that may be requested occasionally for supplementary purposes.
+
+24. The Client declares to be aware of EMIRATES legislation governing the crimes of "MONEY LAUNDERING", as well as the supplementary regulations promulgated by the competent authorities and bodies. Consequently, the Client acknowledges that CTB FINANCES is obliged, under these laws and regulations, to report to the competent EMIRATES authorities any transactions that may indicate cases of money laundering, terrorist financing, tax evasion and other related crimes.
+
+25. The passwords registered by the Client are personal, non-transferable and confidential, and are the sole responsibility of the Client. They must be kept in absolute secrecy.
+
+26. The competent EMIRATES authorities may establish procedures relating to the operation of the Investment Account described herein. In such cases, the conditions established herein may be changed by CTB FINANCES without prior notice.
+
+27. CTB FINANCES will charge service fees for issuing account statements and other documents related to the Investment Account. The respective fees will be communicated before the requested document is issued.
+
+28. The Investment Account may be closed by CTB FINANCES or the Client upon 30 days' prior notice, without incurring any penalties. Counter-guarantees granted by the Client will be maintained or extinguished in accordance with the provisions of the respective guarantee terms or factoring-guarantee contracts.
+
+29. In case of non-compliance with the provisions of item 23, the Investment Account will be blocked. Full compliance with the stipulated formalities will be an essential condition for unblocking this restriction.
+
+30. The English language shall govern the interpretation and validity of this Agreement.
+
+31. All disputes arising out of or relating to this INVESTMENT ACCOUNT OPENING AGREEMENT FOR FINANCIAL COLLATERAL OPERATIONS shall be adjudicated exclusively in Dubai, United Arab Emirates, to the exclusion of any other jurisdiction, regardless of its potential privileges.
+
+## ACCOUNT DETAILS
+
+• Account type: INVESTMENT ACCOUNT FOR FINANCIAL COLLATERAL OPERATIONS
+• Account number: ${c.conta}
+• Company name: ${c.empresa}
+• Based: ${c.endereco}
+• ID: ${c.registro}
+• Phone number: ${c.telefone}
+• Legal representative: ${c.representante}
+• Company position: ${c.cargoRep}
+• Legal representative ID: ${c.passaporte}
+• Nationality: ${c.nacionalidade}
+
+## SIGNATURE CARD ASSOCIATED WITH THE INVESTMENT ACCOUNT
+
+Place: ${c.local}. Date: ${c.data}
+
+The purpose of this document is to authenticate and record the signature of the legal representative stated below, for the purpose of registering in the account opening process of a client account in the name of ${c.empresa} at CTB FINANCES.
+
+It is to be noted that this authentication is exclusively valid for the purposes of opening a client account and will reaffirm any other documents related to the financial relationship between the Client and CTB FINANCES.
+
+In witness whereof, and with equitable and declared intentions, the parties sign this Signature Card.`,
+  assinaturas: (c) => [
+    [`${c.ctbNome || '______________________'} - ${c.ctbCargo}`, `PIN - ${c.ctbPin}`, CTB.razao, `LICENSE No. ${CTB.licenca}`],
+    [c.empresa, `Registered No. ${c.registro}`, `${c.cargoRep}: ${c.representante}`, `Passport: ${c.passaporte}`],
+  ],
+};
+
+export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA };
 
 /** Quais modelos o sistema cria SOZINHO (como rascunho, para a equipe revisar e liberar) em cada evento. */
 export const AUTOMATICOS = {
-  instrumento_aprovada: ['nda'],
+  instrumento_aprovada: ['nda', 'abertura_conta'],
 };

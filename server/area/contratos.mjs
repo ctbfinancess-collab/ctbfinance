@@ -34,6 +34,9 @@ const assinaturasDe = (modelo, campos) => {
   return MODELOS[modelo].assinaturas(c);
 };
 
+/** Número da conta do cliente nos contratos: fixo por cliente (derivado do id), 12 dígitos com prefixo CTB. */
+export const numeroConta = (usuarioId) => { const h = String(usuarioId).replace(/[^0-9a-f]/gi, '').slice(0, 12); return 'CTB' + (BigInt('0x' + (h || '0')) % 1000000000000n).toString().padStart(12, '0'); };
+
 export function criarContratos({ db, json, lerJson, receberArquivo, log = console }) {
   const corpo = async (req, max = 60000) => { const b = await lerJson(req, max); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
   const responder = (res, e) => { if (e.status) return json(res, e.status, { erro: e.message, ...e.extra }); throw e; };
@@ -58,6 +61,8 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
       passaporte: s_(p.passportnumber) || (o.tipo === 'pf' ? s_(o.passaporte) : (!o.tipo && s_(o.nome) === representante ? s_(o.identificacao) : '')),
       cargoRep: s_(p.companyposition) || (o.tipo === 'pj' ? s_(o.cargo) : ''),
       ctbNome: s_(cfg.nome), ctbCargo: s_(cfg.cargo), ctbPin: s_(cfg.pin),
+      nacionalidade: s_(p.nationality), telefone: s_(p.phone_number),
+      conta: numeroConta(usuarioId),
     };
     const out = {};
     for (const { k, padrao } of MODELOS[modelo].campos) out[k] = txt(auto[k] || padrao || '', 300);
@@ -81,6 +86,8 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
   async function aoEvento(evento, { usuarioId, solicitacaoId = null, por }) {
     for (const modelo of AUTOMATICOS[evento] || []) {
       try {
+        // modelos "um por cliente" (ex.: abertura de conta): não cria de novo se já existe um não cancelado
+        if (MODELOS[modelo]?.umPorCliente && (await db.q(`select 1 from contratos where usuario_id=$1 and modelo=$2 and status <> 'cancelado' limit 1`, [usuarioId, modelo])).rowCount) continue;
         const r = await db.transacao((q) => criar(q, { usuarioId, modelo, solicitacaoId, por, automatico: true }));
         if (r) await db.q('insert into acoes_equipe(por_email, acao, alvo, detalhes) values ($1,$2,$3,$4::jsonb)', [por, 'contrato_automatico', r.referencia, JSON.stringify({ evento, modelo })]);
       } catch (e) { log.error('[area-cliente] contrato automático', evento, modelo, e.message); }
