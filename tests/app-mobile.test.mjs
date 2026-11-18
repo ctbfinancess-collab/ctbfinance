@@ -95,7 +95,18 @@ try {
   console.log('--- Proteção contra outros sites (CSRF)');
   await t('AP11', 'Navegador: cookie SEM Origin em alteração → 403', async () => (await fetch(BASE + '/api/cliente/perfil', { method: 'PUT', headers: { Cookie: cWeb, 'Content-Type': 'application/json' }, body: '{"city":"X"}' })).status === 403);
   await t('AP12', 'Origin de outro site → 403 mesmo com token do app', async () => (await app('PUT', '/api/cliente/perfil', { token: tok, json: { city: 'X' }, headers: { Origin: 'https://evil.example' } })).status === 403);
-  await t('AP13', '"Esqueci a senha" pelo app (sem Origin, sem cookie) → 200', async () => (await app('POST', '/api/cliente/esqueci', { json: { email: 'cliente@example.com', lang: 'pt' } })).status === 200);
+  await t('AP13', '"Esqueci a senha" pelo app (/app/esqueci, sem Origin) → 200; a rota do navegador sem Origin → 403', async () => (await app('POST', '/api/cliente/app/esqueci', { json: { email: 'cliente@example.com', lang: 'pt' } })).status === 200 && (await app('POST', '/api/cliente/esqueci', { json: { email: 'cliente@example.com', lang: 'pt' } })).status === 403);
+  console.log('--- Correções da revisão independente');
+  const doc = up.dados.documento;
+  const tokEq = lEq.dados.token;
+  await t('AP20', 'Conta da equipe pelo APP não baixa documento de outro cliente (404) e a sessão diz equipe:false', async () => (await app('GET', `/api/cliente/documentos/${doc.id}/arquivo`, { token: tokEq })).status === 404 && (await app('GET', '/api/cliente/sessao', { token: tokEq })).dados.equipe === false);
+  const semOrigin = await fetch(BASE + '/api/cliente/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'cliente@example.com', senha: 'SenhaSegura2026' }) });
+  const textoPuro = await fetch(BASE + '/api/cliente/app/entrar', { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ email: 'cliente@example.com', senha: 'SenhaSegura2026' }) });
+  await t('AP21', `Login do NAVEGADOR sem Origin → 403 (sem cookie); corpo text/plain → 415 (${semOrigin.status}, ${textoPuro.status})`, async () => semOrigin.status === 403 && !semOrigin.headers.get('set-cookie') && textoPuro.status === 415);
+  await t('AP22', 'Cookie válido + "Authorization: Basic" (proxy/homologação) → sessão do navegador continua valendo', async () => (await fetch(BASE + '/api/cliente/sessao', { headers: { Cookie: cWeb, Authorization: 'Basic dXNlcjpzZW5oYQ==' } })).status === 200);
+  await t('AP23', 'App com token "bearer" minúsculo + cookie qualquer, sem Origin → aceito', async () => (await fetch(BASE + '/api/cliente/perfil', { method: 'PUT', headers: { Authorization: `bearer ${tok}`, Cookie: '__cf_bm=abc', 'Content-Type': 'application/json' }, body: '{"city":"Abu Dhabi"}' })).status === 200);
+  const lUni = await app('POST', '/api/cliente/app/entrar', { json: { email: 'cliente@example.com', senha: 'SenhaSegura2026', dispositivo: 'iPhone de João' } });
+  await t('AP24', 'Nome do aparelho com acento é preservado', async () => lUni.status === 200 && (await db.q(`select dispositivo from sessoes where tipo='app' order by criada_em desc limit 1`)).rows[0].dispositivo === 'iPhone de João');
 
   console.log('--- Limites, bloqueio, expiração e saída');
   await db.q('delete from tentativas_login');

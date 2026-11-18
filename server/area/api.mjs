@@ -91,6 +91,9 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
   const ip = (req) => chaveDeIp(ipDoVisitante(req));
   const origemValida = (req) => origens.has(req.headers.origin || '');
   const lerJson = (req, max = 20000) => new Promise((ok, erro) => {
+    if (!/^application\/json\b/i.test(String(req.headers['content-type'] || '')) && (Number(req.headers['content-length'] || 0) > 0 || req.headers['transfer-encoding'])) {
+      req.resume(); return erro(Object.assign(new Error('tipo'), { status: 415 }));
+    }
     let t = '', n = 0, grande = false;
     // acima do limite: para de acumular e devolve 413 (a conexão é fechada DEPOIS que a resposta sai)
     req.on('data', (c) => { if (grande) return; n += c.length; if (n > max) { grande = true; req.pause(); erro(Object.assign(new Error('grande'), { status: 413, fechar: true })); } else t += c; });
@@ -118,10 +121,11 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
   // ---- sessão: conferida a cada requisição
   /** Token da requisição: cabeçalho "Authorization: Bearer" (app) tem prioridade sobre o cookie (web). */
   function tokenDaRequisicao(req) {
-    const h = String(req.headers.authorization || '');
-    const m = /^Bearer ([A-Za-z0-9_-]{20,100})$/.exec(h);
-    if (m) return { token: m[1], tipo: 'app' };
-    if (h) return { token: null, tipo: 'app' };          // cabeçalho presente mas malformado: não cai no cookie
+    const h = String(req.headers.authorization || '').trim();
+    if (/^bearer\b/i.test(h)) {
+      const m = /^bearer ([A-Za-z0-9_-]{20,100})$/i.exec(h);
+      return { token: m ? m[1] : null, tipo: 'app' };    // Bearer malformado: não cai no cookie
+    }
     const c = lerCookie(req);
     return { token: c, tipo: 'web' };
   }
@@ -142,7 +146,8 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       return null;
     }
     if (Number(s.ocioso_ms) > 60_000) await db.q('update sessoes set ultimo_uso_em=now() where id_hash=$1', [s.id_hash]);
-    return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true, sessao: s.id_hash, tipo };
+    // poderes de equipe só na sessão do navegador; o token do app é sempre de cliente comum
+    return { id: s.id, email: s.email, verificado: Boolean(s.email_verificado_em), equipe: s.equipe === true && tipo === 'web', sessao: s.id_hash, tipo };
   }
   async function criarSessao(res, req, usuarioId, { tipo = 'web', dispositivo = null } = {}) {
     const token = novoToken();
@@ -189,7 +194,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     await liberarReservas(reservas);                                                 // login legítimo não consome o limite
     await db.q(`insert into ips_confiaveis(usuario_id, ip) values ($1,$2) on conflict (usuario_id, ip) do update set ultimo_login_em=now()`, [u.id, ip(req)]);
     if (app) {
-      const d = b && typeof b.dispositivo === 'string' ? b.dispositivo.replace(/[^\w .:()-]/g, '').slice(0, 80) : null;
+      const d = b && typeof b.dispositivo === 'string' ? b.dispositivo.replace(/[^\p{L}\p{N} .:()_-]/gu, '').slice(0, 80) : null;
       const token = await criarSessao(res, req, u.id, { tipo: 'app', dispositivo: d });
       return json(res, 200, { ok: true, token, expiraEmSegundos: Math.floor(SESSAO_MAX_MS / 1000), ociosaEmSegundos: Math.floor(SESSAO_OCIOSA_MS / 1000) });
     }
@@ -418,7 +423,9 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     try {
       if (m !== 'GET' && m !== 'HEAD') {
         const origem = req.headers.origin;
-        if (origem ? !origens.has(origem) : Boolean(req.headers.cookie)) return json(res, 403, { erro: 'origem' });
+        const rotaPublicaDoApp = rota === '/api/cliente/app/entrar' || rota === '/api/cliente/app/esqueci';
+        const bearer = /^bearer [A-Za-z0-9_-]{20,100}$/i.test(String(req.headers.authorization || '').trim());
+        if (origem ? !origens.has(origem) : !(bearer || rotaPublicaDoApp)) return json(res, 403, { erro: 'origem' });
       }
       if (rota === '/api/cliente/status' && m === 'GET') {
         // diagnóstico TEMPORÁRIO (só com AREA_DIAGNOSTICO_IP=1): mostra qual IP o servidor enxerga, para conferir o proxy
@@ -428,6 +435,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       if (rota === '/api/cliente/entrar' && m === 'POST') return await entrar(req, res);
       if (rota === '/api/cliente/app/entrar' && m === 'POST') return await entrar(req, res, { app: true });
       if (rota === '/api/cliente/app/sair' && m === 'POST') return await sair(req, res);
+      if (rota === '/api/cliente/app/esqueci' && m === 'POST') return await esqueci(req, res);
       if (rota === '/api/cliente/sair' && m === 'POST') return await sair(req, res);
       if (rota === '/api/cliente/esqueci' && m === 'POST') return await esqueci(req, res);
       if (rota === '/api/cliente/redefinir' && m === 'POST') return await redefinir(req, res);
