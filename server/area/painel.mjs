@@ -200,15 +200,29 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const valor = centavos(b.valor, { negativo: true });
     const descricao = texto(b.descricao, 140);
     if (!UUID.test(String(b.contaId || '')) || !dataValida(b.data) || !descricao || valor === null || valor === 0n) return erro(res, 400, 'valor_invalido', 'Confira a conta, a data, a descrição e o valor.');
-    const conta = (await db.q('select id from contas_cliente where id=$1 and usuario_id=$2', [b.contaId, c.id])).rows[0];
-    if (!conta) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
-    const r = await db.q('insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por) values ($1,$2,$3,$4,$5,$6) returning id', [c.id, conta.id, b.data, descricao, valor.toString(), u.email]);
+    // lança e atualiza o saldo da conta na MESMA transação (trava a conta para lançamentos simultâneos)
+    const r = await db.transacao(async (q) => {
+      const conta = (await q('select id from contas_cliente where id=$1 and usuario_id=$2 for update', [b.contaId, c.id])).rows[0];
+      if (!conta) return null;
+      const mov = await q('insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por, aplicado_no_saldo) values ($1,$2,$3,$4,$5,$6,true) returning id', [c.id, conta.id, b.data, descricao, valor.toString(), u.email]);
+      const s = await q('update contas_cliente set saldo_centavos = saldo_centavos + $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1 returning saldo_centavos::text as saldo', [conta.id, valor.toString(), u.email]);
+      return { id: mov.rows[0].id, saldo: s.rows[0].saldo };
+    });
+    if (!r) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
     await registrar(u, 'financeiro_movimento', c.email, { data: b.data });
-    return json(res, 201, { id: r.rows[0].id });
+    return json(res, 201, r);
   }
   async function excluirMovimento(req, res, u, id, movId) {
     const c = await usuarioPorId(id); if (!c || !UUID.test(movId)) return erro(res, 404, 'nao_encontrado');
-    const r = await db.q('delete from movimentos_cliente where id=$1 and usuario_id=$2 returning data', [movId, c.id]);
+    // exclui e desfaz o efeito no saldo (só se aquele lançamento tinha sido somado ao saldo)
+    const r = await db.transacao(async (q) => {
+      const m = (await q('select conta_id, valor_centavos::text as v, aplicado_no_saldo from movimentos_cliente where id=$1 and usuario_id=$2', [movId, c.id])).rows[0];
+      if (!m) return { rowCount: 0 };
+      await q('select id from contas_cliente where id=$1 for update', [m.conta_id]);
+      const d = await q('delete from movimentos_cliente where id=$1 and usuario_id=$2', [movId, c.id]);
+      if (d.rowCount && m.aplicado_no_saldo) await q('update contas_cliente set saldo_centavos = saldo_centavos - $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [m.conta_id, m.v, u.email]);
+      return d;
+    });
     if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
     await registrar(u, 'financeiro_movimento_excluido', c.email);
     return json(res, 200, { ok: true });

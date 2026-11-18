@@ -76,6 +76,17 @@ try {
   const m1 = await E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-17', descricao: 'Aplicação — Fundo Global', valor: '-25.000,00' } });
   const m2 = await E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-12', descricao: 'Rendimento', valor: '1350' } });
   await t('FI4', 'Movimentações: débito negativo e crédito positivo, mais recentes primeiro', async () => { const ms = (await F(cAna)).movimentos; return m1.status === 201 && m2.status === 201 && ms.length === 2 && ms[0].valor === '-2500000' && ms[1].valor === '135000' && ms[0].moeda === 'AED'; });
+  const saldoDig = async () => (await F(cAna)).contas.find((c) => c.tipo === 'digital').saldo;
+  await t('FI4b', 'Saldo atualiza sozinho: 30.000 − 25.000 + 1.350 = 6.350,00', async () => (await saldoDig()) === '635000' && m2.dados.saldo === '635000');
+  const m3 = await E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Depósito recebido', valor: '8000' } });
+  await E('DELETE', `/clientes/${ana}/movimentos/${m3.dados.id}`);
+  await t('FI4c', 'Excluir a movimentação desfaz o efeito no saldo (volta a 6.350,00)', async () => (await saldoDig()) === '635000');
+  await Promise.all(Array.from({ length: 10 }, () => E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Rendimento', valor: '1' } })));
+  await t('FI4d', '10 lançamentos simultâneos → saldo soma todos (sem perder nenhum)', async () => (await saldoDig()) === '636000');
+  const antigo = (await db.q(`insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por) values ($1,$2,'2026-11-01','Lançamento antigo',500000,'x') returning id`, [ana, c1.dados.id])).rows[0].id;
+  await E('DELETE', `/clientes/${ana}/movimentos/${antigo}`);
+  await t('FI4e', 'Excluir lançamento antigo (anterior à regra) NÃO mexe no saldo', async () => (await saldoDig()) === '636000');
+  for (const m of (await F(cAna)).movimentos.filter((x) => x.descricao === 'Rendimento' && x.valor === '100')) await E('DELETE', `/clientes/${ana}/movimentos/${m.id}`);
   const p1 = await E('PUT', `/clientes/${ana}/posicoes`, { json: { classe: 'renda_fixa', descricao: 'Bond 2030', moeda: 'USD', valor: '400.000,00' } });
   await E('PUT', `/clientes/${ana}/posicoes`, { json: { classe: 'fundos', descricao: 'Fundo Global', moeda: 'USD', valor: '200000' } });
   await E('PUT', `/clientes/${ana}/posicoes`, { json: { id: p1.dados.id, classe: 'renda_fixa', descricao: 'Bond 2031', moeda: 'USD', valor: '410000' } });

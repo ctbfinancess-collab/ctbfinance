@@ -461,12 +461,12 @@ import '../../styles/global.css';
             el('label', { class: 'largo' }, el('span', {}, 'Descrição'), el('input', { name: 'descricao', maxlength: 140, placeholder: 'clique numa opção abaixo ou digite' })),
             el('label', {}, el('span', {}, 'Tipo'), sentido), el('label', {}, el('span', {}, 'Valor'), el('input', { name: 'valor', inputmode: 'decimal', placeholder: 'ex.: 8.000,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Lançar'));
           fm.append(chips(SUGESTOES_MOV.map(([t]) => t), (t) => { (fm.elements.namedItem('descricao') as HTMLInputElement).value = t; sentido.value = SUGESTOES_MOV.find(([x]) => x === t)![1]; (fm.elements.namedItem('valor') as HTMLInputElement).focus(); }));
-          fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); if (!String(d.get('descricao') || '').trim() || !String(d.get('valor') || '').trim()) return aviso('Preencha a descrição e o valor.', 'erro'); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada.'); });
+          fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); if (!String(d.get('descricao') || '').trim() || !String(d.get('valor') || '').trim()) return aviso('Preencha a descrição e o valor.', 'erro'); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada e saldo atualizado.'); });
           movs.append(fm);
         } else movs.append(el('p', { class: 'nota' }, 'Lance uma conta antes das movimentações.'));
         if (!f.movimentos.length) movs.append(el('p', { class: 'nota' }, 'Nenhuma movimentação.'));
         for (const m of f.movimentos.slice(0, 30)) movs.append(el('div', { class: 'fin-linha' }, el('span', {}, `${dataCivil(m.data)} · ${m.descricao}`), el('b', {}, dinheiro(m.valor, m.moeda)), el('small', {}, `${TIPOS_CONTA[m.conta_tipo] || ''} · por ${m.criado_por || '—'}`),
-          el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Excluir esta movimentação?')) enviar('DELETE', `movimentos/${m.id}`, undefined, 'Movimentação excluída.'); } }, 'Excluir')));
+          el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Excluir esta movimentação? O saldo da conta será ajustado.')) enviar('DELETE', `movimentos/${m.id}`, undefined, 'Movimentação excluída e saldo ajustado.'); } }, 'Excluir')));
         // investimentos
         const inv = el('div', { class: 'fin-sec' }, el('h4', {}, 'Investimentos (posições)'));
         if (!f.posicoes.length) inv.append(el('p', { class: 'nota' }, 'Nenhuma posição.'));

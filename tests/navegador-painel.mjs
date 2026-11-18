@@ -128,7 +128,7 @@ try {
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][3];f.final.value='3478';f.fatura.value='5.420,00';f.requestSubmit();return 1})()`);
   check('Cadastrar cartão', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('•••• 3478')`));
   const finAna = await (await fetch(`${BASE}/api/cliente/financeiro`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json();
-  check('A cliente recebe exatamente o que a equipe lançou', finAna.contas[0]?.saldo === '2875000' && finAna.movimentos[0]?.valor === '-800000' && finAna.posicoes[0]?.valor === '30000000' && finAna.cartao?.final === '3478');
+  check('A cliente recebe o que a equipe lançou; saldo já descontado (28.750 − 8.000 = 20.750)', finAna.contas[0]?.saldo === '2075000' && finAna.movimentos[0]?.valor === '-800000' && finAna.posicoes[0]?.valor === '30000000' && finAna.cartao?.final === '3478');
   await shot('p3b-financeiro');
   await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][1].scrollIntoView({block:'start'}),1`); await shot('p3c-opcoes');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");

@@ -110,6 +110,8 @@ create table if not exists movimentos_cliente (
   criado_por text
 );
 create index if not exists movimentos_cliente_usuario on movimentos_cliente(usuario_id, data desc, criado_em desc);
+-- true = o valor já foi somado ao saldo da conta (movimentos novos); lançamentos antigos ficam false e não alteram o saldo ao serem excluídos
+alter table movimentos_cliente add column if not exists aplicado_no_saldo boolean not null default false;
 create table if not exists posicoes_cliente (
   id uuid primary key default gen_random_uuid(),
   usuario_id uuid not null references usuarios(id) on delete cascade,
