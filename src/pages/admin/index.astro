@@ -175,11 +175,19 @@ import '../../styles/global.css';
           <form class="quadro convite" data-form-convite novalidate>
             <h2>Convidar cliente</h2>
             <div class="linha">
-              <label><span>Nome</span><input name="nome" maxlength="120" /></label>
-              <label><span>E-mail</span><input name="email" type="email" required maxlength="160" /></label>
+              <label><span>Tipo</span><select name="tipo" data-convite-tipo><option value="pf">Pessoa física</option><option value="pj">Pessoa jurídica (empresa)</option></select></label>
+              <label><span data-convite-nome-rot>Nome</span><input name="nome" maxlength="120" autocomplete="off" /></label>
+              <label><span>E-mail</span><input name="email" type="email" required maxlength="160" autocomplete="off" /></label>
               <label><span>Idioma do convite</span><select name="idioma"><option value="pt">Português</option><option value="en">Inglês</option></select></label>
               <button type="submit" class="botao">Enviar convite</button>
             </div>
+            <div class="linha" data-convite-pj hidden>
+              <label><span>Empresa (razão social)</span><input name="empresa" maxlength="160" autocomplete="off" /></label>
+              <label><span>Nº de registro</span><input name="registro" maxlength="60" autocomplete="off" /></label>
+              <label><span>País de constituição</span><input name="pais" maxlength="80" autocomplete="off" /></label>
+              <label><span>Cargo do representante</span><input name="cargo" maxlength="80" placeholder="ex.: CEO" autocomplete="off" /></label>
+            </div>
+            <p class="nota">O cliente completa o restante (passaporte, endereços) em Meu perfil, na Área do Cliente.</p>
           </form>
           <div class="busca"><input type="search" placeholder="Buscar por nome ou e-mail" data-busca /></div>
           <div class="tabela" data-clientes></div>
@@ -388,6 +396,8 @@ import '../../styles/global.css';
             el('button', { type: 'button', class: 'link', onclick: () => abrirFicha(c.id) }, 'Abrir ficha')));
         }
       };
+      // convite: Pessoa jurídica mostra os campos da empresa (o nome vira o do representante)
+      $<HTMLSelectElement>('[data-convite-tipo]').addEventListener('change', (e) => { const pj = (e.target as HTMLSelectElement).value === 'pj'; $('[data-convite-pj]').hidden = !pj; $('[data-convite-nome-rot]').textContent = pj ? 'Nome do representante' : 'Nome'; });
       $('[data-form-convite]').addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = e.target as HTMLFormElement; const f = new FormData(form);
@@ -395,9 +405,11 @@ import '../../styles/global.css';
         if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) return aviso('Informe um e-mail válido.', 'erro');
         const botao = form.querySelector('button')!; botao.disabled = true;
         try {
-          const r = await chamar('/equipe/clientes', { metodo: 'POST', corpo: { email, nome: String(f.get('nome')).trim(), idioma: f.get('idioma') } });
+          const pj = f.get('tipo') === 'pj';
+          if (pj && !String(f.get('empresa') || '').trim()) { botao.disabled = false; return aviso('Informe o nome da empresa (ou escolha Pessoa física).', 'erro'); }
+          const r = await chamar('/equipe/clientes', { metodo: 'POST', corpo: { email, nome: String(f.get('nome')).trim(), idioma: f.get('idioma'), tipo: pj ? 'pj' : 'pf', ...(pj ? { empresa: String(f.get('empresa') || '').trim(), registro: String(f.get('registro') || '').trim(), pais: String(f.get('pais') || '').trim(), cargo: String(f.get('cargo') || '').trim() } : {}) } });
           aviso(`Convite enviado para ${email}.`);
-          form.reset(); await atualizar();
+          form.reset(); $('[data-convite-pj]').hidden = true; $('[data-convite-nome-rot]').textContent = 'Nome'; await atualizar();
         } catch (er) { falhou(er); } finally { botao.disabled = false; }
       });
 

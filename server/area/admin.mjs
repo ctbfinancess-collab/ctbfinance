@@ -20,11 +20,12 @@ export function criarAdmin({ db, arquivos, api, avisarCliente = null }) {
 
   return {
     /** Cria a conta (sem senha) e envia o convite por e-mail; o cliente define a senha pelo link (72 h). */
-    async convidar(email, { nome = '', lang = 'pt' } = {}) {
+    async convidar(email, { nome = '', lang = 'pt', extra = null } = {}) {
       const e = norm(email);
       if (!EMAIL_RE.test(e)) throw new Error('e-mail inválido');
       const u = (await db.q(`insert into usuarios(email, idioma) values ($1, $2) on conflict (email) do update set idioma=excluded.idioma returning *`, [e, lang === 'en' ? 'en' : 'pt'])).rows[0];
-      if (nome) await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados`, [u.id, JSON.stringify({ display_name: nome })]);
+      const dados = { ...(nome ? { display_name: nome } : {}), ...(extra || {}) };
+      if (Object.keys(dados).length) await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados`, [u.id, JSON.stringify(dados)]);
       await api.enviarLinkSenha(u, u.senha_hash ? 'redefinir' : 'convite', lang);
       return { id: u.id, email: e, convite: u.senha_hash ? 'redefinicao_enviada' : 'convite_enviado' };
     },

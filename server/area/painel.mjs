@@ -104,8 +104,11 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
     // conta já existente: não mexe em nome/idioma nem reenvia por aqui (use a ficha, que respeita o bloqueio)
     if ((await db.q('select 1 from usuarios where email=$1', [email])).rowCount) return erro(res, 409, 'ja_existe', 'Este e-mail já tem conta. Abra a ficha do cliente para reenviar o acesso.');
     try {
-      const r = await adm.convidar(email, { nome, lang: idioma });
-      await registrar(u, 'convidar', email, { idioma });
+      // pessoa jurídica já no convite (opcional): grava no perfil os mesmos campos de "Meu perfil"
+      const pj = b.tipo === 'pj' ? { CompanyName: texto(b.empresa, 160), Companyregistrationnumber: texto(b.registro, 60), companycountry: texto(b.pais, 80), companyposition: texto(b.cargo, 80) } : null;
+      if (pj && !pj.CompanyName) return erro(res, 400, 'empresa_obrigatoria', 'Informe o nome da empresa (ou escolha Pessoa física).');
+      const r = await adm.convidar(email, { nome, lang: idioma, extra: pj ? Object.fromEntries(Object.entries(pj).filter(([, v]) => v)) : null });
+      await registrar(u, 'convidar', email, { idioma, tipo: pj ? 'pj' : 'pf' });
       return json(res, 200, r);
     } catch (e) {
       if (/e-mail inválido/.test(e.message)) return erro(res, 400, 'email_invalido', 'E-mail inválido.');

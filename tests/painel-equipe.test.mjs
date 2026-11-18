@@ -100,6 +100,10 @@ try {
   const nX = emails.length;
   const dupConv = await E('POST', '/clientes', { json: { email: 'cli@example.com', nome: 'Outra Pessoa', idioma: 'en' } }); await sleep(300);
   await t('PE10b', 'Convidar e-mail que já tem conta → 409; nome e idioma NÃO mudam; nenhum e-mail', async () => dupConv.status === 409 && dupConv.dados.erro === 'ja_existe' && emails.length === nX && (await db.q(`select u.idioma, p.dados->>'display_name' n from perfis p join usuarios u on u.id=p.usuario_id where u.email='cli@example.com'`)).rows[0].n === nomeAntes && (await db.q(`select idioma from usuarios where email='cli@example.com'`)).rows[0].idioma === 'pt');
+  const convPj = await E('POST', '/clientes', { json: { email: 'empresa@example.com', nome: 'Rep Exemplo', idioma: 'pt', tipo: 'pj', empresa: 'Empresa Exemplo LLC', registro: 'REG-123', pais: 'United Arab Emirates', cargo: 'CEO' } });
+  const semEmp = await E('POST', '/clientes', { json: { email: 'semempresa@example.com', tipo: 'pj', empresa: '' } });
+  const dPj = (await db.q(`select p.dados from perfis p join usuarios u on u.id=p.usuario_id where u.email='empresa@example.com'`)).rows[0]?.dados || {};
+  await t('PE9b', 'Convidar como Pessoa jurídica: empresa, registro, país e cargo já gravados no perfil; sem nome da empresa → 400', async () => convPj.status === 200 && dPj.display_name === 'Rep Exemplo' && dPj.CompanyName === 'Empresa Exemplo LLC' && dPj.Companyregistrationnumber === 'REG-123' && dPj.companycountry === 'United Arab Emirates' && dPj.companyposition === 'CEO' && semEmp.status === 400);
   const novoId = (await db.q(`select id from usuarios where email='novo@example.com'`)).rows[0].id;
   const n1 = emails.length;
   await t('PE11', 'Reenviar convite → novo e-mail (o link anterior deixa de valer)', async () => (await E('POST', `/clientes/${novoId}/reenviar`, { json: {} })).status === 200 && !!(await esperar(() => emails.length > n1)));
