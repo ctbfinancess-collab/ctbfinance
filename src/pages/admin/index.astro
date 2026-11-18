@@ -50,6 +50,7 @@ import '../../styles/global.css';
           <button role="tab" data-aba="instrumentos"><svg viewBox="0 0 24 24"><path d="M12 3 5 6v6c0 4.2 3 7.6 7 9 4-1.4 7-4.8 7-9V6z"/><path d="M9 11h6M9 14h4"/></svg><span>Instrumentos</span><b data-cont="instrumentos_abertos"></b></button>
           <button role="tab" data-aba="agendamentos"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="m9 15 2 2 4-4"/></svg><span>Agendamentos</span><b data-cont="agendamentos_pendentes"></b></button>
           <button role="tab" data-aba="documentos"><svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Documentos</span><b data-cont="documentos_em_analise"></b></button>
+          <button role="tab" data-aba="equipe"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M19 4l1.2 2.4 2.6.4-1.9 1.8.5 2.6L19 10l-2.4 1.2.5-2.6-1.9-1.8 2.6-.4z"/></svg><span>Equipe</span></button>
           <button role="tab" data-aba="registro"><svg viewBox="0 0 24 24"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/><circle cx="18" cy="18" r="3"/></svg><span>Registro</span></button>
         </nav>
         <p class="menu-titulo">Em breve</p>
@@ -210,6 +211,20 @@ import '../../styles/global.css';
           <div data-documentos></div>
         </div>
 
+        <div data-painel="equipe" hidden>
+          <form class="quadro convite" data-form-time novalidate>
+            <h2>Adicionar à equipe</h2>
+            <div class="linha">
+              <label><span>Nome</span><input name="nome" maxlength="120" autocomplete="off" /></label>
+              <label><span>E-mail</span><input name="email" type="email" maxlength="160" autocomplete="off" /></label>
+              <label><span>Idioma do convite</span><select name="idioma"><option value="pt">Português</option><option value="en">Inglês</option></select></label>
+              <button type="submit" class="botao">Adicionar</button>
+            </div>
+            <p class="nota">A pessoa recebe um e-mail para criar a senha e entra pelo endereço ctbfinances.ae/admin. Só a titular adiciona ou remove pessoas.</p>
+          </form>
+          <div data-time></div>
+        </div>
+
         <div data-painel="registro" hidden>
           <div class="tabela" data-registro></div>
         </div>
@@ -262,7 +277,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato', ver_instrumento: 'Abriu solicitação de instrumento', instrumento_mensagem: 'Enviou mensagem (instrumento)', instrumento_nota_interna: 'Registrou nota interna (instrumento)', instrumento_responsavel: 'Atribuiu responsável (instrumento)', instrumento_instituicao: 'Registrou instituição (instrumento)', instrumento_evidencia: 'Anexou comprovante (instrumento)', instrumento_analise_documental: 'Instrumento: análise documental', instrumento_documentacao_solicitada: 'Instrumento: pediu documentos', instrumento_analise_interna: 'Instrumento: análise interna', instrumento_encaminhada: 'Instrumento: encaminhou à instituição', instrumento_aguardando_instituicao: 'Instrumento: aguardando instituição', instrumento_aprovada: 'Instrumento: aprovada pela instituição', instrumento_recusada: 'Instrumento: recusou', instrumento_cancelada: 'Instrumento: cancelou', instrumento_concluida: 'Instrumento: concluiu', contrato_gerado: 'Gerou contrato', contrato_editado: 'Editou contrato', contrato_liberado: 'Liberou contrato ao cliente', contrato_cancelado: 'Cancelou contrato', contrato_automatico: 'Contrato criado automaticamente', contrato_pdf: 'Abriu PDF do contrato', contratos_assinatura_ctb: 'Definiu quem assina pela CTB' };
+      const ACOES: Record<string, string> = { equipe_adicionou: 'Adicionou à equipe', equipe_removeu: 'Removeu da equipe', equipe_aprovador_concedido: 'Deu permissão de aprovar', equipe_aprovador_retirado: 'Tirou permissão de aprovar', convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato', ver_instrumento: 'Abriu solicitação de instrumento', instrumento_mensagem: 'Enviou mensagem (instrumento)', instrumento_nota_interna: 'Registrou nota interna (instrumento)', instrumento_responsavel: 'Atribuiu responsável (instrumento)', instrumento_instituicao: 'Registrou instituição (instrumento)', instrumento_evidencia: 'Anexou comprovante (instrumento)', instrumento_analise_documental: 'Instrumento: análise documental', instrumento_documentacao_solicitada: 'Instrumento: pediu documentos', instrumento_analise_interna: 'Instrumento: análise interna', instrumento_encaminhada: 'Instrumento: encaminhou à instituição', instrumento_aguardando_instituicao: 'Instrumento: aguardando instituição', instrumento_aprovada: 'Instrumento: aprovada pela instituição', instrumento_recusada: 'Instrumento: recusou', instrumento_cancelada: 'Instrumento: cancelou', instrumento_concluida: 'Instrumento: concluiu', contrato_gerado: 'Gerou contrato', contrato_editado: 'Editou contrato', contrato_liberado: 'Liberou contrato ao cliente', contrato_cancelado: 'Cancelou contrato', contrato_automatico: 'Contrato criado automaticamente', contrato_pdf: 'Abriu PDF do contrato', contratos_assinatura_ctb: 'Definiu quem assina pela CTB' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -305,9 +320,9 @@ import '../../styles/global.css';
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
-      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', operacoes: 'Operações — transferências e câmbio solicitados pelos clientes', instrumentos: 'Instrumentos financeiros — SBLC, LC, garantias (solicitação e acompanhamento)', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
+      const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', interessados: 'Interessados — pedidos recebidos pelos formulários do site', operacoes: 'Operações — transferências e câmbio solicitados pelos clientes', instrumentos: 'Instrumentos financeiros — SBLC, LC, garantias (solicitação e acompanhamento)', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' , equipe: 'Equipe — quem acessa o Admin e quem aprova instrumentos' };
       // histórico: cada aba e cada ficha viram um passo; "Voltar" (e o botão do navegador) retornam ao anterior
-      const ABAS = ['geral', 'interessados', 'operacoes', 'instrumentos', 'clientes', 'agendamentos', 'documentos', 'registro'];
+      const ABAS = ['geral', 'interessados', 'operacoes', 'instrumentos', 'clientes', 'agendamentos', 'documentos', 'equipe', 'registro'];
       let passos = 0;
       const btnVoltar = $('[data-voltar]');
       const marcarVoltar = () => (btnVoltar.hidden = passos <= 0 && abaAtual === 'geral' && !ficha.open);
@@ -1036,6 +1051,32 @@ import '../../styles/global.css';
       $('[data-doc-status]').addEventListener('change', () => carregar.documentos().catch(falhou));
 
       // ---- registro
+      carregar.equipe = async () => {
+        const v = nova('equipe'); const d = await chamar('/equipe/time'); if (!vigente('equipe', v)) return;
+        $('[data-form-time]').hidden = !d.gestor;
+        const box = $('[data-time]'); box.replaceChildren();
+        if (!d.gestor) box.append(el('p', { class: 'nota' }, 'Somente a titular gerencia a equipe.'));
+        box.append(el('div', { class: 'linha-t cab time' }, el('span', {}, 'Pessoa'), el('span', {}, 'Situação'), el('span', {}, 'Aprova instrumentos'), el('span', {}, '')));
+        for (const m of d.membros) {
+          const acoes = el('span', {});
+          if (d.gestor && m.ativo && m.id !== d.eu) {
+            acoes.append(el('button', { type: 'button', class: 'link', onclick: async () => { try { await chamar(`/equipe/time/${m.id}/aprovador`, { metodo: 'POST', corpo: { ativo: !m.aprovador } }); aviso(m.aprovador ? 'Permissão de aprovar retirada.' : 'Agora esta pessoa também aprova instrumentos.'); await carregar.equipe(); } catch (e) { falhou(e); } } }, m.aprovador ? 'Tirar permissão de aprovar' : 'Dar permissão de aprovar'),
+              el('button', { type: 'button', class: 'link perigo', onclick: async () => { if (!confirm(`Remover ${m.email} da equipe? O acesso ao Admin termina na hora.`)) return; try { await chamar(`/equipe/time/${m.id}/revogar`, { metodo: 'POST', corpo: {} }); aviso('Removido da equipe.'); await carregar.equipe(); } catch (e) { falhou(e); } } }, 'Remover'));
+          }
+          const sit = !m.ativo ? `Removido em ${dataHora(m.revogado_em)}` : m.bloqueado ? 'Bloqueado' : m.acesso_definido ? 'Ativo' : 'Convite enviado (sem senha)';
+          box.append(el('div', { class: 'linha-t time' + (m.ativo ? '' : ' feito') }, el('span', {}, el('strong', {}, m.nome || m.email), el('small', {}, m.email + (m.id === d.eu ? ' · você' : ''))), el('span', {}, sit), el('span', {}, m.ativo && m.aprovador ? 'Sim' : '—'), acoes));
+        }
+      };
+      $('[data-form-time]').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const form = e.target as HTMLFormElement; const f = new FormData(form);
+        const email = String(f.get('email') || '').trim();
+        if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) return aviso('Informe um e-mail válido.', 'erro');
+        if (!confirm(`Dar acesso ao Admin para ${email}? Essa pessoa verá todos os clientes e documentos.`)) return;
+        const botao = form.querySelector('button[type=submit]') as HTMLButtonElement; botao.disabled = true;
+        try { const r = await chamar('/equipe/time', { metodo: 'POST', corpo: { email, nome: String(f.get('nome') || '').trim(), idioma: f.get('idioma') } }); aviso(r.convite ? `Convite enviado para ${email}.` : `${email} agora tem acesso ao Admin.`); form.reset(); await carregar.equipe(); }
+        catch (er) { falhou(er); } finally { botao.disabled = false; }
+      });
       carregar.registro = async () => {
         const v = nova('registro'); const { acoes } = await chamar('/equipe/registro'); if (!vigente('registro', v)) return;
         const box = $('[data-registro]'); box.replaceChildren();
@@ -1221,6 +1262,9 @@ import '../../styles/global.css';
       .dados { display: grid; grid-template-columns: 170px 1fr; gap: 0.4rem 1rem; margin: 0.4rem 0 0.8rem; font-size: 0.9rem; }
       .dados dt { color: var(--texto-2); }
       .dados dd { margin: 0; overflow-wrap: anywhere; }
+      .linha-t.time { grid-template-columns: 2fr 1.2fr 1fr 2fr; }
+      .linha-t.time small { display: block; color: var(--texto-suave, #c9b79c); font-size: 0.8rem; }
+      .link.perigo { color: #d9ae6b; }
       .bloco { border-top: 1px solid var(--borda); padding-top: 0.8rem; margin-top: 0.8rem; }
       .ficha-abas { position: sticky; top: 4.1rem; z-index: 1; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.7rem 0; margin-bottom: 0.6rem; background: #22140d; border-bottom: 1px solid var(--borda); }
       .ficha-abas button { font: inherit; font-size: 0.85rem; padding: 0.4rem 0.85rem; border-radius: 999px; cursor: pointer; background: transparent; color: var(--texto); border: 1px solid var(--borda-forte); }

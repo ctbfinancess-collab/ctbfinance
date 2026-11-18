@@ -192,8 +192,26 @@ try {
   await t('PE51', 'Convidar de novo → 409 "já tem conta", sem novo e-mail', async () => { const n = emails.length; const r = await E('POST', `/interessados/${lead.id}/convidar`, { json: {} }); await sleep(300); return r.status === 409 && emails.length === n; });
 
   console.log('--- Registro e sessão da equipe');
+  console.log('--- Equipe (usuários do Admin)');
+  const c2 = await contaComSenha('chefe2@example.com', 'SenhaSegura2026');
+  const naoGestor = await req('POST', '/api/cliente/equipe/time', { cookie: c2, json: { email: 'nova.equipe@example.com' } });
+  await t('PE40', 'Quem não é aprovadora não adiciona pessoas à equipe (403)', async () => naoGestor.status === 403);
+  await adm.aprovadorInstrumentos('chefe@example.com', true);
+  const nE = emails.length;
+  const addT = await E('POST', '/time', { json: { email: 'Nova.Equipe@example.com', nome: 'Pessoa Nova', idioma: 'pt' } }); await sleep(300);
+  const listaT = (await E('GET', '/time')).dados;
+  const novaT = listaT.membros.find((m) => m.email === 'nova.equipe@example.com');
+  await t('PE41', 'Titular adiciona pessoa nova: convite por e-mail, já aparece como equipe ativa (sem senha ainda)', async () => addT.status === 200 && addT.dados.convite === true && emails.length > nE && !!novaT && novaT.ativo && !novaT.acesso_definido && listaT.gestor === true);
+  await t('PE42', 'Adicionar de novo → 409; e-mail inválido → 400', async () => (await E('POST', '/time', { json: { email: 'nova.equipe@example.com' } })).status === 409 && (await E('POST', '/time', { json: { email: 'x' } })).status === 400);
+  const idC2 = listaT.membros.find((m) => m.email === 'chefe2@example.com').id;
+  const apT = await E('POST', `/time/${idC2}/aprovador`, { json: { ativo: true } });
+  await t('PE43', 'Titular dá permissão de aprovar a outra pessoa; não pode tirar a própria (409)', async () => apT.status === 200 && (await db.q('select aprova_instrumentos from equipe where usuario_id=$1', [idC2])).rows[0].aprova_instrumentos === true && (await E('POST', `/time/${chefeId}/aprovador`, { json: { ativo: false } })).status === 409);
+  await E('POST', `/time/${idC2}/aprovador`, { json: { ativo: false } });
+  const remT = await E('POST', `/time/${idC2}/revogar`);
+  await t('PE44', 'Remover da equipe: acesso termina na hora (sessão encerrada), aparece como removido; não pode remover a si mesma', async () => remT.status === 200 && (await req('GET', '/api/cliente/equipe/resumo', { cookie: c2 })).status === 401 && (await E('GET', '/time')).dados.membros.find((m) => m.id === idC2).ativo === false && (await E('POST', `/time/${chefeId}/revogar`)).status === 409);
+  await adm.aprovadorInstrumentos('chefe@example.com', false);
   const reg = (await E('GET', '/registro')).dados.acoes.map((a) => a.acao);
-  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento', 'editar_dados'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
+  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'equipe_adicionou', 'equipe_removeu', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento', 'editar_dados'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
   await adm.revogarEquipe('chefe@example.com');
   await t('PE35', 'Papel de equipe revogado → painel some na hora (404), mesma sessão', async () => (await E('GET', '/resumo')).status === 404);
   await adm.concederEquipe('chefe@example.com');

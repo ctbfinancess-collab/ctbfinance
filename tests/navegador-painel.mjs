@@ -264,6 +264,13 @@ try {
   await ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-form-rejeitar]');f.pt.value='Comprovante desatualizado: envie um dos últimos 3 meses.';f.requestSubmit();return 1})()`);
   check('Rejeitar com orientação → lista vazia; a Ana vê a orientação', await waitFor(`document.querySelector('[data-documentos]').innerText.includes('Nenhum documento esperando')`) && (await (await fetch(`${BASE}/api/cliente/documentos`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json()).documentos.some((d) => d.orientacao?.pt?.includes('últimos 3 meses')));
 
+  console.log('--- Equipe');
+  await adm.aprovadorInstrumentos('chefe@example.com', true);
+  await clicar('[data-aba=equipe]');
+  check('Aba Equipe: lista a equipe e mostra o formulário para a titular', await waitFor(`(()=>{const t=document.querySelector('[data-time]').innerText;return t.includes('chefe@example.com') && t.includes('você') && !document.querySelector('[data-form-time]').hidden})()`));
+  await ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-form-time]');f.nome.value='Equipe Nova';f.email.value='equipe.nova@example.com';f.requestSubmit();return 1})()`);
+  check('Adicionar à equipe → "Convite enviado" e a pessoa aparece na lista', await waitFor(`${msg}.includes('Convite enviado para equipe.nova@example.com') && document.querySelector('[data-time]').innerText.includes('Equipe Nova')`));
+  await shot('p5z-equipe');
   console.log('--- Registro, celular e saída');
   await clicar('[data-aba=registro]');
   check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Gerou contrato','Editou contrato','Liberou contrato ao cliente','Recusou operação','Concluiu operação','Lançou operação no extrato','Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));

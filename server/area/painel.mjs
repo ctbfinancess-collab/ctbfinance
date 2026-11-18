@@ -470,6 +470,54 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
     return json(res, 200, { ok: true });
   }
 
+  // ---- Equipe (usuários do Admin). Só quem é APROVADOR (a titular) adiciona, remove ou dá a permissão de aprovar.
+  const ehGestor = async (u) => (await db.q('select 1 from equipe where usuario_id=$1 and ativo and aprova_instrumentos', [u.id])).rowCount > 0;
+  async function timeListar(res, u) {
+    const r = await db.q(`select u.id, u.email, p.dados->>'display_name' as nome, e.ativo, e.aprova_instrumentos as aprovador, e.concedido_em, e.revogado_em,
+                                 u.senha_hash is not null as acesso_definido, u.bloqueado
+                            from equipe e join usuarios u on u.id=e.usuario_id left join perfis p on p.usuario_id=u.id
+                           order by e.ativo desc, u.email`);
+    return json(res, 200, { membros: r.rows, gestor: await ehGestor(u), eu: u.id });
+  }
+  async function timeAdicionar(req, res, u) {
+    if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode adicionar pessoas à equipe.');
+    const b = await corpo(req, 2000);
+    const email = String(b.email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(email)) return erro(res, 400, 'email_invalido', 'E-mail inválido.');
+    const nome = texto(b.nome, 120); const idioma = b.idioma === 'en' ? 'en' : 'pt';
+    const existe = (await db.q('select id, senha_hash is not null as tem_senha from usuarios where email=$1', [email])).rows[0];
+    if (existe && (await db.q('select 1 from equipe where usuario_id=$1 and ativo', [existe.id])).rowCount) return erro(res, 409, 'ja_e_equipe', 'Esta pessoa já faz parte da equipe.');
+    // conta nova (ou sem senha): convite para criar a senha; conta existente com senha: só ganha acesso ao Admin
+    if (!existe || !existe.tem_senha) await adm.convidar(email, { nome, lang: idioma });
+    else if (nome) await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do nothing`, [existe.id, JSON.stringify({ display_name: nome })]);
+    const r = await adm.concederEquipe(email);
+    await registrar(u, 'equipe_adicionou', email, { convite: !existe || !existe.tem_senha });
+    return json(res, 200, { ...r, convite: !existe || !existe.tem_senha });
+  }
+  async function timeRevogar(res, u, id) {
+    if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode remover pessoas da equipe.');
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    if (id === u.id) return erro(res, 409, 'nao_a_si', 'Você não pode remover o seu próprio acesso.');
+    const m = (await db.q('select u.email from equipe e join usuarios u on u.id=e.usuario_id where e.usuario_id=$1 and e.ativo', [id])).rows[0];
+    if (!m) return erro(res, 404, 'nao_encontrado');
+    await adm.revogarEquipe(m.email);
+    await db.q('update equipe set aprova_instrumentos=false where usuario_id=$1', [id]);
+    await db.q('update sessoes set revogada_em=now() where usuario_id=$1 and revogada_em is null', [id]);   // sai do Admin na hora
+    await registrar(u, 'equipe_removeu', m.email);
+    return json(res, 200, { ok: true });
+  }
+  async function timeAprovador(req, res, u, id) {
+    if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode mudar quem aprova instrumentos.');
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 500); const sim = b.ativo === true;
+    if (id === u.id && !sim) return erro(res, 409, 'nao_a_si', 'Você não pode tirar a sua própria permissão de aprovadora.');
+    const m = (await db.q('select u.email from equipe e join usuarios u on u.id=e.usuario_id where e.usuario_id=$1 and e.ativo', [id])).rows[0];
+    if (!m) return erro(res, 404, 'nao_encontrado');
+    await db.q('update equipe set aprova_instrumentos=$2 where usuario_id=$1', [id, sim]);
+    await registrar(u, sim ? 'equipe_aprovador_concedido' : 'equipe_aprovador_retirado', m.email);
+    return json(res, 200, { ok: true, aprovador: sim });
+  }
+
   async function registro(res) {
     const r = await db.q('select por_email, acao, alvo, detalhes, em from acoes_equipe order by em desc limit 200');
     return json(res, 200, { acoes: r.rows });
@@ -518,6 +566,12 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
     if (p[0] === 'instrumentos' && instrumentos) return instrumentos.equipe(req, res, url, u, p, registrar);
     if (p[0] === 'contratos' && contratos) return contratos.equipe(req, res, url, u, p, registrar);
     if (p[0] === 'registro' && p.length === 1 && m === 'GET') return registro(res);
+    if (p[0] === 'time') {
+      if (p.length === 1 && m === 'GET') return timeListar(res, u);
+      if (p.length === 1 && m === 'POST') return timeAdicionar(req, res, u);
+      if (p.length === 3 && p[2] === 'revogar' && m === 'POST') return timeRevogar(res, u, p[1]);
+      if (p.length === 3 && p[2] === 'aprovador' && m === 'POST') return timeAprovador(req, res, u, p[1]);
+    }
     return json(res, 404, { erro: 'rota' });
   };
 }
