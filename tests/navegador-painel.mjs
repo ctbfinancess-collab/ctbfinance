@@ -63,7 +63,7 @@ let ok = 0, fail = 0; const check = (d, c) => { if (c) { ok++; console.log('✅'
 const clicar = (sel) => ev(`(()=>{const e=document.querySelector('${sel}');e.click();return 1})()`);
 const clicarTexto = (txt, raiz = 'document') => ev(`(()=>{const b=[...${raiz}.querySelectorAll('button')].find(x=>x.textContent.trim()==='${txt}' && x.getClientRects().length);if(!b)return 0;b.click();return 1})()`);
 const entrarPainel = (e, s) => ev(`(()=>{const f=document.querySelector('[data-form-entrar]');f.email.value='${e}';f.senha.value='${s}';f.requestSubmit();return 1})()`);
-const msg = `((document.querySelector('[data-msg]')||{}).textContent||'')`;
+const msg = `(((document.querySelector('[data-msg]')||{}).textContent||'') + ' ' + ((document.querySelector('[data-msg-ficha]')||{}).textContent||''))`;
 
 try {
   await send('Runtime.enable'); await send('Page.enable');
@@ -113,8 +113,10 @@ try {
   await clicarTexto('Desbloquear acesso', "document.querySelector('[data-ficha]')");
   check('Desbloquear', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Bloquear acesso')`));
   check('Ficha mostra o bloco Financeiro vazio', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Contas e saldos') && document.querySelector('[data-ficha]').innerText.includes('Nenhuma conta lançada')`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.saldo.value='';f.requestSubmit();return 1})()`);
+  check('Salvar com o saldo vazio → aviso VISÍVEL dentro da ficha', await waitFor(`(()=>{const m=document.querySelector('[data-msg-ficha]');return !m.hidden && m.textContent.includes('Digite o saldo') && m.getClientRects().length>0})()`));
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.tipo.value='digital';f.moeda.value='AED';f.saldo.value='28.750,00';f.requestSubmit();return 1})()`);
-  check('Lançar saldo AED 28.750,00 pela ficha', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('AED 28.750,00')`));
+  check('Lançar saldo AED 28.750,00 pela ficha → "✓ Saldo salvo." dentro da ficha', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('AED 28.750,00') && document.querySelector('[data-msg-ficha]').textContent.includes('Saldo salvo')`));
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];f.descricao.value='Transferência SWIFT';f.sentido.value='debito';f.valor.value='8.000,00';f.requestSubmit();return 1})()`);
   check('Lançar débito no extrato', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('− AED 8.000,00')`));
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][2];f.classe.value='renda_fixa';f.descricao.value='Bond 2030';f.moeda.value='USD';f.valor.value='300.000,00';f.requestSubmit();return 1})()`);

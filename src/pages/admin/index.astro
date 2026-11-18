@@ -172,6 +172,7 @@ import '../../styles/global.css';
     <dialog class="ficha" data-ficha>
       <div class="ficha__topo"><h2 data-ficha-titulo></h2><button type="button" class="fechar" data-fechar aria-label="Fechar">×</button></div>
       <div data-ficha-corpo></div>
+      <p class="msg msg-janela" data-msg-ficha hidden role="status" aria-live="polite"></p>
     </dialog>
 
     <!-- Rejeitar documento -->
@@ -210,7 +211,13 @@ import '../../styles/global.css';
 
       let eu: { email: string } | null = null;
       const vista = (v: string) => $$('[data-vista]').forEach((x) => (x.hidden = x.dataset.vista !== v));
-      const aviso = (t: string, tipo: 'ok' | 'erro' = 'ok') => { const m = $('[data-msg]'); m.hidden = false; m.textContent = t; m.dataset.tipo = tipo; clearTimeout((aviso as any).t); (aviso as any).t = setTimeout(() => (m.hidden = true), 7000); };
+      const aviso = (t: string, tipo: 'ok' | 'erro' = 'ok') => {
+        // com a ficha aberta, a mensagem aparece DENTRO dela (fixa embaixo); senão, no topo da página
+        const fichaAberta = (document.querySelector('[data-ficha]') as HTMLDialogElement | null)?.open;
+        const m = fichaAberta ? $('[data-msg-ficha]') : $('[data-msg]');
+        m.hidden = false; m.textContent = (tipo === 'ok' ? '✓ ' : '⚠ ') + t; m.dataset.tipo = tipo;
+        clearTimeout((m as any).t); (m as any).t = setTimeout(() => (m.hidden = true), tipo === 'ok' ? 4000 : 9000);
+      };
 
       async function chamar(rota: string, opts: { metodo?: string; corpo?: unknown } = {}) {
         const r = await fetch(API + rota, { method: opts.metodo || 'GET', credentials: 'same-origin', headers: opts.corpo !== undefined ? { 'Content-Type': 'application/json' } : {}, body: opts.corpo !== undefined ? JSON.stringify(opts.corpo) : undefined });
@@ -410,7 +417,7 @@ import '../../styles/global.css';
         let f: any;
         try { f = await chamar(`/equipe/clientes/${c.id}/financeiro`); } catch (e) { box.replaceChildren(el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Não foi possível carregar.')); return; }
         const recarregar = () => blocoFinanceiro(c, box);
-        const enviar = async (metodo: string, rota: string, corpo?: any, ok = 'Salvo.') => { try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo, corpo }); aviso(ok); await recarregar(); } catch (e) { falhou(e); } };
+        const enviar = async (metodo: string, rota: string, corpo?: any, ok = 'Salvo.') => { try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo, corpo }); await recarregar(); aviso(ok); } catch (e) { falhou(e); } };
         box.replaceChildren(el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'O cliente vê estes dados nas abas Início, Conta, Investimentos e Cartões (site e app). Valores como 28.750,00; débito com sinal de menos.'));
         // contas
         const contas = el('div', { class: 'fin-sec' }, el('h4', {}, 'Contas e saldos'));
@@ -420,8 +427,8 @@ import '../../styles/global.css';
         const fc = el('form', { class: 'fin-form' }) as HTMLFormElement;
         const tipoSel = opcoes(el('select', { name: 'tipo' }) as HTMLSelectElement, Object.entries(TIPOS_CONTA));
         const moedaSel = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
-        fc.append(el('label', {}, el('span', {}, 'Conta'), tipoSel), el('label', {}, el('span', {}, 'Moeda'), moedaSel), el('label', {}, el('span', {}, 'Saldo'), el('input', { name: 'saldo', inputmode: 'decimal', placeholder: '28.750,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Salvar saldo'));
-        fc.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fc); enviar('PUT', 'contas', { tipo: d.get('tipo'), moeda: d.get('moeda'), saldo: String(d.get('saldo') || '') }, 'Saldo salvo.'); });
+        fc.append(el('label', {}, el('span', {}, 'Conta'), tipoSel), el('label', {}, el('span', {}, 'Moeda'), moedaSel), el('label', {}, el('span', {}, 'Saldo'), el('input', { name: 'saldo', inputmode: 'decimal', placeholder: 'ex.: 28.750,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Salvar saldo'));
+        fc.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fc); if (!String(d.get('saldo') || '').trim()) return aviso('Digite o saldo (ex.: 28.750,00).', 'erro'); enviar('PUT', 'contas', { tipo: d.get('tipo'), moeda: d.get('moeda'), saldo: String(d.get('saldo') || '') }, 'Saldo salvo.'); });
         contas.append(fc);
         // movimentações
         const movs = el('div', { class: 'fin-sec' }, el('h4', {}, 'Movimentações (extrato)'));
@@ -431,8 +438,8 @@ import '../../styles/global.css';
           const sentido = opcoes(el('select', { name: 'sentido' }) as HTMLSelectElement, [['debito', 'Débito (saída)'], ['credito', 'Crédito (entrada)']]);
           fm.append(el('label', {}, el('span', {}, 'Conta'), contaSel), el('label', {}, el('span', {}, 'Data'), el('input', { name: 'data', type: 'date', value: new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10) })),
             el('label', { class: 'largo' }, el('span', {}, 'Descrição'), el('input', { name: 'descricao', maxlength: 140, placeholder: 'Ex.: Transferência internacional (SWIFT)' })),
-            el('label', {}, el('span', {}, 'Tipo'), sentido), el('label', {}, el('span', {}, 'Valor'), el('input', { name: 'valor', inputmode: 'decimal', placeholder: '8.000,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Lançar'));
-          fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada.'); });
+            el('label', {}, el('span', {}, 'Tipo'), sentido), el('label', {}, el('span', {}, 'Valor'), el('input', { name: 'valor', inputmode: 'decimal', placeholder: 'ex.: 8.000,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Lançar'));
+          fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); if (!String(d.get('descricao') || '').trim() || !String(d.get('valor') || '').trim()) return aviso('Preencha a descrição e o valor.', 'erro'); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada.'); });
           movs.append(fm);
         } else movs.append(el('p', { class: 'nota' }, 'Lance uma conta antes das movimentações.'));
         if (!f.movimentos.length) movs.append(el('p', { class: 'nota' }, 'Nenhuma movimentação.'));
@@ -445,11 +452,11 @@ import '../../styles/global.css';
         const idPos = el('input', { type: 'hidden', name: 'id' }) as HTMLInputElement;
         const classeSel = opcoes(el('select', { name: 'classe' }) as HTMLSelectElement, Object.entries(CLASSES));
         const moedaPos = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
-        const descPos = el('input', { name: 'descricao', maxlength: 120, placeholder: 'Ex.: Bond 2030' }) as HTMLInputElement;
-        const valPos = el('input', { name: 'valor', inputmode: 'decimal', placeholder: '400.000,00' }) as HTMLInputElement;
+        const descPos = el('input', { name: 'descricao', maxlength: 120, placeholder: 'ex.: Bond 2030' }) as HTMLInputElement;
+        const valPos = el('input', { name: 'valor', inputmode: 'decimal', placeholder: 'ex.: 400.000,00' }) as HTMLInputElement;
         const btnPos = el('button', { type: 'submit', class: 'botao pequeno' }, 'Adicionar posição') as HTMLButtonElement;
         fp.append(idPos, el('label', {}, el('span', {}, 'Classe'), classeSel), el('label', { class: 'largo' }, el('span', {}, 'Descrição'), descPos), el('label', {}, el('span', {}, 'Moeda'), moedaPos), el('label', {}, el('span', {}, 'Valor'), valPos), btnPos);
-        fp.addEventListener('submit', (e) => { e.preventDefault(); enviar('PUT', 'posicoes', { id: idPos.value || undefined, classe: classeSel.value, descricao: descPos.value, moeda: moedaPos.value, valor: valPos.value }, idPos.value ? 'Posição atualizada.' : 'Posição adicionada.'); });
+        fp.addEventListener('submit', (e) => { e.preventDefault(); if (!descPos.value.trim() || !valPos.value.trim()) return aviso('Preencha a descrição e o valor da posição.', 'erro'); enviar('PUT', 'posicoes', { id: idPos.value || undefined, classe: classeSel.value, descricao: descPos.value, moeda: moedaPos.value, valor: valPos.value }, idPos.value ? 'Posição atualizada.' : 'Posição adicionada.'); });
         for (const ps of f.posicoes) inv.append(el('div', { class: 'fin-linha' }, el('span', {}, `${CLASSES[ps.classe]} · ${ps.descricao}`), el('b', {}, dinheiro(ps.valor, ps.moeda)), el('small', {}, `por ${ps.atualizado_por || '—'} em ${dataHora(ps.atualizado_em)}`),
           el('span', {}, el('button', { type: 'button', class: 'link', onclick: () => { idPos.value = ps.id; classeSel.value = ps.classe; descPos.value = ps.descricao; moedaPos.value = ps.moeda; valPos.value = centavosTexto(ps.valor); btnPos.textContent = 'Salvar correção'; descPos.focus(); } }, 'Corrigir'),
             el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Excluir esta posição?')) enviar('DELETE', `posicoes/${ps.id}`, undefined, 'Posição excluída.'); } }, 'Excluir'))));
@@ -466,7 +473,7 @@ import '../../styles/global.css';
           el('label', {}, el('span', {}, 'Situação'), sit), el('label', {}, el('span', {}, 'Moeda'), moedaK), el('label', {}, el('span', {}, 'Limite'), el('input', { name: 'limite', inputmode: 'decimal', value: centavosTexto(k?.limite ?? null) })),
           el('label', {}, el('span', {}, 'Fatura atual'), el('input', { name: 'fatura', inputmode: 'decimal', value: centavosTexto(k?.fatura ?? null) })), el('label', {}, el('span', {}, 'Vencimento'), el('input', { name: 'vencimento', type: 'date', value: k?.vencimento || '' })),
           el('button', { type: 'submit', class: 'botao pequeno' }, k ? 'Salvar cartão' : 'Cadastrar cartão'));
-        fk.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fk); enviar('PUT', 'cartao', { final: d.get('final'), bandeira: d.get('bandeira'), situacao: d.get('situacao'), moeda: d.get('moeda'), limite: String(d.get('limite') || ''), fatura: String(d.get('fatura') || ''), vencimento: String(d.get('vencimento') || '') }, 'Cartão salvo.'); });
+        fk.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fk); if (!/^\d{4}$/.test(String(d.get('final') || ''))) return aviso('Digite os 4 últimos dígitos do cartão.', 'erro'); enviar('PUT', 'cartao', { final: d.get('final'), bandeira: d.get('bandeira'), situacao: d.get('situacao'), moeda: d.get('moeda'), limite: String(d.get('limite') || ''), fatura: String(d.get('fatura') || ''), vencimento: String(d.get('vencimento') || '') }, 'Cartão salvo.'); });
         cart.append(fk);
         if (k) cart.append(el('button', { type: 'button', class: 'link', onclick: () => { if (confirm('Remover o cartão deste cliente?')) enviar('PUT', 'cartao', { remover: true }, 'Cartão removido.'); } }, 'Remover cartão'));
         box.append(contas, movs, inv, cart);
@@ -759,6 +766,8 @@ import '../../styles/global.css';
       .nota { color: var(--texto-2); font-size: 0.86rem; margin: 0.4rem 0; }
       .nota.ok { color: var(--verde); }
       .msg { margin: 0 0 1rem; padding: 0.75rem 1rem; font-size: 0.9rem; border-radius: 10px; border: 1px solid rgba(217, 174, 107, 0.5); background: rgba(217, 174, 107, 0.12); color: var(--texto); }
+      .msg-janela { position: sticky; bottom: 0; z-index: 2; margin: 1rem 0 0; box-shadow: 0 -10px 24px rgba(10, 5, 3, 0.55); font-weight: 600; }
+      .msg-janela:not([data-tipo='erro']) { background: #3a2a12; border-color: rgba(240, 211, 156, 0.7); color: #f0d39c; }
       .msg[data-tipo='erro'], .cartao-entrar .msg { border-color: rgba(232, 214, 183, 0.55); background: rgba(232, 214, 183, 0.08); }
 
       /* clientes / listas */
