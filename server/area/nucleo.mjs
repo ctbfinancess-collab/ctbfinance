@@ -47,6 +47,21 @@ export function ipDoVisitante(req) {
   return IP_RE.test(v) ? v : String(req.socket.remoteAddress || '');
 }
 
+/**
+ * Chave usada nos LIMITES por IP: IPv4 como está; IPv6 agrupado pelo bloco /64 (uma conexão doméstica ou servidor
+ * costuma ter um /64 inteiro e poderia trocar de endereço a cada tentativa). IPv4 mapeado em IPv6 vira IPv4.
+ */
+export function chaveDeIp(ip) {
+  const v = String(ip || '').toLowerCase().replace(/^\[|\]$/g, '').split('%')[0];
+  const mapeado = v.match(/^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (mapeado) return mapeado[1];
+  if (!v.includes(':')) return v;
+  const [esq, dir = ''] = v.split('::');
+  const a = esq ? esq.split(':') : [], b = v.includes('::') && dir ? dir.split(':') : [];
+  const grupos = v.includes('::') ? [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill('0'), ...b] : a;
+  return grupos.slice(0, 4).map((g) => (parseInt(g || '0', 16) || 0).toString(16)).join(':') + '::/64';
+}
+
 // ------------------------------------------------------------------ senhas e tokens
 const SCRYPT = { N: 16384, r: 8, p: 1, len: 64 };
 export async function gerarHashSenha(senha) {

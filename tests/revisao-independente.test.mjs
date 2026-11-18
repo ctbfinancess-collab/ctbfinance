@@ -101,6 +101,12 @@ try {
     return (await db.q(`select count(*)::int n from tentativas_login where chave='antiga'`)).rows[0].n === 0;
   });
 
+  const { chaveDeIp } = await import('../server/area/nucleo.mjs');
+  await t('V4-5', 'IPv6 agrupado por /64; IPv4 e IPv4 mapeado preservados', async () => chaveDeIp('2804:3c60:117:d400:c443:c007:e803:b128') === '2804:3c60:117:d400::/64' && chaveDeIp('2804:3c60:117:d400::1') === '2804:3c60:117:d400::/64' && chaveDeIp('2001:db8::1') === '2001:db8:0:0::/64' && chaveDeIp('170.80.38.226') === '170.80.38.226' && chaveDeIp('::ffff:10.0.0.1') === '10.0.0.1');
+  await db.q('delete from tentativas_login');
+  const v6 = []; for (let i = 0; i < 6; i++) v6.push((await req('POST', '/api/cliente/entrar', { json: { email: 'v3@example.com', senha: 'v6errada' + i + 'k9' }, headers: { 'X-Real-IP': `2001:db8:abcd:12::${(i + 1).toString(16)}` } })).status);
+  await t('V4-6', `Endereços IPv6 diferentes do MESMO /64 dividem o limite (${v6.join(',')})`, async () => v6.slice(0, 5).every((x) => x === 401) && v6[5] === 429);
+
   console.log('--- V5 "Esqueci a senha" não revela pela demora se a conta existe');
   await db.q('delete from tentativas_login');
   atrasoResend = 400;

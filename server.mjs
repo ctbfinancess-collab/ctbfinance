@@ -125,7 +125,7 @@ function validate(f) {
 
 import { SITE, RESEND_API, fromAddress, teamList, replyToTeam, sendEmail, brandedHtml } from './server/email-base.mjs';
 import { iniciarAreaCliente } from './server/area/iniciar.mjs';
-import { ipDoVisitante } from './server/area/nucleo.mjs';
+import { ipDoVisitante, chaveDeIp } from './server/area/nucleo.mjs';
 
 // Limite por destinatário para as confirmações automáticas (no máx. 3 por dia por e-mail)
 const recipientHits = new Map();
@@ -175,7 +175,7 @@ async function handleContact(req, res) {
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
 
-  const ip = ipDoVisitante(req);
+  const ip = chaveDeIp(ipDoVisitante(req));
   if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limit' });
 
   let fields;
@@ -257,7 +257,7 @@ const newsletterReady = () => Boolean(process.env.RESEND_API_KEY && process.env.
 async function handleNewsletter(req, res) {
   const origin = req.headers.origin;
   if (origin && !ALLOWED_ORIGINS.has(origin)) return sendJson(res, 403, { ok: false, error: 'origin' });
-  const ip = ipDoVisitante(req);
+  const ip = chaveDeIp(ipDoVisitante(req));
   if (rateLimited(ip)) return sendJson(res, 429, { ok: false, error: 'rate_limit' });
   let f;
   try {

@@ -15,7 +15,7 @@ import fs from 'node:fs';
 import { pipeline } from 'node:stream/promises';
 import {
   conferirSenha, gerarHashSenha, politicaSenha, novoToken, hashToken, cookieSessao, cookieApagar, lerCookie,
-  SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES, ipDoVisitante,
+  SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES, ipDoVisitante, chaveDeIp,
 } from './nucleo.mjs';
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
@@ -66,7 +66,8 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     req.on('error', () => clearTimeout(relogio));
     req.resume();
   };
-  const ip = ipDoVisitante;
+  // IP usado nos limites e na lista de IPs conhecidos: IPv6 agrupado pelo bloco /64
+  const ip = (req) => chaveDeIp(ipDoVisitante(req));
   const origemValida = (req) => origens.has(req.headers.origin || '');
   const lerJson = (req, max = 20000) => new Promise((ok, erro) => {
     let t = '', n = 0, grande = false;
