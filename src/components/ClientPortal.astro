@@ -17,7 +17,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -101,9 +101,14 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         <h3>{p.profileTitle}</h3>
         <div class="grid">
           <label class="ro"><span>{p.emailLabel}</span><input type="text" data-ro="email" readonly /></label>
-          <label class="ro"><span>{p.passport}</span><input type="text" data-ro="passport" readonly /></label>
           {profileFields.map((f) => <label><span>{p.fields[f]}</span><input type="text" name={f} maxlength="200" /></label>)}
         </div>
+        <h3>{p.passport}</h3>
+        <div class="grid">
+          <label><span>{p.passportNumber}</span><input type="text" name="passportnumber" data-pass="numero" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" /></label>
+          <label><span>{p.passportExpiry}</span><input type="date" name="passportexpirationdate" data-pass="validade" min="2000-01-01" max="2100-12-31" /></label>
+        </div>
+        <p class="note pass-locked" data-pass-locked hidden></p>
         <div data-company hidden>
           <h3>{p.companyTitle}</h3>
           <div class="grid">
@@ -129,6 +134,24 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 
     <section data-panel="appointments" hidden>
       <h3>{p.apptTitle}</h3>
+      <button type="button" class="btn btn--primary" data-appt-open>{p.apptNew}</button>
+      <form class="appt-form" data-appt-form novalidate hidden>
+        <h4>{p.apptFormTitle}</h4>
+        <div class="grid">
+          <label><span>{p.apptSubject}</span>
+            <select name="assunto" required>
+              {Object.entries(p.assuntos).map(([k, v]) => <option value={k}>{v}</option>)}
+            </select>
+          </label>
+          <label><span>{p.apptDate}</span><input type="date" name="data" required data-appt-date /></label>
+        </div>
+        <label class="full"><span>{p.apptNotes}</span><textarea name="observacao" maxlength="500" rows="3" placeholder={p.apptNotesPh}></textarea></label>
+        <div class="appt-actions">
+          <button type="submit" class="btn btn--primary" data-appt-send>{p.apptSend}</button>
+          <button type="button" class="link" data-appt-cancel>{p.apptCancel}</button>
+        </div>
+      </form>
+      <p class="msg" role="status" aria-live="polite" hidden data-appt-msg></p>
       <ul class="list" data-appts></ul>
       <p class="note">{p.apptText} <a href={routes.contact[lang]}>{p.contact}</a></p>
     </section>
@@ -167,6 +190,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
     const vigente = (s: number, email: string) => s === sessao && usuarioAtual === email;
     const upInput = $<HTMLInputElement>('[data-upload]'); const upLabel = $('[data-upload-label]');
     const profileForm = $<HTMLFormElement>('[data-profile]'); const saveBtn = $<HTMLButtonElement>('[data-save]');
+    const passNum = $<HTMLInputElement>('[data-pass="numero"]'); const passVal = $<HTMLInputElement>('[data-pass="validade"]');
+    const apptForm = $<HTMLFormElement>('[data-appt-form]'); const apptOpen = $<HTMLButtonElement>('[data-appt-open]');
 
     function limparTudo() {
       original = {};
@@ -174,7 +199,9 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       root.querySelectorAll<HTMLInputElement>('[data-profile] input').forEach((i) => (i.value = ''));
       $('[data-company]').hidden = true;
       $('[data-docs]').innerHTML = ''; $('[data-appts]').innerHTML = '';
-      ['[data-profile-msg]', '[data-docs-msg]'].forEach((k) => limparMsg($(k)));
+      ['[data-profile-msg]', '[data-docs-msg]', '[data-appt-msg]'].forEach((k) => limparMsg($(k)));
+      apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false;
+      passNum.readOnly = false; passVal.readOnly = false; passNum.placeholder = ''; $('[data-pass-locked]').hidden = true;
       upInput.value = ''; upLabel.textContent = M.upload; saveBtn.disabled = false; saveBtn.textContent = M.save;
       root.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x.dataset.tab === 'profile')));
       root.querySelectorAll<HTMLElement>('[data-panel]').forEach((p) => (p.hidden = p.dataset.panel !== 'profile'));
@@ -242,8 +269,16 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       $('[data-name]').textContent = p.display_name || email;
       $('[data-email]').textContent = email;
       $<HTMLInputElement>('[data-ro="email"]').value = email;
-      $<HTMLInputElement>('[data-ro="passport"]').value = p.passaporte || '—';
       original = {};
+      // passaporte: o número completo nunca vem do servidor (só os 3 últimos); conferido pela equipe = travado
+      const travado = Boolean(p.passaporteConferidoEm);
+      passNum.value = travado ? (p.passaporte || '') : '';
+      passNum.placeholder = !travado && p.passaporte ? p.passaporte : '';
+      passVal.value = p.passaporteValidade || ''; original.passportexpirationdate = passVal.value;
+      passNum.readOnly = travado; passVal.readOnly = travado;
+      const aviso = $('[data-pass-locked]'); aviso.hidden = !(travado || p.passaporte); aviso.dataset.travado = String(travado);
+      aviso.textContent = M.passportKeep;
+      if (travado) aviso.textContent = M.passportLocked.replace('{data}', new Date(p.passaporteConferidoEm).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }));
       for (const k of [...PROFILE, ...COMPANY]) {
         const v = typeof p[k] === 'string' ? p[k] : '';
         original[k] = v;
@@ -261,14 +296,30 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         const v = input.value.trim().slice(0, 200);
         if (v !== original[k]) changes[k] = v;
       }
+      if (!passNum.readOnly) {
+        const n = passNum.value.replace(/[\s-]/g, '').toUpperCase();
+        if (n) { if (!/^[A-Z0-9]{5,20}$/.test(n)) return msg(pm, M.passportBad, 'err'); changes.passportnumber = n; }
+        if (passVal.value !== original.passportexpirationdate) changes.passportexpirationdate = passVal.value;
+      }
       if (!Object.keys(changes).length) return msg(pm, M.nothingChanged);
       saveBtn.disabled = true; saveBtn.textContent = M.saving;
       try {
         const r = await enviarJson('/perfil', 'PUT', changes);
         if (!vigente(s, email)) return;
         if (r.status === 401) return sessaoCaiu();
+        if (r.status === 409 || r.status === 400) {
+          const d = await r.json().catch(() => ({}));
+          if (!vigente(s, email)) return;
+          if (d.erro === 'passaporte_conferido') return msg(pm, M.passportLockedErr, 'err');
+          if (d.campo === 'passportnumber') return msg(pm, M.passportBad, 'err');
+          if (d.campo === 'passportexpirationdate') return msg(pm, M.passportBadDate, 'err');
+          throw new Error();
+        }
         if (!r.ok) throw new Error();
-        Object.assign(original, changes); msg(pm, M.saved); if (changes.display_name) $('[data-name]').textContent = changes.display_name;
+        const novo = await r.json().catch(() => null);
+        if (!vigente(s, email)) return;
+        if (novo && novo.perfil) mostrarPerfil(novo, email); else Object.assign(original, changes);
+        msg(pm, M.saved); if (changes.display_name) $('[data-name]').textContent = changes.display_name;
       } catch { if (vigente(s, email)) msg(pm, M.genericError, 'err'); }
       finally { if (vigente(s, email)) { saveBtn.disabled = false; saveBtn.textContent = M.save; } }
     });
@@ -337,7 +388,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       if (!lista.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.apptEmpty; ul.append(li); return; }
       for (const a of lista) {
         const li = document.createElement('li'); li.className = 'appt';
-        const n = document.createElement('span'); n.className = 'name'; n.textContent = a.tipo || '—';
+        const n = document.createElement('span'); n.className = 'name'; n.textContent = M.assuntos[a.tipo] || a.tipo || '—';
         const i = document.createElement('span'); i.className = 'info';
         if (a.horarioConfirmado) {
           i.textContent = `${M.apptConfirmed}: ${new Date(a.horarioConfirmado).toLocaleString(locale, { timeZone: 'Asia/Dubai', dateStyle: 'medium', timeStyle: 'short' })} · ${M.tz}`;
@@ -348,9 +399,44 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         } else {
           i.textContent = M.apptPending; li.dataset.tipo = 'pendente';
         }
-        li.append(n, i); ul.append(li);
+        li.append(n, i);
+        if (a.descricao) { const o = document.createElement('p'); o.className = 'orient orient--info'; o.textContent = a.descricao; li.append(o); }
+        ul.append(li);
       }
     }
+
+    // ---- Pedido de agendamento (a equipe confirma o horário depois)
+    const somarDias = (n: number) => { const d = new Date(Date.now() + 4 * 3600 * 1000); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+    apptOpen.addEventListener('click', () => {
+      const dt = $<HTMLInputElement>('[data-appt-date]'); dt.min = somarDias(1); dt.max = somarDias(180);
+      apptForm.hidden = false; apptOpen.hidden = true; limparMsg($('[data-appt-msg]'));
+      apptForm.querySelector<HTMLSelectElement>('select')?.focus();
+    });
+    $('[data-appt-cancel]').addEventListener('click', () => { apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false; });
+    const apptSend = $<HTMLButtonElement>('[data-appt-send]');
+    apptForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!usuarioAtual) return;
+      const s = sessao, email = usuarioAtual; const am = $('[data-appt-msg]'); limparMsg(am);
+      const f = new FormData(apptForm); const data = String(f.get('data') || '');
+      const dt = $<HTMLInputElement>('[data-appt-date]');
+      if (!data || data < dt.min || data > dt.max) return msg(am, M.apptBadDate, 'err');
+      apptSend.disabled = true; apptSend.textContent = M.apptSending;
+      try {
+        const r = await enviarJson('/agendamentos', 'POST', { assunto: f.get('assunto'), data, observacao: String(f.get('observacao') || '').trim() });
+        if (!vigente(s, email)) return;
+        if (r.status === 401) return sessaoCaiu();
+        if (r.status === 429) return msg(am, M.apptLimit, 'err');
+        if (r.status === 400) { const d = await r.json().catch(() => ({})); return msg(am, d.erro === 'data_invalida' ? M.apptBadDate : M.genericError, 'err'); }
+        if (!r.ok) throw new Error();
+        apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false;
+        const l = await api('/agendamentos').then((x) => (x.ok ? x.json() : null));
+        if (!vigente(s, email)) return;
+        if (l) mostrarAgendamentos(l.agendamentos);
+        msg(am, M.apptSent);
+      } catch { if (vigente(s, email)) msg(am, M.genericError, 'err'); }
+      finally { if (vigente(s, email)) { apptSend.disabled = false; apptSend.textContent = M.apptSend; } }
+    });
 
     // ---- Abrir sessão: limpa tudo, mostra "carregando" e só exibe dados que pertencem à sessão atual
     async function abrirSessao() {
@@ -384,7 +470,12 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       $('[data-indisponivel]').hidden = ativo;
       $<HTMLFieldSetElement>('[data-login-fs]').disabled = !ativo;
       if (!ativo) { show('login'); return; }
-      if (tokenSenha) { show('senha'); return; }
+      if (tokenSenha) {
+        // chegou pelo link do e-mail: leva direto ao quadro de criar senha
+        show('senha');
+        requestAnimationFrame(() => { root.scrollIntoView({ behavior: 'smooth', block: 'start' }); senhaForm.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true }); });
+        return;
+      }
       await abrirSessao();
     })();
   }
@@ -431,13 +522,22 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem 1.1rem; margin-bottom: 1rem; }
   .dash label { display: flex; flex-direction: column; gap: 0.35rem; }
   .dash label > span { font-size: 0.78rem; letter-spacing: 0.04em; color: var(--color-cafe); }
-  .dash input[type='text'] { font: inherit; font-size: 0.95rem; color: var(--color-espresso); background: var(--color-ivory); border: 1px solid rgba(98, 72, 58, 0.25); border-radius: 4px; padding: 0.65rem 0.8rem; min-height: 44px; }
+  .dash input[type='text'], .dash input[type='date'], .dash select, .dash textarea { font: inherit; font-size: 0.95rem; color: var(--color-espresso); background: var(--color-ivory); border: 1px solid rgba(98, 72, 58, 0.25); border-radius: 4px; padding: 0.65rem 0.8rem; min-height: 44px; }
   .dash input[readonly] { background: #efe8dc; color: var(--color-cafe); }
   .dash input:focus { outline: none; border-color: var(--color-gold); box-shadow: 0 0 0 3px rgba(181, 139, 77, 0.2); }
   .dash .note { color: var(--color-cafe); font-size: 0.86rem; }
   .dash .note a { color: #8a5e2e; }
   .dash .msg { color: var(--color-espresso); }
   .upload { cursor: pointer; margin: 0.4rem 0 0.6rem; }
+  .dash select, .dash textarea { width: 100%; }
+  .dash textarea { resize: vertical; min-height: 84px; }
+  .dash .full { margin-bottom: 1rem; }
+  .dash h4 { font-size: 1.15rem; font-weight: 500; margin: 0 0 0.9rem; }
+  .pass-locked { margin-top: -0.4rem; }
+  .pass-locked[data-travado='true'] { color: #3f6b44 !important; }
+  .appt-form { margin: 1rem 0 0; padding: 1.2rem 1.2rem 0.6rem; border: 1px solid rgba(98, 72, 58, 0.18); background: #f6f0e6; }
+  .appt-actions { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.8rem; }
+  .appt-actions .link { background: none; border: 0; font: inherit; color: #8a5e2e; text-decoration: underline; cursor: pointer; }
   .dash__head :global(.btn--secondary) { color: var(--color-espresso); border-color: rgba(98, 72, 58, 0.45); }
   .dash__head :global(.btn--secondary:hover) { background: var(--color-espresso); color: var(--color-champagne); }
   .list { list-style: none; margin: 1.2rem 0 0; padding: 0; border-top: 1px solid rgba(98, 72, 58, 0.15); }

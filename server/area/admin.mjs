@@ -36,12 +36,34 @@ export function criarAdmin({ db, arquivos, api }) {
       return { email: u.email, bloqueado: true };
     },
     async desbloquear(email) { const u = await usuarioPorEmail(email); await db.q('update usuarios set bloqueado=false where id=$1', [u.id]); return { email: u.email, bloqueado: false }; },
-    /** Dados de cadastro que só a equipe altera (ex.: passaporte conferido). */
-    async definirDadosRestritos(email, dados) {
+    /** Equipe grava número/validade do passaporte (já conferidos): o campo fica travado para o cliente. */
+    async definirDadosRestritos(email, dados, por = 'equipe') {
       const u = await usuarioPorEmail(email);
       const permitidos = {}; for (const k of ['passportnumber', 'passportexpirationdate']) if (typeof dados[k] === 'string') permitidos[k] = dados[k];
-      await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados`, [u.id, JSON.stringify(permitidos)]);
-      return { email: u.email, campos: Object.keys(permitidos) };
+      if (permitidos.passportnumber) permitidos.passportnumber = permitidos.passportnumber.replace(/[\s-]/g, '').toUpperCase();
+      await db.q(`insert into perfis(usuario_id, dados, passaporte_conferido_em, passaporte_conferido_por) values ($1, $2::jsonb, now(), $3)
+                  on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados, passaporte_conferido_em = now(), passaporte_conferido_por = $3`, [u.id, JSON.stringify(permitidos), por]);
+      return { email: u.email, campos: Object.keys(permitidos), conferido: true };
+    },
+    /** Marca como conferido o passaporte que o próprio cliente informou (trava o campo). */
+    async conferirPassaporte(email, por = 'equipe') {
+      const u = await usuarioPorEmail(email);
+      const r = await db.q(`update perfis set passaporte_conferido_em = now(), passaporte_conferido_por = $2
+                             where usuario_id = $1 and coalesce(dados->>'passportnumber', '') <> '' returning dados->>'passportnumber' as numero, dados->>'passportexpirationdate' as validade`, [u.id, por]);
+      if (!r.rowCount) throw new Error('o cliente ainda não informou o número do passaporte');
+      return { email: u.email, numero: r.rows[0].numero, validade: r.rows[0].validade, conferido: true };
+    },
+    /** Destrava o passaporte (o cliente volta a poder editar). */
+    async liberarPassaporte(email) {
+      const u = await usuarioPorEmail(email);
+      await db.q('update perfis set passaporte_conferido_em = null, passaporte_conferido_por = null where usuario_id=$1', [u.id]);
+      return { email: u.email, conferido: false };
+    },
+    /** Ficha do cliente para a equipe (inclui o número completo do passaporte, que a web nunca mostra). */
+    async verCliente(email) {
+      const u = await usuarioPorEmail(email);
+      const p = (await db.q('select dados, passaporte_conferido_em, passaporte_conferido_por from perfis where usuario_id=$1', [u.id])).rows[0] || {};
+      return { email: u.email, bloqueado: u.bloqueado, senhaDefinida: Boolean(u.senha_hash), dados: p.dados || {}, passaporteConferidoEm: p.passaporte_conferido_em || null, passaporteConferidoPor: p.passaporte_conferido_por || null };
     },
 
     // ---- equipe (revogação imediata: o cadastro é lido a cada requisição)
@@ -87,6 +109,12 @@ export function criarAdmin({ db, arquivos, api }) {
     },
 
     // ---- agendamentos
+    /** Pedidos ainda sem horário confirmado (mais próximos primeiro). */
+    async listarAgendamentos({ todos = false } = {}) {
+      return (await db.q(`select a.id, u.email, a.tipo, a.descricao, to_char(a.data_solicitada,'YYYY-MM-DD') as data_solicitada, a.horario_confirmado, a.solicitado_pelo_cliente, a.criado_em
+                            from agendamentos a join usuarios u on u.id=a.usuario_id
+                           ${todos ? '' : 'where a.horario_confirmado is null'} order by a.data_solicitada nulls last, a.criado_em`)).rows;
+    },
     async registrarAgendamento(email, dataSolicitada, tipo, descricao = '') {
       if (!/^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(dataSolicitada)) throw new Error('data inválida (AAAA-MM-DD)');
       const u = await usuarioPorEmail(email);

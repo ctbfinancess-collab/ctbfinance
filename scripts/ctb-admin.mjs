@@ -11,10 +11,14 @@
  *
  *   usuarios:convidar <email> ["Nome"] [pt|en]
  *   usuarios:bloquear <email>        usuarios:desbloquear <email>
- *   usuarios:passaporte <email> <número> [validade]
+ *   usuarios:ver <email>             (ficha: dados do perfil, incluindo o passaporte completo)
+ *   usuarios:passaporte <email> <número> [AAAA-MM-DD]   (equipe grava já conferido; trava o campo)
+ *   usuarios:passaporte-conferir <email>   (confere o que o cliente informou; trava o campo)
+ *   usuarios:passaporte-liberar <email>    (destrava: o cliente volta a poder editar)
  *   equipe:conceder <email>          equipe:revogar <email>          equipe:listar
  *   docs:listar [status]             docs:baixar <id> <pasta>
  *   docs:aprovar <id>                docs:rejeitar <id> "<orientação PT>" ["<orientação EN>"]
+ *   agenda:listar [--todos]          (padrão: só os pedidos sem horário confirmado)
  *   agenda:registrar <email> <AAAA-MM-DD> "<tipo>" ["descrição"]
  *   agenda:confirmar <id> <AAAA-MM-DDTHH:MM>   (horário de Dubai)
  *   arquivos:reconciliar [--aplicar]           (padrão: simulação)
@@ -43,11 +47,15 @@ const quem = process.env.USER || 'equipe';
 const C = {
   'usuarios:convidar': () => adm.convidar(a[0], { nome: a[1] || '', lang: a[2] === 'en' ? 'en' : 'pt' }),
   'usuarios:bloquear': () => adm.bloquear(a[0]), 'usuarios:desbloquear': () => adm.desbloquear(a[0]),
-  'usuarios:passaporte': () => adm.definirDadosRestritos(a[0], { passportnumber: a[1], passportexpirationdate: a[2] }),
+  'usuarios:ver': () => adm.verCliente(a[0]),
+  'usuarios:passaporte': () => adm.definirDadosRestritos(a[0], { passportnumber: a[1], passportexpirationdate: a[2] }, quem),
+  'usuarios:passaporte-conferir': () => adm.conferirPassaporte(a[0], quem),
+  'usuarios:passaporte-liberar': () => adm.liberarPassaporte(a[0]),
   'equipe:conceder': () => adm.concederEquipe(a[0]), 'equipe:revogar': () => adm.revogarEquipe(a[0]), 'equipe:listar': () => adm.listarEquipe(),
   'docs:listar': () => adm.listarDocumentos(a[0]), 'docs:baixar': () => adm.baixarDocumento(a[0], a[1] || '.'),
   'docs:aprovar': () => adm.decidir(a[0], 'aprovado', { por: quem }),
   'docs:rejeitar': () => adm.decidir(a[0], 'rejeitado', { orientacaoPt: a[1], orientacaoEn: a[2], por: quem }),
+  'agenda:listar': () => adm.listarAgendamentos({ todos: a.includes('--todos') }),
   'agenda:registrar': () => adm.registrarAgendamento(a[0], a[1], a[2], a[3]),
   'agenda:confirmar': () => adm.confirmarAgendamento(a[0], a[1], quem),
   'arquivos:reconciliar': () => adm.reconciliarArquivos({ aplicar: a.includes('--aplicar') }),

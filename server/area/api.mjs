@@ -21,6 +21,24 @@ import {
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
 export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
 const EDITAVEIS = { ...CAMPOS_PERFIL, ...CAMPOS_EMPRESA };
+// passaporte: editável pelo cliente SÓ enquanto a equipe não conferiu (validação de formato no servidor)
+const CAMPOS_PASSAPORTE = ['passportnumber', 'passportexpirationdate'];
+const dataCivilValida = (s) => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s)); if (!m) return false;
+  const [a, me, d] = m.slice(1).map(Number); const x = new Date(Date.UTC(a, me - 1, d));
+  return x.getUTCFullYear() === a && x.getUTCMonth() === me - 1 && x.getUTCDate() === d;
+};
+function validarPassaporte(k, v) {
+  if (k === 'passportnumber') { const n = v.replace(/[\s-]/g, '').toUpperCase(); return n === '' || /^[A-Z0-9]{5,20}$/.test(n) ? n : null; }
+  return v === '' || (dataCivilValida(v) && v >= '2000-01-01' && v <= '2100-12-31') ? v : null;
+}
+// agendamentos pedidos pelo cliente
+export const ASSUNTOS_AGENDAMENTO = ['abertura_conta', 'investimentos', 'documentos', 'outro'];
+const AGENDA_PENDENTES_MAX = 3;      // pedidos em aberto (sem horário confirmado) por cliente
+const AGENDA_DIA_MAX = 5;            // pedidos por cliente em 24 h
+const AGENDA_DIAS_MAX = 180;         // até quantos dias à frente
+const hojeDubai = () => new Date(Date.now() + 4 * 3600 * 1000).toISOString().slice(0, 10);
+const somarDias = (iso, n) => { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const MAX_ARQUIVO = 10 * 1024 * 1024;
 // cota de envios por cliente (24 h): evita lotar o volume
 const COTA_ARQUIVOS_DIA = 30;
@@ -40,7 +58,7 @@ export async function limparRegistrosAntigos(db) {
 const LIBERADOS = ['disponivel_analise', 'aprovado'];
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 
-export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
+export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
   const json = (res, status, body, extra = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...SEG, ...extra });
     res.end(JSON.stringify(body));
@@ -200,29 +218,40 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     return json(res, 200, { ok: true });
   }
 
-  function perfilPublico(dados) {
+  function perfilPublico(dados, conferidoEm = null) {
     const d = dados || {}, out = {};
     for (const k of Object.keys(EDITAVEIS)) out[k] = typeof d[k] === 'string' ? d[k] : '';
     const pn = typeof d.passportnumber === 'string' ? d.passportnumber : '';
-    out.passaporte = pn ? '•••• ' + pn.slice(-3) : '';
+    out.passaporte = pn ? '•••• ' + pn.slice(-3) : '';   // o número completo nunca volta pela web
+    out.passaporteValidade = typeof d.passportexpirationdate === 'string' ? d.passportexpirationdate : '';
+    out.passaporteConferidoEm = conferidoEm || null;
     return out;
   }
   async function perfil(req, res, u) {
     if (req.method === 'GET') {
-      const r = await db.q('select dados from perfis where usuario_id=$1', [u.id]);
-      return json(res, 200, { email: u.email, verificado: u.verificado, perfil: perfilPublico(r.rows[0] && r.rows[0].dados) });
+      const r = await db.q('select dados, passaporte_conferido_em from perfis where usuario_id=$1', [u.id]);
+      return json(res, 200, { email: u.email, verificado: u.verificado, perfil: perfilPublico(r.rows[0] && r.rows[0].dados, r.rows[0] && r.rows[0].passaporte_conferido_em) });
     }
     const b = await lerJson(req);
     const alteracoes = {};
     for (const [k, v] of Object.entries(b && typeof b === 'object' ? b : {})) {
+      if (CAMPOS_PASSAPORTE.includes(k)) {
+        const val = typeof v === 'string' && v.length <= 40 ? validarPassaporte(k, v.trim()) : null;
+        if (val === null) return json(res, 400, { erro: 'valor_invalido', campo: k });
+        alteracoes[k] = val; continue;
+      }
       if (!Object.hasOwn(EDITAVEIS, k)) return json(res, 400, { erro: 'campo_nao_permitido', campo: String(k).slice(0, 40) });
       if (typeof v !== 'string' || v.length > EDITAVEIS[k]) return json(res, 400, { erro: 'valor_invalido', campo: k });
       alteracoes[k] = v.trim();
     }
+    // passaporte já conferido pela equipe: a gravação inteira é recusada (condição no próprio UPDATE, sem corrida)
+    const mexePassaporte = CAMPOS_PASSAPORTE.some((k) => Object.hasOwn(alteracoes, k));
     const r = await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb)
                           on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados, atualizado_em = now()
-                          returning dados`, [u.id, JSON.stringify(alteracoes)]);
-    return json(res, 200, { perfil: perfilPublico(r.rows[0].dados) });
+                          ${mexePassaporte ? 'where perfis.passaporte_conferido_em is null' : ''}
+                          returning dados, passaporte_conferido_em`, [u.id, JSON.stringify(alteracoes)]);
+    if (!r.rowCount) return json(res, 409, { erro: 'passaporte_conferido' });
+    return json(res, 200, { perfil: perfilPublico(r.rows[0].dados, r.rows[0].passaporte_conferido_em) });
   }
 
   const docPublico = (d) => ({ id: d.id, nome: d.nome, tipo: d.tipo, tamanho: d.tamanho, status: d.status, motivo: d.motivo, orientacao: d.orientacao, recebidoEm: d.recebido_em, baixavel: LIBERADOS.includes(d.status) || (d.status === 'rejeitado' && d.motivo === 'analise_equipe') });
@@ -327,6 +356,35 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
                             from agendamentos where usuario_id=$1 order by coalesce(horario_confirmado, data_solicitada::timestamptz) desc nulls last`, [u.id]);
     return json(res, 200, { agendamentos: r.rows.map((a) => ({ id: a.id, tipo: a.tipo, descricao: a.descricao, dataSolicitada: a.data_solicitada, horarioConfirmado: a.horario_confirmado })) });
   }
+  /** Pedido de agendamento feito pelo cliente: assunto da lista fixa, data civil futura, observação curta. */
+  async function solicitarAgendamento(req, res, u) {
+    const b = await lerJson(req, 4000);
+    const assunto = b && b.assunto, data = b && b.data;
+    const obs = typeof (b && b.observacao) === 'string' ? b.observacao.replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, '').trim() : '';
+    if (!ASSUNTOS_AGENDAMENTO.includes(assunto)) return json(res, 400, { erro: 'assunto_invalido' });
+    const hoje = hojeDubai();
+    if (!dataCivilValida(data) || data <= hoje || data > somarDias(hoje, AGENDA_DIAS_MAX)) return json(res, 400, { erro: 'data_invalida' });
+    if (obs.length > 500 || (b.observacao !== undefined && typeof b.observacao !== 'string')) return json(res, 400, { erro: 'observacao_invalida' });
+    const r = await db.transacao(async (q) => {
+      await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', ['agenda:' + u.id]);
+      const c = (await q(`select count(*) filter (where horario_confirmado is null and data_solicitada >= $2::date)::int as abertos,
+                                 count(*) filter (where criado_em > now() - interval '24 hours')::int as dia
+                            from agendamentos where usuario_id=$1 and solicitado_pelo_cliente`, [u.id, hoje])).rows[0];
+      if (c.abertos >= AGENDA_PENDENTES_MAX || c.dia >= AGENDA_DIA_MAX) return null;
+      return (await q(`insert into agendamentos(usuario_id, tipo, descricao, data_solicitada, solicitado_pelo_cliente)
+                       values ($1,$2,$3,$4,true) returning id, tipo, descricao, to_char(data_solicitada,'YYYY-MM-DD') as data_solicitada`, [u.id, assunto, obs || null, data])).rows[0];
+    });
+    if (!r) return json(res, 429, { erro: 'limite_agendamentos' });
+    if (avisarEquipe) {
+      setImmediate(async () => {
+        try {
+          const n = (await db.q(`select dados->>'display_name' as nome from perfis where usuario_id=$1`, [u.id])).rows[0];
+          await avisarEquipe({ email: u.email, nome: (n && n.nome) || '', assunto, data, observacao: obs });
+        } catch (e) { log.error('[area-cliente] aviso de agendamento à equipe:', e.message); }
+      });
+    }
+    return json(res, 201, { agendamento: { id: r.id, tipo: r.tipo, descricao: r.descricao, dataSolicitada: r.data_solicitada, horarioConfirmado: null } });
+  }
 
   async function tratar(req, res, url) {
     const rota = url.pathname.replace(/\/+$/, '');
@@ -351,6 +409,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
       const dl = rota.match(/^\/api\/cliente\/documentos\/([^/]+)\/arquivo$/);
       if (dl && m === 'GET') return await baixarDocumento(res, u, dl[1]);
       if (rota === '/api/cliente/agendamentos' && m === 'GET') return await agendamentos(res, u);
+      if (rota === '/api/cliente/agendamentos' && m === 'POST') return await solicitarAgendamento(req, res, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {
       if (e.status) return e.fechar ? recusar(req, res, e.status, { erro: e.message }, 0) : json(res, e.status, { erro: e.message });

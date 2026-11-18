@@ -21,11 +21,14 @@ A Área do Cliente roda **no próprio servidor do site** (`server.mjs`), com ban
 |---|---|---|
 | `usuarios:convidar <email> "Nome" [pt\|en]` — convite por e-mail (72 h, uso único; **um novo convite cancela o anterior**) | banco + Resend | `railway ssh` ou `railway run` |
 | `usuarios:bloquear` / `usuarios:desbloquear <email>` — bloqueio encerra as sessões na hora | banco | `railway ssh` ou `railway run` |
-| `usuarios:passaporte <email> <número>` | banco | `railway ssh` ou `railway run` |
+| `usuarios:ver <email>` (ficha completa, inclui o número inteiro do passaporte — a web só mostra os 3 últimos) | banco | `railway ssh` ou `railway run` |
+| `usuarios:passaporte-conferir <email>` (confere o que o cliente informou e TRAVA o campo) · `usuarios:passaporte-liberar <email>` (destrava) | banco | `railway ssh` ou `railway run` |
+| `usuarios:passaporte <email> <número> [AAAA-MM-DD]` (equipe grava já conferido; trava o campo) | banco | `railway ssh` ou `railway run` |
 | `equipe:conceder` / `equipe:revogar` / `equipe:listar` — revogação vale na hora | banco | `railway ssh` ou `railway run` |
 | `docs:listar [status]`, `docs:aprovar <id>`, `docs:rejeitar <id> "PT" ["EN"]` | banco | `railway ssh` ou `railway run` |
 | `docs:baixar <id> <pasta>` — salva como `<id>.<extensão>`, nunca com o nome enviado pelo cliente, e não sobrescreve | **volume** | **`railway ssh`** (o arquivo fica no container; copie depois pelo próprio shell/ferramenta autorizada) |
 | `agenda:registrar <email> <AAAA-MM-DD> "tipo"`, `agenda:confirmar <id> <AAAA-MM-DDTHH:MM>` (Dubai; datas/horas impossíveis são recusadas) | banco | `railway ssh` ou `railway run` |
+| `agenda:listar [--todos]` (pedidos sem horário confirmado; os pedidos feitos pelo cliente também chegam por e-mail em CONTACT_EMAIL_TO) | banco | `railway ssh` ou `railway run` |
 | `arquivos:reconciliar [--aplicar]` — volume × banco (padrão: simulação) | **volume** + banco | **`railway ssh`** |
 
 **Links de senha:** cada novo convite ou "esqueci a senha" cancela os links anteriores ainda pendentes; quando uma senha é definida, todos os links pendentes daquela conta deixam de valer e as sessões abertas são encerradas.

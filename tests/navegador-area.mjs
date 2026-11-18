@@ -41,7 +41,7 @@ const cB = (await fetch(`${BASE}/api/cliente/entrar`, { method: 'POST', headers:
 await fetch(`${BASE}/api/cliente/documentos`, { method: 'POST', headers: { Cookie: cB, Origin: BASE, 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'contrato-bruno.pdf' }, body: Buffer.from('%PDF-1.4 bruno\n%%EOF\n') });
 await adm.definirDadosRestritos('ana@example.com', { passportnumber: 'FX123456' });
 await db.q(`update perfis set dados = dados || '{"phone_number":"+971 50 000 0000","nationality":"Brasileira","city":"Dubai","country":"Emirados Árabes Unidos","CompanyName":"Ana Trading LLC","companycity":"Dubai"}'::jsonb where usuario_id=(select id from usuarios where email='ana@example.com')`);
-await adm.registrarAgendamento('ana@example.com', '2026-11-25', 'Abertura de conta');
+await adm.registrarAgendamento('ana@example.com', '2026-11-25', 'Reunião inicial Ana');
 const ag = await adm.registrarAgendamento('ana@example.com', '2026-11-27', 'Revisão de documentos');
 await adm.confirmarAgendamento(ag.id, '2026-11-27T14:00', 'analista');
 fs.writeFileSync(path.join(TMP, 'comprovante.pdf'), '%PDF-1.4\nDocumento de teste\n%%EOF\n');
@@ -66,7 +66,7 @@ const login = (e, s) => ev(`(()=>{const f=document.querySelector('[data-login]')
 const sair = () => ev(`document.querySelector('[data-signout]').click(),1`);
 const nav = async (u) => { await send('Page.navigate', { url: u }); await waitFor(`document.querySelector('[data-portal]')?.dataset.ready==='1' && !document.querySelector('[data-login-fs]').disabled || ${vis('[data-view="senha"]')}`, 20000); };
 const linha = (n) => `[...document.querySelectorAll('[data-docs] li')].find(l=>l.querySelector('.name')?.textContent==='${n}')`;
-const MARCAS_ANA = ['Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Abertura de conta', 'ana@example.com'];
+const MARCAS_ANA = ['Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
 const temAna = `(()=>{const r=document.querySelector('[data-portal]');const txt=r.textContent+' '+[...r.querySelectorAll('input')].map(i=>i.value).join(' ');return ${JSON.stringify(MARCAS_ANA)}.filter(m=>txt.includes(m))})()`;
 async function vigiar(ms) { const v = new Set(); const t0 = Date.now(); while (Date.now() - t0 < ms) { (await ev(temAna) || []).forEach((m) => v.add(m)); await sleep(40); } return [...v]; }
 
@@ -76,13 +76,22 @@ try {
   console.log('--- Convite e login');
   await nav(conviteAna);
   check('Link do convite abre "Criar sua senha" e o token sai da barra de endereço', await waitFor(vis('[data-view="senha"]')) && await ev(`document.querySelector('[data-senha-titulo]').textContent==='Criar sua senha' && !location.search.includes('convite')`));
+  check('Chegando pelo link, a página desce sozinha até o quadro e o cursor já está na senha', await waitFor(`(()=>{const r=document.querySelector('[data-view="senha"]').getBoundingClientRect();return window.scrollY>300 && r.top>=0 && r.top<innerHeight/2 && document.activeElement?.name==='senha'})()`, 5000));
   await ev(`(()=>{const f=document.querySelector('[data-senha]');f.senha.value='curta1';f.confirma.value='curta1';f.requestSubmit();return 1})()`);
   check('Senha curta → mensagem clara', await waitFor(`(document.querySelector('[data-senha-msg]')||{}).textContent?.includes('10 caracteres')`));
   await ev(`(()=>{const f=document.querySelector('[data-senha]');f.senha.value='SenhaForte2026';f.confirma.value='SenhaForte2026';f.requestSubmit();return 1})()`);
   check('Senha criada → painel da Ana abre', await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste' && ${vis('[data-view="dash"]')}`));
-  check('Passaporte mascarado, empresa visível, nenhum saldo/conta', await ev(`document.querySelector('[data-ro="passport"]').value==='•••• 456' && ${vis('[data-company]')} && !/saldo|balance|PL-0/i.test(document.querySelector('[data-portal]').innerText)`));
+  check('Passaporte conferido: mascarado, travado e com aviso; empresa visível; nenhum saldo/conta', await ev(`(()=>{const n=document.querySelector('[data-pass="numero"]');return n.value==='•••• 456' && n.readOnly && document.querySelector('[data-pass="validade"]').readOnly && ${vis('[data-pass-locked]')} && /conferido pela equipe/.test(document.querySelector('[data-pass-locked]').textContent)})() && ${vis('[data-company]')} && !/saldo|balance|PL-0/i.test(document.querySelector('[data-portal]').innerText)`));
   await ev(`(()=>{const i=document.querySelector('[data-profile] [name=city]');i.value='Abu Dhabi';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
   check('Salvar cidade → "Dados atualizados."', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.'`));
+  await adm.liberarPassaporte('ana@example.com');
+  await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  check('Passaporte liberado: campo editável, vazio, com os 3 últimos como dica', await ev(`(()=>{const n=document.querySelector('[data-pass="numero"]');return !n.readOnly && n.value==='' && n.placeholder==='•••• 456' && /digite o número completo/.test(document.querySelector('[data-pass-locked]').textContent)})()`));
+  await ev(`(()=>{document.querySelector('[data-pass="numero"]').value='ab 12';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
+  check('Número curto → aviso no navegador, sem gravar', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent?.includes('5 a 20')`));
+  await ev(`(()=>{document.querySelector('[data-pass="numero"]').value='fx 987-6543';document.querySelector('[data-pass="validade"]').value='2032-03-15';document.querySelector('[data-profile]').requestSubmit();return 1})()`);
+  check('Cliente grava número e validade → "Dados atualizados.", dica vira •••• 543', await waitFor(`(document.querySelector('[data-profile-msg]')||{}).textContent==='Dados atualizados.' && document.querySelector('[data-pass="numero"]').placeholder==='•••• 543' && document.querySelector('[data-pass="validade"]').value==='2032-03-15'`));
+  await adm.conferirPassaporte('ana@example.com', 'analista');
   await shot('1-perfil');
   console.log('--- Documentos');
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
@@ -100,7 +109,16 @@ try {
   await shot('2-documentos');
   console.log('--- Agendamentos (4 fusos)');
   await ev(`document.querySelector('[data-tab=appointments]').click(),1`);
-  check('Pedido: "Data solicitada: 25 de nov." sem hora; confirmado: 14:00 de Dubai', await ev(`(()=>{const t=document.querySelector('[data-appts]').innerText;return /Abertura de conta\\s*Data solicitada: 25 de nov\\. de 2026 · horário a confirmar/.test(t) && /Revisão de documentos\\s*Confirmado: 27 de nov\\. de 2026, 14:00 · horário de Dubai/.test(t)})()`));
+  check('Pedido: "Data solicitada: 25 de nov." sem hora; confirmado: 14:00 de Dubai', await ev(`(()=>{const t=document.querySelector('[data-appts]').innerText;return /Reunião inicial Ana\\s*Data solicitada: 25 de nov\\. de 2026 · horário a confirmar/.test(t) && /Revisão de documentos\\s*Confirmado: 27 de nov\\. de 2026, 14:00 · horário de Dubai/.test(t)})()`));
+  await ev(`document.querySelector('[data-appt-open]').click(),1`);
+  check('"Solicitar agendamento" abre o formulário com datas de amanhã até 6 meses', await waitFor(`${vis('[data-appt-form]')} && !!document.querySelector('[data-appt-date]').min && document.querySelector('[data-appt-date]').min > new Date().toISOString().slice(0,10).replace(/./g,(c)=>c)`) );
+  await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.data.value='2020-01-01';f.requestSubmit();return 1})()`);
+  check('Data no passado → aviso, sem enviar', await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('a partir de amanhã')`));
+  await ev(`(()=>{const f=document.querySelector('[data-appt-form]');f.assunto.value='investimentos';f.data.value=document.querySelector('[data-appt-date]').min;f.observacao.value='Prefiro por vídeo';f.requestSubmit();return 1})()`);
+  const okPedido = await waitFor(`(document.querySelector('[data-appt-msg]')||{}).textContent?.includes('Pedido enviado') && !${vis('[data-appt-form]')} && /Investimentos\\s*Data solicitada: .* · horário a confirmar/.test(document.querySelector('[data-appts]').innerText) && document.querySelector('[data-appts]').innerText.includes('Prefiro por vídeo')`);
+  check('Pedido enviado → mensagem, formulário fecha e o pedido aparece "a confirmar"', okPedido);
+  if (!okPedido) console.log('   estado:', JSON.stringify(await ev(`({msg:document.querySelector('[data-appt-msg]').textContent, form:!document.querySelector('[data-appt-form]').hidden, lista:document.querySelector('[data-appts]').innerText})`)));
+  check('Equipe recebe o e-mail "Pedido de agendamento"', await (async () => { for (let i = 0; i < 30; i++) { if (emails.some((m) => /Pedido de agendamento/.test(m.subject || ''))) return true; await sleep(100); } return false; })());
   await shot('3-agendamentos');
   const vistosTz = {};
   for (const tz of ['America/Sao_Paulo', 'Asia/Tokyo', 'Pacific/Honolulu']) { await send('Emulation.setTimezoneOverride', { timezoneId: tz }); await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-appts] li')`); vistosTz[tz] = await ev(`document.querySelector('[data-appts]').innerText.replace(/\\s+/g,' ')`); }

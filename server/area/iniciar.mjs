@@ -4,7 +4,7 @@
  */
 import { criarBanco, criarArquivos } from './nucleo.mjs';
 import { criarApi, limparRegistrosAntigos } from './api.mjs';
-import { enviarEmailAcesso } from './emails.mjs';
+import { enviarEmailAcesso, avisarEquipeAgendamento } from './emails.mjs';
 
 export async function iniciarAreaCliente({ origens }) {
   if (!process.env.DATABASE_URL || !process.env.ARQUIVOS_DIR) {
@@ -17,5 +17,5 @@ export async function iniciarAreaCliente({ origens }) {
   const limpar = () => limparRegistrosAntigos(db).catch((e) => console.error('[area-cliente] limpeza:', e.message));
   limpar(); setInterval(limpar, 60 * 60 * 1000).unref();
   console.log('[area-cliente] ativa');
-  return criarApi({ db, arquivos, origens, enviarEmail: enviarEmailAcesso });
+  return criarApi({ db, arquivos, origens, enviarEmail: enviarEmailAcesso, avisarEquipe: avisarEquipeAgendamento });
 }

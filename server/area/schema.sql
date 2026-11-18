@@ -48,6 +48,11 @@ create table if not exists perfis (
   atualizado_em timestamptz not null default now()
 );
 
+-- Passaporte: o cliente informa número e validade; depois que a equipe confere o documento, o campo trava
+-- (alterações só pela equipe).
+alter table perfis add column if not exists passaporte_conferido_em timestamptz;
+alter table perfis add column if not exists passaporte_conferido_por text;
+
 -- Equipe: papel controlado SÓ pelo servidor/scripts; conferido a cada requisição (revogação imediata).
 create table if not exists equipe (
   usuario_id uuid primary key references usuarios(id) on delete cascade,
@@ -102,6 +107,8 @@ create table if not exists agendamentos (
   criado_em timestamptz not null default now()
 );
 create index if not exists agendamentos_usuario on agendamentos(usuario_id);
+-- pedido feito pelo próprio cliente na Área do Cliente (a equipe confirma o horário depois)
+alter table agendamentos add column if not exists solicitado_pelo_cliente boolean not null default false;
 
 -- IPs de onde o cliente já entrou com sucesso: isentos do teto geral por conta (o cliente não é bloqueado
 -- por um ataque distribuído quando entra de um lugar conhecido; o limite por conta+IP continua valendo).
