@@ -20,15 +20,15 @@ import {
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
 export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
-const EDITAVEIS = { ...CAMPOS_PERFIL, ...CAMPOS_EMPRESA };
+export const EDITAVEIS = { ...CAMPOS_PERFIL, ...CAMPOS_EMPRESA };
 // passaporte: editável pelo cliente SÓ enquanto a equipe não conferiu (validação de formato no servidor)
-const CAMPOS_PASSAPORTE = ['passportnumber', 'passportexpirationdate'];
+export const CAMPOS_PASSAPORTE = ['passportnumber', 'passportexpirationdate'];
 const dataCivilValida = (s) => {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s)); if (!m) return false;
   const [a, me, d] = m.slice(1).map(Number); const x = new Date(Date.UTC(a, me - 1, d));
   return x.getUTCFullYear() === a && x.getUTCMonth() === me - 1 && x.getUTCDate() === d;
 };
-function validarPassaporte(k, v) {
+export function validarPassaporte(k, v) {
   if (k === 'passportnumber') { const n = v.replace(/[\s-]/g, '').toUpperCase(); return n === '' || /^[A-Z0-9]{5,20}$/.test(n) ? n : null; }
   return v === '' || (dataCivilValida(v) && v >= '2000-01-01' && v <= '2100-12-31') ? v : null;
 }

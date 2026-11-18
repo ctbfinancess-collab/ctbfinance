@@ -63,6 +63,7 @@ import '../../styles/global.css';
 
       <div class="principal">
         <header class="faixa">
+          <button type="button" class="voltar" data-voltar hidden title="Voltar para a tela anterior"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>Voltar</button>
           <div class="faixa__txt">
             <h1>Painel da Equipe – <em>Administração</em></h1>
             <p data-subtitulo>Gestão de clientes, agendamentos e documentos</p>
@@ -188,7 +189,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -218,21 +219,39 @@ import '../../styles/global.css';
       $('[data-sair]').addEventListener('click', async () => { await fetch(API + '/sair', { method: 'POST', credentials: 'same-origin' }).catch(() => {}); eu = null; $('[data-quem]').hidden = true; vista('entrar'); });
 
       // ---- abas
-      let abaAtual = 'geral';
+      let abaAtual = '';
       const carregar: Record<string, () => Promise<void>> = {};
       // cada lista só é desenhada pela resposta MAIS RECENTE (respostas atrasadas são descartadas)
       const versao: Record<string, number> = {};
       const nova = (k: string) => (versao[k] = (versao[k] || 0) + 1);
       const vigente = (k: string, v: number) => versao[k] === v;
       const SUB: Record<string, string> = { geral: 'Gestão de clientes, agendamentos e documentos', clientes: 'Clientes — convites, fichas, passaportes e acessos', agendamentos: 'Agendamentos — pedidos e confirmações (horário de Dubai)', documentos: 'Documentos — análise e decisão', registro: 'Registro — todas as ações da equipe' };
-      function abrirAba(a: string) {
-        abaAtual = a;
+      // histórico: cada aba e cada ficha viram um passo; "Voltar" (e o botão do navegador) retornam ao anterior
+      const ABAS = ['geral', 'clientes', 'agendamentos', 'documentos', 'registro'];
+      let passos = 0;
+      const btnVoltar = $('[data-voltar]');
+      const marcarVoltar = () => (btnVoltar.hidden = passos <= 0 && abaAtual === 'geral' && !ficha.open);
+      // com histórico: volta um passo; sem histórico (ex.: página recarregada): vai ao Dashboard
+      btnVoltar.addEventListener('click', () => { if (passos > 0) history.back(); else abrirAba('geral'); });
+      function abrirAba(a: string, registrar = true) {
+        if (!ABAS.includes(a)) a = 'geral';
+        if (registrar && a !== abaAtual) { history.pushState({ aba: a }, '', '#' + a); passos++; marcarVoltar(); }
+        abaAtual = a; marcarVoltar();
         $('[data-subtitulo]').textContent = SUB[a] || '';
         $$('[data-aba]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.aba === a)));
         $$('[data-painel]').forEach((p) => (p.hidden = p.dataset.painel !== a));
         carregar[a]?.().catch(falhou);
       }
       $$('[data-aba]').forEach((b) => b.addEventListener('click', () => abrirAba(b.dataset.aba!)));
+      let fechandoPeloHistorico = false;
+      window.addEventListener('popstate', (e) => {
+        if (!eu) return;
+        passos = Math.max(0, passos - 1); marcarVoltar();
+        const st = (e.state || {}) as { aba?: string; ficha?: string };
+        if (ficha.open && !st.ficha) { fechandoPeloHistorico = true; ficha.close(); fechandoPeloHistorico = false; }
+        abrirAba(st.aba || location.hash.slice(1).split('/')[0] || 'geral', false);
+        if (st.ficha && !ficha.open) abrirFicha(st.ficha, true, false);
+      });
       const atualizar = async () => { await atualizarResumo().catch(falhou); await carregar[abaAtual]?.().catch(falhou); };
 
       // ---- visão geral
@@ -313,10 +332,11 @@ import '../../styles/global.css';
       const ficha = $<HTMLDialogElement>('[data-ficha]');
       $$('[data-fechar]').forEach((b) => b.addEventListener('click', () => (b.closest('dialog') as HTMLDialogElement).close()));
       // fechou a ficha: uma resposta que ainda estava a caminho não a reabre
-      ficha.addEventListener('close', () => nova('ficha'));
+      ficha.addEventListener('close', () => { nova('ficha'); if (!fechandoPeloHistorico && history.state && history.state.ficha) history.back(); });
       let abrindo = false;
-      async function abrirFicha(id: string, nova_ = true) {
+      async function abrirFicha(id: string, nova_ = true, registrar = true) {
         abrindo = nova_;
+        if (nova_ && registrar) { history.pushState({ aba: abaAtual, ficha: id }, '', `#${abaAtual}/${id}`); passos++; marcarVoltar(); }
         let c: any;
         const v = nova('ficha');
         try { c = await chamar('/equipe/clientes/' + id); } catch (e) { return falhou(e); }
@@ -330,7 +350,9 @@ import '../../styles/global.css';
           try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id, false); await atualizar(); } catch (e) { falhou(e); }
         } }, rotulo);
         const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
-        corpo.append(el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)])));
+        const lista = el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
+        const btnEditar = el('button', { type: 'button', class: 'botao pequeno claro editar', onclick: () => { lista.replaceWith(formEdicao(c, () => abrirFicha(c.id, false))); btnEditar.remove(); } }, '✎ Editar dados');
+        corpo.append(btnEditar, lista);
         // passaporte (número completo só aqui)
         const pass = el('div', { class: 'bloco' }, el('h3', {}, 'Passaporte'));
         if (!d.passportnumber) pass.append(el('p', { class: 'nota' }, 'O cliente ainda não informou.'));
@@ -356,6 +378,34 @@ import '../../styles/global.css';
         if (eu && c.email !== eu.email) conta.append(c.bloqueado ? acao('Desbloquear acesso', 'desbloquear') : acao('Bloquear acesso', 'bloquear', 'Bloquear o acesso deste cliente? As sessões abertas dele terminam na hora.', 'perigo'));
         corpo.append(conta);
         if (!ficha.open) ficha.showModal();
+      }
+
+      // ---- edição dos dados cadastrais pela equipe
+      const ROTULOS: [string, string, string?][] = [
+        ['display_name', 'Nome completo'], ['phone_number', 'Telefone'], ['nationality', 'Nacionalidade'], ['dateofbirth', 'Data de nascimento'],
+        ['address', 'Endereço'], ['residencenumber', 'Número'], ['city', 'Cidade'], ['country', 'País'], ['zipcode', 'CEP / Código postal'],
+        ['passportnumber', 'Número do passaporte'], ['passportexpirationdate', 'Validade do passaporte', 'date'],
+        ['CompanyName', 'Empresa (razão social)'], ['Companyregistrationnumber', 'Registro da empresa'], ['companysadress', 'Endereço da empresa'],
+        ['companyaddressnumber', 'Número (empresa)'], ['companycity', 'Cidade (empresa)'], ['companycountry', 'País (empresa)'], ['companyzipcode', 'CEP (empresa)'],
+      ];
+      function formEdicao(c: any, depois: () => any) {
+        const d = c.dados || {};
+        const f = el('form', { class: 'edicao', novalidate: true }) as HTMLFormElement;
+        const grade = el('div', { class: 'edicao__grade' });
+        for (const [k, rot, tipo] of ROTULOS) grade.append(el('label', {}, el('span', {}, rot), el('input', { name: k, type: tipo || 'text', value: typeof d[k] === 'string' ? d[k] : '', maxlength: k === 'address' || k === 'companysadress' ? 200 : 160 })));
+        const salvar = el('button', { type: 'submit', class: 'botao pequeno' }, 'Salvar alterações') as HTMLButtonElement;
+        f.append(el('p', { class: 'nota' }, 'O e-mail de acesso não é alterado por aqui. Passaporte gravado pela equipe fica como conferido.'), grade,
+          el('div', { class: 'acoes' }, salvar, el('button', { type: 'button', class: 'link', onclick: () => depois() }, 'Cancelar')));
+        f.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const mud: Record<string, string> = {};
+          for (const [k] of ROTULOS) { const v = (f.elements.namedItem(k) as HTMLInputElement).value.trim(); if (v !== (typeof d[k] === 'string' ? d[k] : '')) mud[k] = v; }
+          if (!Object.keys(mud).length) return aviso('Nenhuma alteração para salvar.');
+          salvar.disabled = true;
+          try { const r = await chamar(`/equipe/clientes/${c.id}/dados`, { metodo: 'PUT', corpo: mud }); aviso(`Dados atualizados (${r.alterados.length} ${r.alterados.length === 1 ? 'campo' : 'campos'}).`); await depois(); await atualizar(); }
+          catch (er) { falhou(er); } finally { salvar.disabled = false; }
+        });
+        return f;
       }
 
       // ---- agendamentos
@@ -464,7 +514,10 @@ import '../../styles/global.css';
           vista('entrar'); const m = $('[data-msg-entrar]'); m.hidden = false; m.textContent = 'Esta conta não tem acesso ao Admin.'; return;
         }
         eu = { email: s.email }; $('[data-email]').textContent = s.email; $('[data-quem]').hidden = false;
-        vista('painel'); abrirAba('geral');
+        vista('painel');
+        const inicio = location.hash.slice(1).split('/')[0];
+        history.replaceState({ aba: ABAS.includes(inicio) ? inicio : 'geral' }, '', location.pathname + '#' + (ABAS.includes(inicio) ? inicio : 'geral'));
+        abaAtual = ''; abrirAba(ABAS.includes(inicio) ? inicio : 'geral', false);
       }
       iniciar();
     </script>
@@ -507,6 +560,12 @@ import '../../styles/global.css';
       .onda { margin-top: auto; height: 90px; background: radial-gradient(120% 70% at 0% 100%, rgba(240, 211, 156, 0.55), transparent 55%), linear-gradient(170deg, transparent 55%, rgba(217, 174, 107, 0.35) 56%, transparent 62%); opacity: 0.8; }
       .principal { min-width: 0; display: flex; flex-direction: column; }
       .faixa { position: relative; display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; min-height: 150px; padding: 1.4rem clamp(1rem, 2.5vw, 2rem); border-bottom: 1px solid var(--borda); background: linear-gradient(90deg, #1c100b 0%, rgba(28, 16, 11, 0.9) 30%, rgba(28, 16, 11, 0.25) 62%, rgba(28, 16, 11, 0.1) 100%), url('/brand/admin-robo-faixa.jpg') right 22% / cover no-repeat; }
+      .voltar { position: absolute; left: clamp(1rem, 2.5vw, 2rem); bottom: 0.9rem; display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.9rem 0.35rem 0.6rem; border-radius: 999px; border: 1px solid var(--borda); background: rgba(20, 11, 7, 0.7); color: var(--texto); font: inherit; font-size: 0.85rem; cursor: pointer; }
+      .voltar svg { width: 16px; height: 16px; color: var(--ouro); }
+      .voltar:hover { border-color: var(--borda-forte); }
+      .editar { margin: 0.2rem 0 0.4rem; }
+      .edicao { display: grid; gap: 0.8rem; margin: 0.4rem 0 0.6rem; }
+      .edicao__grade { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem 1rem; }
       .faixa h1 { margin: 0; font-size: clamp(1.5rem, 2.6vw, 2.2rem); font-weight: 600; }
       .faixa h1 em { font-style: normal; color: var(--ouro); }
       .faixa p { margin: 0.25rem 0 0; color: var(--texto); opacity: 0.85; font-size: 0.98rem; }
@@ -638,6 +697,8 @@ import '../../styles/global.css';
         .linha-t, .linha-t.reg { grid-template-columns: 1fr 1fr; }
         .linha-t.cab { display: none; }
         .dados { grid-template-columns: 1fr; }
+        .edicao__grade { grid-template-columns: 1fr; }
+        .voltar { position: static; margin-top: 0.6rem; }
         .dados dt { margin-top: 0.4rem; }
         .mini-linha { grid-template-columns: 1fr; }
         .mini-linha .quando { grid-row: auto; }

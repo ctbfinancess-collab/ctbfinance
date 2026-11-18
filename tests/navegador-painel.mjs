@@ -104,12 +104,28 @@ try {
   check('Bloquear: ficha mostra "Bloqueado" e a sessão da Ana cai', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Desbloquear acesso')`) && (await fetch(`${BASE}/api/cliente/perfil`, { headers: { Cookie: cAna } })).status === 401);
   await clicarTexto('Desbloquear acesso', "document.querySelector('[data-ficha]')");
   check('Desbloquear', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Bloquear acesso')`));
+  await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
+  check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));
+  await ev(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');f.display_name.value='Ana Corrigida';f.city.value='Sharjah';f.requestSubmit();return 1})()`);
+  check('Salvar → "Dados atualizados (2 campos)" e a ficha mostra o nome novo', await waitFor(`${msg}.includes('Dados atualizados (2 campos)') && document.querySelector('[data-ficha-titulo]').textContent==='Ana Corrigida' && document.querySelector('[data-ficha]').innerText.includes('Sharjah')`));
+  const pAna = await (await fetch(`${BASE}/api/cliente/perfil`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json();
+  check('A cliente vê os dados corrigidos na Área do Cliente', pAna.perfil.display_name === 'Ana Corrigida' && pAna.perfil.city === 'Sharjah');
   await ev(`document.querySelector('[data-ficha]').close(),1`);
+  check('Fechar a ficha volta para a aba Clientes (não para o Dashboard)', await waitFor(`!document.querySelector('[data-ficha]').open && document.querySelector('[data-aba=clientes]').getAttribute('aria-selected')==='true' && location.hash==='#clientes'`));
   await ev(`(()=>{const l=[...document.querySelectorAll('[data-clientes] .linha-t')].find(x=>x.innerText.includes('chefe@example.com'));l.querySelector('button').click();return 1})()`);
   check('Na ficha da própria conta da equipe não existe "Bloquear acesso"', await waitFor(`document.querySelector('[data-ficha]').open && document.querySelector('[data-ficha-titulo]').textContent==='chefe@example.com'`) && await ev(`![...document.querySelectorAll('[data-ficha] button')].some(b=>b.textContent==='Bloquear acesso')`));
   await ev(`document.querySelector('[data-ficha]').close(),1`);
 
   console.log('--- Agendamentos');
+  await clicar('[data-aba=agendamentos]');
+  check('Botão "Voltar" aparece depois de navegar', await waitFor(vis('[data-voltar]')));
+  await clicar('[data-voltar]');
+  check('"Voltar" leva de Agendamentos para Clientes (onde estava)', await waitFor(`document.querySelector('[data-aba=clientes]').getAttribute('aria-selected')==='true' && ${vis('[data-painel="clientes"]')}`));
+  await send('Runtime.evaluate', { expression: 'history.forward()' });
+  check('Avançar do navegador volta para Agendamentos', await waitFor(`document.querySelector('[data-aba=agendamentos]').getAttribute('aria-selected')==='true'`));
+  await send('Page.reload'); await waitFor(`${vis('[data-vista="painel"]')}`, 20000);
+  check('Recarregar a página mantém a aba Agendamentos', await waitFor(`document.querySelector('[data-aba=agendamentos]').getAttribute('aria-selected')==='true' && ${vis('[data-painel="agendamentos"]')}`));
+  check('Depois de recarregar, "Voltar" continua visível e leva ao Dashboard', await waitFor(vis('[data-voltar]')) && (await clicar('[data-voltar]'), await waitFor(`document.querySelector('[data-aba=geral]').getAttribute('aria-selected')==='true' && ${vis('[data-painel="geral"]')}`)));
   await clicar('[data-aba=agendamentos]');
   check('Pedido da Ana: assunto, data pedida, Vídeo · Manhã, observação, campos já preenchidos (dia pedido, 10:00)', await waitFor(`(()=>{const t=document.querySelector('[data-agendamentos]').innerText;const i=document.querySelector('[data-agendamentos] input[type=date]');return t.includes('Abertura de conta')&&t.includes('Vídeo · Manhã (9h–12h)')&&t.includes('Aguardo contato')&&i&&i.value==='${dias(4)}'&&document.querySelector('[data-agendamentos] input[type=time]').value==='10:00'})()`));
   await shot('p4-agendamentos');

@@ -4,6 +4,7 @@
  * Toda ação que altera algo fica registrada em acoes_equipe (quem, o quê, sobre quem, quando).
  * As regras de negócio são as mesmas dos comandos da equipe (admin.mjs): o painel só as expõe com segurança.
  */
+import { EDITAVEIS, CAMPOS_PASSAPORTE, validarPassaporte } from './api.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const STATUS_DOC = ['disponivel_analise', 'aprovado', 'rejeitado'];
 
@@ -114,6 +115,39 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     return json(res, 200, r);
   }
 
+  /**
+   * Equipe corrige dados cadastrais do cliente (mesmos campos e limites da Área do Cliente, mais o passaporte).
+   * Passaporte gravado pela equipe fica como CONFERIDO por ela. O registro guarda QUAIS campos mudaram (não os valores).
+   */
+  async function editarDados(req, res, u, id) {
+    const c = await usuarioPorId(id);
+    if (!c) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 20000);
+    const alteracoes = {};
+    for (const [k, v] of Object.entries(b)) {
+      if (CAMPOS_PASSAPORTE.includes(k)) {
+        const val = typeof v === 'string' && v.length <= 40 ? validarPassaporte(k, v.trim()) : null;
+        if (val === null) return erro(res, 400, 'valor_invalido', k === 'passportnumber' ? 'Número do passaporte inválido (5 a 20 letras e números).' : 'Validade do passaporte inválida.');
+        alteracoes[k] = val; continue;
+      }
+      if (!Object.hasOwn(EDITAVEIS, k)) return erro(res, 400, 'campo_nao_permitido', 'Campo não permitido.');
+      if (typeof v !== 'string' || v.length > EDITAVEIS[k]) return erro(res, 400, 'valor_invalido', 'Valor muito longo ou inválido.');
+      alteracoes[k] = v.trim();
+    }
+    const atual = ((await db.q('select dados from perfis where usuario_id=$1', [c.id])).rows[0] || {}).dados || {};
+    const mudou = Object.keys(alteracoes).filter((k) => (atual[k] ?? '') !== alteracoes[k]);
+    if (!mudou.length) return json(res, 200, { alterados: [] });
+    const so = Object.fromEntries(mudou.map((k) => [k, alteracoes[k]]));
+    const passaporte = mudou.some((k) => CAMPOS_PASSAPORTE.includes(k));
+    await db.q(`insert into perfis(usuario_id, dados${passaporte ? ', passaporte_conferido_em, passaporte_conferido_por' : ''})
+                values ($1, $2::jsonb${passaporte ? ', now(), $3' : ''})
+                on conflict (usuario_id) do update set dados = perfis.dados || excluded.dados, atualizado_em = now()
+                ${passaporte ? ', passaporte_conferido_em = now(), passaporte_conferido_por = $3' : ''}`,
+      passaporte ? [c.id, JSON.stringify(so), u.email] : [c.id, JSON.stringify(so)]);
+    await registrar(u, 'editar_dados', c.email, { campos: mudou });
+    return json(res, 200, { alterados: mudou });
+  }
+
   async function listarAgendamentos(res, url) {
     const todos = url.searchParams.get('todos') === '1';
     const r = await db.q(`select a.id, u.id as cliente_id, u.email, p.dados->>'display_name' as nome, a.tipo, a.descricao, a.formato, a.periodo,
@@ -180,6 +214,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (p.length === 1 && m === 'GET') return listarClientes(res, url);
       if (p.length === 1 && m === 'POST') return convidar(req, res, u);
       if (p.length === 2 && m === 'GET') return fichaCliente(res, u, p[1]);
+      if (p.length === 3 && p[2] === 'dados' && m === 'PUT') return editarDados(req, res, u, p[1]);
       if (p.length === 3 && m === 'POST') return acaoCliente(req, res, u, p[1], p[2]);
     }
     if (p[0] === 'agendamentos') {

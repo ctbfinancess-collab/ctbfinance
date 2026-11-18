@@ -152,9 +152,22 @@ try {
   await t('PE32', 'Rejeitar com orientação → cliente vê a orientação', async () => (await E('POST', `/documentos/${doc2.id}/decidir`, { json: { decisao: 'rejeitado', orientacaoPt: 'Imagem ilegível, envie de novo.' } })).status === 200 && (await req('GET', '/api/cliente/documentos', { cookie: cCli2 })).dados.documentos.find((d) => d.id === doc2.id).orientacao.pt === 'Imagem ilegível, envie de novo.');
   await t('PE33', 'Decidir de novo o mesmo documento → 409 (não refaz por engano)', async () => (await E('POST', `/documentos/${doc.id}/decidir`, { json: { decisao: 'rejeitado', orientacaoPt: 'x' } })).status === 409);
 
+  console.log('--- Edição de dados pela equipe');
+  const ed = await req('PUT', `/api/cliente/equipe/clientes/${cli}/dados`, { cookie: cChefe, json: { display_name: 'Cliente Corrigido', city: 'Abu Dhabi', CompanyName: 'Nova LLC', passportnumber: 'cd 765-4321', passportexpirationdate: '2033-03-03' } });
+  await t('PE38', 'Equipe corrige nome, cidade, empresa e passaporte → 200 com a lista dos campos alterados', async () => ed.status === 200 && ['display_name', 'city', 'CompanyName', 'passportnumber', 'passportexpirationdate'].every((k) => ed.dados.alterados.includes(k)));
+  const pf = (await req('GET', '/api/cliente/perfil', { cookie: cCli2 })).dados.perfil;
+  await t('PE39', 'Cliente vê os dados corrigidos; passaporte normalizado e marcado como conferido pela equipe', async () => pf.display_name === 'Cliente Corrigido' && pf.city === 'Abu Dhabi' && pf.CompanyName === 'Nova LLC' && pf.passaporte === '•••• 321' && pf.passaporteValidade === '2033-03-03' && !!pf.passaporteConferidoEm && (await db.q(`select dados->>'passportnumber' n, passaporte_conferido_por por from perfis where usuario_id=$1`, [cli])).rows[0].n === 'CD7654321');
+  const ruinsE = await Promise.all([{ email: 'x@y.com' }, { equipe: 'true' }, { city: 'x'.repeat(81) }, { passportnumber: '12' }, { passportexpirationdate: '2033-02-30' }, { city: 5 }].map((j) => req('PUT', `/api/cliente/equipe/clientes/${cli}/dados`, { cookie: cChefe, json: j })));
+  await t('PE40', `E-mail, papel, campo longo, passaporte/validade inválidos, valor não-texto → 400 (${ruinsE.map((r) => r.status)})`, async () => ruinsE.every((r) => r.status === 400) && (await req('GET', '/api/cliente/sessao', { cookie: cCli2 })).dados.email === 'cli@example.com');
+  await t('PE41', 'Cliente comum não usa a rota de edição (404); sem Origin → 403', async () => (await req('PUT', `/api/cliente/equipe/clientes/${cli}/dados`, { cookie: cOutro, json: { city: 'X' } })).status === 404 && (await req('PUT', `/api/cliente/equipe/clientes/${cli}/dados`, { cookie: cChefe, json: { city: 'X' }, headers: { Origin: 'https://evil.example' } })).status === 403);
+  const igual = await req('PUT', `/api/cliente/equipe/clientes/${cli}/dados`, { cookie: cChefe, json: { city: 'Abu Dhabi' } });
+  await t('PE42', 'Salvar sem mudança real → nada alterado e nada registrado', async () => igual.status === 200 && igual.dados.alterados.length === 0);
+  const regEd = (await db.q(`select detalhes from acoes_equipe where acao='editar_dados' order by em`)).rows;
+  await t('PE43', 'Registro guarda QUAIS campos mudaram (sem os valores)', async () => regEd.length === 1 && regEd[0].detalhes.campos.includes('city') && !JSON.stringify(regEd[0].detalhes).includes('Abu Dhabi') && !JSON.stringify(regEd[0].detalhes).includes('7654321'));
+
   console.log('--- Registro e sessão da equipe');
   const reg = (await E('GET', '/registro')).dados.acoes.map((a) => a.acao);
-  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
+  await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento', 'editar_dados'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);
   await adm.revogarEquipe('chefe@example.com');
   await t('PE35', 'Papel de equipe revogado → painel some na hora (404), mesma sessão', async () => (await E('GET', '/resumo')).status === 404);
   await adm.concederEquipe('chefe@example.com');
