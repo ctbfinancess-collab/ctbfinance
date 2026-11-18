@@ -119,6 +119,11 @@ try {
   await t('OP23', 'Agora há vaga: nova solicitação aceita (2 fechadas liberaram)', async () => (await P(cAna, { tipo: 'cambio', contaId: usd, valor: '1', moedaDestino: 'AED' })).status === 201);
   const lApp = await fetch(BASE + '/api/cliente/app/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'ana@example.com', senha: 'SenhaSegura2026' }) }).then((r) => r.json());
   await t('OP24', 'Pelo app (token), a cliente lê as mesmas solicitações', async () => (await fetch(BASE + '/api/cliente/operacoes', { headers: { Authorization: `Bearer ${lApp.token}` } }).then((r) => r.json())).operacoes.length === 6);
+  const sg = await P(cAna, { tipo: 'cambio', contaId: usd, valor: '20.000', moedaDestino: 'AED' });
+  const opG = (await E('GET', '/operacoes')).dados.operacoes.find((o) => o.valor === '2000000');
+  await E('POST', `/operacoes/${opG.id}/status`, { json: { status: 'concluida' } });
+  const lg = await E('POST', `/operacoes/${opG.id}/lancar`);
+  await t('OP25', 'Lançar operação maior que o saldo → 409 saldo_insuficiente; saldo e extrato intactos', async () => sg.status === 201 && lg.status === 409 && lg.dados.erro === 'saldo_insuficiente' && (await saldo(usd)) === '1000000' && (await db.q('select movimento_id from operacoes_cliente where id=$1', [opG.id])).rows[0].movimento_id === null);
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);
 } finally {

@@ -25,6 +25,8 @@ function centavos(v, { negativo = false } = {}) {
   return m[1] ? -c : c;
 }
 const dataValida = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]; };
+const fmtValor = (c, moeda) => { const n = BigInt(c); const a = n < 0n ? -n : n; return `${n < 0n ? '− ' : ''}${moeda} ${(a / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(a % 100n).toString().padStart(2, '0')}`; };
+const semSaldo = (saldo, moeda) => `Débito maior que o saldo disponível (${fmtValor(saldo, moeda)}). Confira o valor — o saldo não pode ficar negativo.`;
 const texto = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : '');
 
 export function criarPainel({ db, adm, json, lerJson, log = console }) {
@@ -214,13 +216,15 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     if (!UUID.test(String(b.contaId || '')) || !dataValida(b.data) || !descricao || valor === null || valor === 0n) return erro(res, 400, 'valor_invalido', 'Confira a conta, a data, a descrição e o valor.');
     // lança e atualiza o saldo da conta na MESMA transação (trava a conta para lançamentos simultâneos)
     const r = await db.transacao(async (q) => {
-      const conta = (await q('select id from contas_cliente where id=$1 and usuario_id=$2 for update', [b.contaId, c.id])).rows[0];
+      const conta = (await q('select id, moeda, saldo_centavos::text as saldo from contas_cliente where id=$1 and usuario_id=$2 for update', [b.contaId, c.id])).rows[0];
       if (!conta) return null;
+      if (valor < 0n && BigInt(conta.saldo) + valor < 0n) return { semSaldo: semSaldo(conta.saldo, conta.moeda) };
       const mov = await q('insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por, aplicado_no_saldo) values ($1,$2,$3,$4,$5,$6,true) returning id', [c.id, conta.id, b.data, descricao, valor.toString(), u.email]);
       const s = await q('update contas_cliente set saldo_centavos = saldo_centavos + $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1 returning saldo_centavos::text as saldo', [conta.id, valor.toString(), u.email]);
       return { id: mov.rows[0].id, saldo: s.rows[0].saldo };
     });
     if (!r) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
+    if (r.semSaldo) return erro(res, 409, 'saldo_insuficiente', r.semSaldo);
     await registrar(u, 'financeiro_movimento', c.email, { data: b.data });
     return json(res, 201, r);
   }
@@ -250,8 +254,13 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (!m) return 404;
       // trava as contas envolvidas sempre na mesma ordem (evita impasse)
       const ids = [...new Set([m.conta_id, b.contaId])].sort();
-      const contas = (await q('select id from contas_cliente where id = any($1::uuid[]) and usuario_id=$2 order by id for update', [ids, c.id])).rows;
-      if (!contas.some((k) => k.id === b.contaId)) return 400;
+      const contas = (await q('select id, moeda, saldo_centavos::text as saldo from contas_cliente where id = any($1::uuid[]) and usuario_id=$2 order by id for update', [ids, c.id])).rows;
+      const destino = contas.find((k) => k.id === b.contaId);
+      if (!destino) return 400;
+      if (m.aplicado_no_saldo && valor < 0n) {
+        const base = BigInt(destino.saldo) - (m.conta_id === b.contaId ? BigInt(m.v) : 0n);
+        if (base + valor < 0n) return { semSaldo: semSaldo(base.toString(), destino.moeda) };
+      }
       if (m.aplicado_no_saldo) {
         await q('update contas_cliente set saldo_centavos = saldo_centavos - $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [m.conta_id, m.v, u.email]);
         await q('update contas_cliente set saldo_centavos = saldo_centavos + $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [b.contaId, valor.toString(), u.email]);
@@ -261,6 +270,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     });
     if (r === 404) return erro(res, 404, 'nao_encontrado');
     if (r === 400) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
+    if (r?.semSaldo) return erro(res, 409, 'saldo_insuficiente', r.semSaldo);
     await registrar(u, 'financeiro_movimento_corrigido', c.email, { data: b.data });
     return json(res, 200, { ok: true });
   }
@@ -433,7 +443,9 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (o.status !== 'concluida') return 'nao_concluida';
       if (o.movimento_id) return 'ja_lancada';
       if (!o.conta_id) return 'sem_conta';
-      await q('select id from contas_cliente where id=$1 for update', [o.conta_id]);
+      const k = (await q('select moeda, saldo_centavos::text as saldo from contas_cliente where id=$1 for update', [o.conta_id])).rows[0];
+      if (!k) return 'sem_conta';
+      if (BigInt(k.saldo) - BigInt(o.valor_centavos) < 0n) return { semSaldo: semSaldo(k.saldo, k.moeda) };
       const ben = o.beneficiario || {};
       const desc = (o.tipo === 'cambio' ? `Câmbio ${o.moeda} → ${o.moeda_destino}` : `${DESC_OP[o.tipo]}${ben.nome ? ' — ' + ben.nome : ''}`).slice(0, 140);
       const hoje = new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10);
@@ -447,6 +459,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     if (r === 'nao_concluida') return erro(res, 409, 'nao_concluida', 'Conclua a solicitação antes de lançar no extrato.');
     if (r === 'ja_lancada') return erro(res, 409, 'ja_lancada', 'Esta operação já foi lançada no extrato.');
     if (r === 'sem_conta') return erro(res, 409, 'sem_conta', 'A conta de origem foi excluída; lance manualmente na ficha.');
+    if (r?.semSaldo) return erro(res, 409, 'saldo_insuficiente', r.semSaldo);
     await registrar(u, 'operacao_lancada', r);
     return json(res, 200, { ok: true });
   }

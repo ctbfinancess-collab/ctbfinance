@@ -100,6 +100,17 @@ try {
   const ccDup = await E('PUT', `/clientes/${ana}/contas`, { json: { id: c2.dados.id, tipo: 'digital', moeda: 'AED', saldo: '1' } });
   await t('FI4i', 'Corrigir conta: troca a moeda; virar duplicata de outra conta → 409', async () => cc.status === 200 && (await F(cAna)).contas.some((c) => c.id === c2.dados.id && c.moeda === 'EUR') && ccDup.status === 409);
   await E('PUT', `/clientes/${ana}/contas`, { json: { id: c2.dados.id, tipo: 'global', moeda: 'USD', saldo: '12480.5' } });
+  { const s0 = await saldoDig();
+    const grande = await E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Transferência SWIFT', valor: '-100000000' } });
+    await t('FI4k', 'Débito maior que o saldo → 409 saldo_insuficiente, nada lançado, saldo intacto', async () => grande.status === 409 && grande.dados.erro === 'saldo_insuficiente' && /saldo disponível/.test(grande.dados.mensagem) && (await saldoDig()) === s0 && !(await F(cAna)).movimentos.some((m) => m.valor === '-10000000000'));
+    const pequeno = await E('POST', `/clientes/${ana}/movimentos`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Tarifa', valor: '-1' } });
+    const corrG = await E('PUT', `/clientes/${ana}/movimentos/${pequeno.dados.id}`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Tarifa', valor: '-100000000' } });
+    await t('FI4l', 'Corrigir para débito maior que o saldo → 409; lançamento e saldo continuam como antes', async () => corrG.status === 409 && corrG.dados.erro === 'saldo_insuficiente' && (await saldoDig()) === String(BigInt(s0) - 100n) && (await F(cAna)).movimentos.some((m) => m.id === pequeno.dados.id && m.valor === '-100'));
+    const exato = await E('PUT', `/clientes/${ana}/movimentos/${pequeno.dados.id}`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'Tarifa', valor: '-' + (BigInt(s0) / 100n).toString() + ',' + (BigInt(s0) % 100n).toString().padStart(2, '0') } });
+    await t('FI4m', 'Débito igual ao saldo é aceito (saldo zera)', async () => exato.status === 200 && (await saldoDig()) === '0');
+    await E('DELETE', `/clientes/${ana}/movimentos/${pequeno.dados.id}`);
+    await t('FI4n', 'Excluir devolve o saldo', async () => (await saldoDig()) === s0);
+  }
   await t('FI4j', 'Corrigir movimento de outra cliente → 404', async () => (await E('PUT', `/clientes/${bia}/movimentos/${m1.dados.id}`, { json: { contaId: c1.dados.id, data: '2026-11-18', descricao: 'x', valor: '1' } })).status === 404);
   const p1 = await E('PUT', `/clientes/${ana}/posicoes`, { json: { classe: 'renda_fixa', descricao: 'Bond 2030', moeda: 'USD', valor: '400.000,00' } });
   await E('PUT', `/clientes/${ana}/posicoes`, { json: { classe: 'fundos', descricao: 'Fundo Global', moeda: 'USD', valor: '200000' } });
