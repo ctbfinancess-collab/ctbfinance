@@ -175,6 +175,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 </div>
 
 <script>
+  // campos de data: clicar em qualquer ponto abre o calendário
+  document.addEventListener('click', (e) => { const t = e.target as HTMLInputElement; if (t instanceof HTMLInputElement && t.type === 'date' && !t.disabled && !t.readOnly) { try { t.showPicker(); } catch {} } });
   // Área do Cliente: API do próprio site no Railway. Sessão em cookie HttpOnly (o JavaScript não lê o cookie).
   const PROFILE = ['display_name', 'phone_number', 'nationality', 'dateofbirth', 'address', 'residencenumber', 'city', 'country', 'zipcode'];
   const COMPANY = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'];
@@ -524,6 +526,8 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
 </script>
 
 <style>
+  :global(input[type='date']) { color-scheme: dark; cursor: pointer; }
+  :global(input[type='date']::-webkit-calendar-picker-indicator) { cursor: pointer; opacity: 1; filter: invert(72%) sepia(38%) saturate(520%) hue-rotate(352deg) brightness(95%); }
   .portal { scroll-margin-top: 110px; }
   .portal [hidden] { display: none !important; }
   .loading { grid-column: 1 / -1; }

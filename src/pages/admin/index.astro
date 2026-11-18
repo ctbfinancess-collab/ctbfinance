@@ -235,6 +235,8 @@ import '../../styles/global.css';
     </dialog>
 
     <script>
+      // campos de data: clicar em qualquer ponto abre o calendário
+      document.addEventListener('click', (e) => { const t = e.target as HTMLInputElement; if (t instanceof HTMLInputElement && t.type === 'date' && !t.disabled && !t.readOnly) { try { t.showPicker(); } catch {} } });
       const API = '/api/cliente';
       const $ = <T extends HTMLElement = HTMLElement>(s: string, r: ParentNode = document) => r.querySelector<T>(s)!;
       const $$ = <T extends HTMLElement = HTMLElement>(s: string, r: ParentNode = document) => [...r.querySelectorAll<T>(s)];
@@ -923,6 +925,8 @@ import '../../styles/global.css';
     </script>
 
     <style is:global>
+      input[type='date'] { cursor: pointer; }
+      input[type='date']::-webkit-calendar-picker-indicator { cursor: pointer; opacity: 1; filter: invert(72%) sepia(38%) saturate(520%) hue-rotate(352deg) brightness(95%); }
       :root { --fundo: #1c100b; --fundo-2: #24150e; --cartao: rgba(43, 26, 18, 0.88); --borda: rgba(201, 164, 106, 0.32); --borda-forte: rgba(217, 174, 107, 0.6); --ouro: #d9ae6b; --ouro-claro: #f0d39c; --texto: #f3e6d2; --texto-2: #c9b49a; --verde: #f0d39c; --vermelho: #e8d6b7; }
       html, body { background: var(--fundo); }
       body { color: var(--texto); min-height: 100vh; font-family: var(--font-body); }

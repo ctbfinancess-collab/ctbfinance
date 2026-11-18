@@ -36,7 +36,7 @@ const T = en ? {
     aviso: 'Sending a request does not represent approval or issuance of the instrument. Issuance is carried out exclusively by a licensed financial institution.',
     nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
     instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
-    ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', finalidade: 'Purpose', operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
+    ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', finalidade: 'Purpose', sugFinalidade: ['Monetization', 'Payment guarantee', 'Credit line / financing', 'Commodity purchase', 'Import / export', 'Contract performance guarantee', 'Project / investment'], operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
     salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
     faltam: 'To send, fill in:', minhas: 'My instrument requests', nenhuma: 'No instrument requests yet.', rascunho: 'Draft', anexar: 'Attach file (PDF, JPG, PNG)', anexado: 'File attached.', cancelar: 'Cancel request', cancelarConf: 'Cancel this request?', cancelada: 'Request cancelled.',
     historico: 'History', anexos: 'Attachments', mensagem: 'Message to our team', enviarMsg: 'Send message', msgOk: 'Message sent.', equipe: 'CTB team', voce: 'You', aDefinir: 'to be defined',
@@ -71,7 +71,7 @@ const T = en ? {
     aviso: 'O envio da solicitação não representa aprovação nem emissão do instrumento. A emissão é feita exclusivamente por instituição financeira habilitada.',
     nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
     instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
-    ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', finalidade: 'Finalidade', operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
+    ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', finalidade: 'Finalidade', sugFinalidade: ['Monetização', 'Garantia de pagamento', 'Linha de crédito / financiamento', 'Compra de commodities', 'Importação / exportação', 'Garantia de performance contratual', 'Projeto / investimento'], operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
     salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
     faltam: 'Para enviar, preencha:', minhas: 'Minhas solicitações de instrumentos', nenhuma: 'Nenhuma solicitação de instrumento ainda.', rascunho: 'Rascunho', anexar: 'Anexar arquivo (PDF, JPG, PNG)', anexado: 'Arquivo anexado.', cancelar: 'Cancelar solicitação', cancelarConf: 'Cancelar esta solicitação?', cancelada: 'Solicitação cancelada.',
     historico: 'Histórico', anexos: 'Anexos', mensagem: 'Mensagem para a nossa equipe', enviarMsg: 'Enviar mensagem', msgOk: 'Mensagem enviada.', equipe: 'Equipe CTB', voce: 'Você', aDefinir: 'a definir',
@@ -196,6 +196,7 @@ const I = T.inst;
           </div>
         </fieldset>
         <label class="op-obs"><span>{I.finalidade}</span><textarea name="finalidade" maxlength="1000" rows="2"></textarea></label>
+        <div class="op-tipos op-sugestoes" data-sug-finalidade>{I.sugFinalidade.map((t: string) => <button type="button" aria-pressed="false" data-sug={t}>{t}</button>)}</div>
         <label class="op-obs"><span>{I.operacao}</span><textarea name="operacaoSubjacente" maxlength="1000" rows="2"></textarea></label>
         <div class="op-grade">
           <label><span>{I.emissor}</span><input name="bancoEmissor" maxlength="160" autocomplete="off" /></label>
@@ -227,6 +228,13 @@ const I = T.inst;
   const raiz = document.querySelector<HTMLElement>('[data-fin]');
   if (raiz && !raiz.dataset.pronto) {
     raiz.dataset.pronto = '1';
+    // sugestões de finalidade: um clique preenche o campo (dá para completar o texto depois)
+    raiz.querySelectorAll<HTMLElement>('[data-sug-finalidade]').forEach((box) => box.addEventListener('click', (ev) => {
+      const b = (ev.target as HTMLElement).closest<HTMLButtonElement>('button[data-sug]'); if (!b) return;
+      const ta = box.previousElementSibling?.querySelector('textarea') as HTMLTextAreaElement | null; if (!ta) return;
+      ta.value = b.dataset.sug!; box.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+      ta.dispatchEvent(new Event('input', { bubbles: true })); ta.focus();
+    }));
     const T = JSON.parse(raiz.dataset.t!);
     const en = raiz.dataset.lang === 'en';
     const loc = en ? 'en-GB' : 'pt-BR';
@@ -546,6 +554,9 @@ const I = T.inst;
   .op-form { display: grid; gap: 0.9rem; margin-top: 1rem; padding: 1.1rem 1.2rem; border: 1px solid rgba(201, 164, 106, 0.32); border-radius: 16px; background: rgba(28, 16, 11, 0.28); }
   .op-form[hidden], .op-form [hidden] { display: none !important; }
   .op-form + .sub, [data-op-semconta] + .op-form[hidden] + .sub { margin-top: 1.8rem; }
+  .op-sugestoes { margin: -0.3rem 0 0.4rem; }
+  .op-sugestoes button { font-size: 0.8rem; padding: 0.35rem 0.8rem; }
+  .op-sugestoes button[aria-pressed='true'] { background: linear-gradient(180deg, #f0d39c, #c99550); color: #24120a; border-color: transparent; font-weight: 600; }
   .op-tipos { display: flex; flex-wrap: wrap; gap: 0.5rem; }
   .op-tipos button { font: inherit; font-size: 0.88rem; padding: 0.5rem 1rem; border-radius: 999px; cursor: pointer; background: transparent; color: #f3e6d2; border: 1px solid rgba(201, 164, 106, 0.45); }
   .op-tipos button[aria-checked='true'] { background: linear-gradient(180deg, #f0d39c, #c99550); color: #24120a; border-color: transparent; font-weight: 600; }
