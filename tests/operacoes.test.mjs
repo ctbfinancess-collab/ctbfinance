@@ -124,6 +124,7 @@ try {
   await E('POST', `/operacoes/${opG.id}/status`, { json: { status: 'concluida' } });
   const lg = await E('POST', `/operacoes/${opG.id}/lancar`);
   await t('OP25', 'Lançar operação maior que o saldo → 409 saldo_insuficiente; saldo e extrato intactos', async () => sg.status === 201 && lg.status === 409 && lg.dados.erro === 'saldo_insuficiente' && (await saldo(usd)) === '1000000' && (await db.q('select movimento_id from operacoes_cliente where id=$1', [opG.id])).rows[0].movimento_id === null);
+  await t('OP26', 'Ficha do cliente: filtro por cliente (Ana vê as dela; Bia nenhuma; id inválido ignora o filtro)', async () => (await E('GET', `/operacoes?status=todas&usuario=${ana}`)).dados.operacoes.every((o) => o.email === 'ana@example.com') && (await E('GET', `/operacoes?status=todas&usuario=${ana}`)).dados.operacoes.length > 0 && (await E('GET', `/operacoes?status=todas&usuario=${bia}`)).dados.operacoes.length === 0);
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);
 } finally {

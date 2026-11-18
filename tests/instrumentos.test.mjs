@@ -188,6 +188,7 @@ try {
   await t('IN38', 'Limite de novas solicitações por dia → 429', async () => extras.some((r) => r.status === 429) && extras.filter((r) => r.status === 201).length <= 7);
   const lApp = await fetch(BASE + '/api/cliente/app/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'ana@example.com', senha: 'SenhaSegura2026' }) }).then((r) => r.json());
   await t('IN39', 'Pelo app (token), a cliente lê as mesmas solicitações', async () => { const r = await fetch(BASE + '/api/cliente/instrumentos', { headers: { Authorization: `Bearer ${lApp.token}` } }).then((x) => x.json()); return r.solicitacoes.length === (await L(cAna)).length && r.solicitacoes.length >= 3; });
+  await t('IN40b', 'Ficha do cliente: filtro ?usuario= traz só as solicitações dele', async () => { const l = (await E('GET', `/instrumentos?status=todas&usuario=${ana}`)).dados.solicitacoes; const z = (await E('GET', `/instrumentos?status=todas&usuario=00000000-0000-4000-8000-000000000000`)).dados.solicitacoes; return l.length > 0 && l.every((x) => x.usuario_id === ana) && z.length === 0; });
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);

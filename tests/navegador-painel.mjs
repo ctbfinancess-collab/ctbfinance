@@ -61,6 +61,7 @@ const vis = (sel) => `(()=>{const e=document.querySelector('${sel}');return !!e 
 const shot = async (f, w = 1440, h = 1000) => { await send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 500 }); await sleep(400); const { data } = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(path.join(SAIDA, `${f}.png`), Buffer.from(data, 'base64')); };
 let ok = 0, fail = 0; const check = (d, c) => { if (c) { ok++; console.log('✅', d); } else { fail++; console.log('❌', d); } };
 const clicar = (sel) => ev(`(()=>{const e=document.querySelector('${sel}');e.click();return 1})()`);
+const abaFicha = (k) => ev(`(()=>{document.querySelector('[data-ficha-aba=${k}]').click();return 1})()`);
 const clicarTexto = (txt, raiz = 'document') => ev(`(()=>{const b=[...${raiz}.querySelectorAll('button')].find(x=>x.textContent.trim()==='${txt}' && x.getClientRects().length);if(!b)return 0;b.click();return 1})()`);
 const entrarPainel = (e, s) => ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-form-entrar]');f.email.value='${e}';f.senha.value='${s}';f.requestSubmit();return 1})()`);
 const msg = `(((document.querySelector('[data-msg]')||{}).textContent||'') + ' ' + ((document.querySelector('[data-msg-ficha]')||{}).textContent||''))`;
@@ -102,16 +103,19 @@ try {
   check('Convidar: mensagem de sucesso, Carla na lista como "Convite enviado", e-mail em inglês', await waitFor(`${msg}.includes('Convite enviado para carla@example.com') && document.querySelector('[data-clientes]').innerText.includes('Convite enviado')`) && emails.some((m) => m.to.includes('carla@example.com') && /Client Area/.test(m.subject)));
   await shot('p2-clientes');
   await ev(`(()=>{const l=[...document.querySelectorAll('[data-clientes] .linha-t')].find(x=>x.innerText.includes('ana@example.com'));l.querySelector('button').click();return 1})()`);
-  check('Ficha da Ana: passaporte COMPLETO (FX1234567), validade, documentos e agendamento', await waitFor(`document.querySelector('[data-ficha]').open && (()=>{const t=document.querySelector('[data-ficha]').innerText;return t.includes('FX1234567')&&t.includes('20/05/2031')&&t.includes('passaporte-ana.pdf')&&t.includes('Abertura de conta')})()`));
+  check('Ficha em abas (Dados, Financeiro, Instrumentos, Transferências, Contratos, Documentos, Agendamentos, Acesso); abre em Dados', await waitFor(`document.querySelector('[data-ficha]').open && [...document.querySelectorAll('[data-ficha] [data-ficha-aba]')].map(b=>b.dataset.fichaAba).join(',')==='dados,financeiro,instrumentos,transferencias,contratos,documentos,agendamentos,acesso' && document.querySelector('[data-ficha-aba=dados]').getAttribute('aria-selected')==='true' && document.querySelector('[data-ficha-painel=financeiro]').hidden && document.querySelector('[data-ficha]').innerText.includes('Pessoa física')`));
+  check('Ficha da Ana: passaporte COMPLETO (FX1234567), validade, documentos e agendamento', await waitFor(`document.querySelector('[data-ficha]').open && (()=>{const t=document.querySelector('[data-ficha]').textContent;return t.includes('FX1234567')&&t.includes('20/05/2031')&&t.includes('passaporte-ana.pdf')&&t.includes('Abertura de conta')})()`));
   await shot('p3-ficha');
   await clicarTexto('Marcar como conferido', "document.querySelector('[data-ficha]')");
   check('Conferir passaporte → "Conferido em … por chefe@example.com" e botão de destravar', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('por chefe@example.com') && [...document.querySelectorAll('[data-ficha] button')].some(b=>b.textContent.startsWith('Destravar'))`));
   const travou = await fetch(`${BASE}/api/cliente/perfil`, { method: 'PUT', headers: { Cookie: cAna, Origin: BASE, 'Content-Type': 'application/json' }, body: JSON.stringify({ passportnumber: 'ZZ9999999' }) });
   check('Cliente não consegue mais alterar o passaporte (409)', travou.status === 409);
+  await abaFicha('acesso');
   await clicarTexto('Bloquear acesso', "document.querySelector('[data-ficha]')");
   check('Bloquear: ficha mostra "Bloqueado" e a sessão da Ana cai', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Desbloquear acesso')`) && (await fetch(`${BASE}/api/cliente/perfil`, { headers: { Cookie: cAna } })).status === 401);
   await clicarTexto('Desbloquear acesso', "document.querySelector('[data-ficha]')");
   check('Desbloquear', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Bloquear acesso')`));
+  await abaFicha('financeiro');
   check('Ficha mostra o bloco Financeiro vazio', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('Contas e saldos') && document.querySelector('[data-ficha]').innerText.includes('Nenhuma conta lançada')`));
   await ev(`(()=>{window.confirm=()=>true;const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.saldo.value='';f.requestSubmit();return 1})()`);
   check('Salvar com o saldo vazio → aviso VISÍVEL dentro da ficha', await waitFor(`(()=>{const m=document.querySelector('[data-msg-ficha]');return !m.hidden && m.textContent.includes('Digite o saldo') && m.getClientRects().length>0})()`));
@@ -141,6 +145,7 @@ try {
   await shot('p3b-financeiro');
   await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][1].scrollIntoView({block:'start'}),1`); await shot('p3c-opcoes');
   console.log('--- Contratos (papel timbrado)');
+  await abaFicha('contratos');
   check('Ficha mostra o bloco Contratos vazio', await waitFor(`(()=>{const b=document.querySelector('[data-ficha] [data-contratos]');return !!b && b.innerText.includes('Nenhum contrato.')})()`));
   await ev(`(()=>{document.querySelector('[data-ficha] [data-contrato-gerar]').click();return 1})()`);
   check('Gerar contrato → editor com os campos preenchidos do cadastro (passaporte completo)', await waitFor(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');const v=(k)=>e?.querySelector('[data-contrato-campo='+k+']')?.value;return v('passaporte')==='FX1234567' && v('prazo')==='two (2)' && /^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(v('data')||'')})()`));
@@ -158,6 +163,7 @@ try {
   const pdfAdm = await ev(`fetch('/api/cliente/equipe/contratos/'+document.querySelector('[data-ficha] [data-contrato-id]').dataset.contratoId+'/pdf').then(async r=>r.status+' '+r.headers.get('content-type')+' '+(await r.text()).slice(0,5))`);
   check('Pré-visualização do PDF pela equipe (application/pdf)', pdfAdm === '200 application/pdf %PDF-');
   await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');e.querySelectorAll('details').forEach(d=>d.open=true);e.scrollIntoView({block:'start'});return 1})()`); await shot('p3g-contrato-texto');
+  await abaFicha('dados');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
   check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));
   await ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.edicao');f.display_name.value='Ana Corrigida';f.city.value='Sharjah';f.requestSubmit();return 1})()`);

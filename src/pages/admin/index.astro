@@ -407,6 +407,7 @@ import '../../styles/global.css';
       // fechou a ficha: uma resposta que ainda estava a caminho não a reabre
       ficha.addEventListener('close', () => { nova('ficha'); if (!fechandoPeloHistorico && history.state && history.state.ficha) history.back(); });
       let abrindo = false;
+      let fichaAba = 'dados', fichaAbaDe = '';   // aba da ficha lembrada enquanto o mesmo cliente está aberto
       async function abrirFicha(id: string, nova_ = true, registrar = true) {
         abrindo = nova_;
         if (nova_ && registrar) { history.pushState({ aba: abaAtual, ficha: id }, '', `#${abaAtual}/${id}`); passos++; marcarVoltar(); }
@@ -422,11 +423,26 @@ import '../../styles/global.css';
           if (confirmar && !confirm(confirmar)) return;
           try { await chamar(`/equipe/clientes/${c.id}/${rota}`, { metodo: 'POST', corpo: {} }); aviso('Feito.'); await abrirFicha(c.id, false); await atualizar(); } catch (e) { falhou(e); }
         } }, rotulo);
-        const campos: [string, string][] = [['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Empresa', d.CompanyName], ['Registro da empresa', d.Companyregistrationnumber], ['País da empresa', d.companycountry], ['Cargo na empresa', d.companyposition], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']];
-        const lista = el('dl', { class: 'dados' }, ...campos.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, v)]));
-        const btnEditar = el('button', { type: 'button', class: 'botao pequeno claro editar', onclick: () => { lista.replaceWith(formEdicao(c, () => abrirFicha(c.id, false))); btnEditar.remove(); } }, '✎ Editar dados');
-        corpo.append(btnEditar, lista);
-        // passaporte (número completo só aqui)
+        const dl = (pares: [string, any][]) => el('dl', { class: 'dados' }, ...pares.filter(([, v]) => v).flatMap(([k, v]) => [el('dt', {}, k), el('dd', {}, String(v))]));
+        // ---- abas da ficha: cada assunto separado para a equipe conferir com calma
+        const ABAS_FICHA: [string, string][] = [['dados', 'Dados'], ['financeiro', 'Financeiro'], ['instrumentos', 'Instrumentos'], ['transferencias', 'Transferências'], ['contratos', 'Contratos'], ['documentos', `Documentos (${c.documentos.length})`], ['agendamentos', `Agendamentos (${c.agendamentos.length})`], ['acesso', 'Acesso']];
+        if (fichaAbaDe !== c.id) { fichaAba = 'dados'; fichaAbaDe = c.id; }
+        const nav = el('nav', { class: 'ficha-abas', role: 'tablist', 'aria-label': 'Assuntos do cliente' });
+        const paineis: Record<string, HTMLElement> = {};
+        const mostrar = (k: string) => { fichaAba = k; nav.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String((b as HTMLElement).dataset.fichaAba === k))); for (const [n, pn] of Object.entries(paineis)) pn.hidden = n !== k; carregarAba(k); };
+        const carregados = new Set<string>();
+        const carregarAba = (k: string) => { if (carregados.has(k)) return; carregados.add(k); (CARGAS as any)[k]?.(); };
+        for (const [k, rot] of ABAS_FICHA) {
+          nav.append(el('button', { type: 'button', role: 'tab', 'data-ficha-aba': k, onclick: () => mostrar(k) }, rot));
+          paineis[k] = el('div', { class: 'ficha-painel', role: 'tabpanel', 'data-ficha-painel': k, hidden: '' });
+        }
+        corpo.append(nav, ...Object.values(paineis));
+        // Dados: pessoa física, empresa e passaporte
+        const pf = dl([['E-mail', c.email], ['Telefone', d.phone_number], ['Nacionalidade', d.nationality], ['Nascimento', d.dateofbirth], ['Endereço', [d.address, d.residencenumber].filter(Boolean).join(', ')], ['Cidade / País', [d.city, d.country].filter(Boolean).join(' · ')], ['CEP', d.zipcode], ['Idioma dos e-mails', c.idioma === 'en' ? 'Inglês' : 'Português'], ['Situação', c.bloqueado ? 'Bloqueado' : c.ativo ? 'Ativo' : 'Convite enviado (sem senha)']]);
+        const temPj = d.CompanyName || d.Companyregistrationnumber;
+        const pj = temPj ? dl([['Empresa', d.CompanyName], ['Nº de registro', d.Companyregistrationnumber], ['País de constituição', d.companycountry], ['Endereço', [[d.companysadress, d.companyaddressnumber].filter(Boolean).join(', '), d.companycity, d.companyzipcode].filter(Boolean).join(' · ')], ['Cargo do cliente', d.companyposition]]) : el('p', { class: 'nota' }, 'O cliente não cadastrou empresa.');
+        const blocoDados = el('div', {}, el('h3', {}, 'Pessoa física'), pf, el('div', { class: 'bloco' }, el('h3', {}, 'Pessoa jurídica (empresa)'), pj));
+        const btnEditar = el('button', { type: 'button', class: 'botao pequeno claro editar', onclick: () => { blocoDados.replaceWith(formEdicao(c, () => abrirFicha(c.id, false))); btnEditar.remove(); } }, '✎ Editar dados');
         const pass = el('div', { class: 'bloco' }, el('h3', {}, 'Passaporte'));
         if (!d.passportnumber) pass.append(el('p', { class: 'nota' }, 'O cliente ainda não informou.'));
         else {
@@ -434,30 +450,44 @@ import '../../styles/global.css';
           if (c.passaporteConferidoEm) pass.append(el('p', { class: 'nota ok' }, `Conferido em ${dataHora(c.passaporteConferidoEm)} por ${c.passaporteConferidoPor || 'equipe'}.`), acao('Destravar (cliente poderá alterar)', 'passaporte-liberar', 'Destravar o passaporte? O cliente poderá alterar o número e a validade.', 'claro'));
           else pass.append(el('p', { class: 'nota' }, 'Compare com a cópia do passaporte em Documentos antes de conferir.'), acao('Marcar como conferido', 'passaporte-conferir', 'Confirmar que o número e a validade conferem com o documento? O campo ficará travado para o cliente.'));
         }
-        corpo.append(pass);
-        // financeiro (lançado pela equipe; o cliente só consulta)
-        const fin = el('div', { class: 'bloco' }, el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Carregando…'));
-        corpo.append(fin);
-        blocoFinanceiro(c, fin);
-        // contratos (NDA etc.) no papel timbrado
-        const ctr = el('div', { class: 'bloco', 'data-contratos': '' }, el('h3', {}, 'Contratos'), el('p', { class: 'nota' }, 'Carregando…'));
-        corpo.append(ctr);
-        blocoContratos(ctr, { usuarioId: c.id });
-        // documentos
-        const docs = el('div', { class: 'bloco' }, el('h3', {}, `Documentos (${c.documentos.length})`));
-        for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id, false)));
-        if (!c.documentos.length) docs.append(el('p', { class: 'nota' }, 'Nenhum documento enviado.'));
-        corpo.append(docs);
-        // agendamentos
-        const ags = el('div', { class: 'bloco' }, el('h3', {}, `Agendamentos (${c.agendamentos.length})`));
-        for (const a of c.agendamentos) ags.append(linhaAgendamento({ ...a, email: c.email, nome: d.display_name }, () => abrirFicha(c.id, false)));
-        if (!c.agendamentos.length) ags.append(el('p', { class: 'nota' }, 'Nenhum agendamento.'));
-        corpo.append(ags);
-        // conta
-        const conta = el('div', { class: 'bloco acoes' }, el('h3', {}, 'Conta'));
+        paineis.dados.append(btnEditar, blocoDados, pass);
+        // Financeiro (lançado pela equipe; o cliente só consulta)
+        const fin = el('div', {}, el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Carregando…'));
+        paineis.financeiro.append(fin);
+        // Instrumentos e transferências deste cliente
+        const instBox = el('div', {}, el('p', { class: 'nota' }, 'Carregando…'));
+        paineis.instrumentos.append(el('h3', {}, 'Solicitações de instrumentos'), instBox);
+        const opBox = el('div', {}, el('p', { class: 'nota' }, 'Carregando…'));
+        paineis.transferencias.append(el('h3', {}, 'Transferências e câmbio'), opBox);
+        // Contratos (NDA etc.) no papel timbrado
+        const ctr = el('div', { 'data-contratos': '' }, el('h3', {}, 'Contratos'), el('p', { class: 'nota' }, 'Carregando…'));
+        paineis.contratos.append(ctr);
+        const CARGAS = {
+          financeiro: () => blocoFinanceiro(c, fin),
+          contratos: () => blocoContratos(ctr, { usuarioId: c.id }),
+          instrumentos: async () => {
+            try { const { solicitacoes } = await chamar(`/equipe/instrumentos?status=todas&usuario=${c.id}`); instBox.replaceChildren(...(solicitacoes.length ? solicitacoes.map((x: any) => linhaInstrumento(x)) : [el('p', { class: 'nota' }, 'Nenhuma solicitação enviada (rascunhos do cliente não aparecem).')])); }
+            catch (e) { instBox.replaceChildren(el('p', { class: 'nota' }, 'Não foi possível carregar.')); }
+          },
+          transferencias: async () => {
+            try { const { operacoes } = await chamar(`/equipe/operacoes?status=todas&usuario=${c.id}`); opBox.replaceChildren(...(operacoes.length ? operacoes.map((x: any) => linhaOperacao(x)) : [el('p', { class: 'nota' }, 'Nenhuma solicitação de transferência ou câmbio.')])); }
+            catch (e) { opBox.replaceChildren(el('p', { class: 'nota' }, 'Não foi possível carregar.')); }
+          },
+        };
+        // Documentos
+        paineis.documentos.append(el('h3', {}, `Documentos (${c.documentos.length})`));
+        for (const x of c.documentos) paineis.documentos.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id, false)));
+        if (!c.documentos.length) paineis.documentos.append(el('p', { class: 'nota' }, 'Nenhum documento enviado.'));
+        // Agendamentos
+        paineis.agendamentos.append(el('h3', {}, `Agendamentos (${c.agendamentos.length})`));
+        for (const a of c.agendamentos) paineis.agendamentos.append(linhaAgendamento({ ...a, email: c.email, nome: d.display_name }, () => abrirFicha(c.id, false)));
+        if (!c.agendamentos.length) paineis.agendamentos.append(el('p', { class: 'nota' }, 'Nenhum agendamento.'));
+        // Acesso (senha, convite, bloqueio)
+        const conta = el('div', { class: 'acoes' }, el('h3', {}, 'Acesso à Área do Cliente'));
         if (!c.bloqueado) conta.append(acao(c.ativo ? 'Enviar link para redefinir senha' : 'Reenviar convite', 'reenviar', undefined, 'claro'));
         if (eu && c.email !== eu.email) conta.append(c.bloqueado ? acao('Desbloquear acesso', 'desbloquear') : acao('Bloquear acesso', 'bloquear', 'Bloquear o acesso deste cliente? As sessões abertas dele terminam na hora.', 'perigo'));
-        corpo.append(conta);
+        paineis.acesso.append(conta);
+        mostrar(ABAS_FICHA.some(([k]) => k === fichaAba) ? fichaAba : 'dados');
         if (!ficha.open) ficha.showModal();
       }
 
@@ -1180,6 +1210,9 @@ import '../../styles/global.css';
       .dados dt { color: var(--texto-2); }
       .dados dd { margin: 0; overflow-wrap: anywhere; }
       .bloco { border-top: 1px solid var(--borda); padding-top: 0.8rem; margin-top: 0.8rem; }
+      .ficha-abas { position: sticky; top: 4.1rem; z-index: 1; display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0.7rem 0; margin-bottom: 0.6rem; background: #22140d; border-bottom: 1px solid var(--borda); }
+      .ficha-abas button { font: inherit; font-size: 0.85rem; padding: 0.4rem 0.85rem; border-radius: 999px; cursor: pointer; background: transparent; color: var(--texto); border: 1px solid var(--borda-forte); }
+      .ficha-abas button[aria-selected='true'] { background: linear-gradient(180deg, #f0d39c, #c99550); color: #24120a; border-color: transparent; font-weight: 600; }
       .contrato-editor { margin-top: 0.8rem; padding: 0.9rem; border: 1px solid var(--borda); border-radius: 12px; background: rgba(14, 7, 4, 0.35); }
       .contrato-editor h4 { margin: 0 0 0.2rem; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; color: #f0d39c; }
       .contrato-editor textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; line-height: 1.45; }

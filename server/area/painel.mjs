@@ -409,12 +409,14 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
   const DESC_OP = { transferencia_local: 'Transferência local (UAE)', transferencia_swift: 'Transferência internacional (SWIFT)', cambio: 'Câmbio' };
   async function listarOperacoes(res, url) {
     const f = FILTRO_OP[url.searchParams.get('status')] || FILTRO_OP.abertas;
+    const uid = url.searchParams.get('usuario');   // ficha do cliente: só as dele
+    const porCliente = uid && UUID.test(uid);
     const r = await db.q(`select o.id, o.usuario_id, u.email, p.dados->>'display_name' as nome, o.tipo, o.moeda, o.valor_centavos::text as valor, o.moeda_destino,
                                  o.beneficiario, o.observacao, o.status, o.motivo, o.criado_em, o.atualizado_em, o.atualizado_por, o.conta_id, c.tipo as conta_tipo,
                                  o.movimento_id is not null as lancada
                             from operacoes_cliente o join usuarios u on u.id=o.usuario_id left join perfis p on p.usuario_id=u.id
                             left join contas_cliente c on c.id=o.conta_id
-                           where ${f} order by o.criado_em desc limit 300`);
+                           where ${f}${porCliente ? ' and o.usuario_id=$1' : ''} order by o.criado_em desc limit 300`, porCliente ? [uid] : []);
     return json(res, 200, { operacoes: r.rows });
   }
   async function statusOperacao(req, res, u, id) {

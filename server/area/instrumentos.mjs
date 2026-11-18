@@ -311,6 +311,8 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     if (inst && (GARANTIAS[inst] || DECLARACOES[inst])) { vals.push(inst); where.push(`s.instrumento=$${vals.length}`); }
     const moeda = url.searchParams.get('moeda');
     if (moeda && MOEDAS_INSTRUMENTO.includes(moeda)) { vals.push(moeda); where.push(`s.moeda=$${vals.length}`); }
+    const uid = url.searchParams.get('usuario');   // ficha do cliente: só as dele
+    if (uid && UUID.test(uid)) { vals.push(uid); where.push(`s.usuario_id=$${vals.length}`); }
     const busca = String(url.searchParams.get('q') || '').trim().toLowerCase().slice(0, 80);
     if (busca) { vals.push(busca); where.push(`(u.email like '%' || $${vals.length} || '%' or lower(coalesce(p.dados->>'display_name','')) like '%' || $${vals.length} || '%' or lower(coalesce(s.referencia,'')) like '%' || $${vals.length} || '%')`); }
     const r = await db.q(`select ${COLS}, s.usuario_id, s.responsavel_email, s.instituicao, u.email, p.dados->>'display_name' as nome
