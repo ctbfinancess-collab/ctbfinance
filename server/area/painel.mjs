@@ -29,7 +29,7 @@ const fmtValor = (c, moeda) => { const n = BigInt(c); const a = n < 0n ? -n : n;
 const semSaldo = (saldo, moeda) => `Débito maior que o saldo disponível (${fmtValor(saldo, moeda)}). Confira o valor — o saldo não pode ficar negativo.`;
 const texto = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : '');
 
-export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contratos = null, log = console }) {
+export function criarPainel({ db, adm, json, lerJson, avisarAcessoEquipe = null, instrumentos = null, contratos = null, log = console }) {
   const registrar = (u, acao, alvo, detalhes = {}) =>
     db.q('insert into acoes_equipe(por_usuario, por_email, acao, alvo, detalhes) values ($1,$2,$3,$4,$5::jsonb)', [u.id, u.email, acao, alvo || null, JSON.stringify(detalhes)]);
   const usuarioPorId = async (id) => {
@@ -491,8 +491,11 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
     if (!existe || !existe.tem_senha) await adm.convidar(email, { nome, lang: idioma });
     else if (nome) await db.q(`insert into perfis(usuario_id, dados) values ($1, $2::jsonb) on conflict (usuario_id) do nothing`, [existe.id, JSON.stringify({ display_name: nome })]);
     const r = await adm.concederEquipe(email);
-    await registrar(u, 'equipe_adicionou', email, { convite: !existe || !existe.tem_senha });
-    return json(res, 200, { ...r, convite: !existe || !existe.tem_senha });
+    // conta que já tinha senha: não há convite, então avisa por e-mail que o acesso ao Painel foi liberado
+    let avisado = false;
+    if (existe && existe.tem_senha && avisarAcessoEquipe) { try { await avisarAcessoEquipe({ to: email, lang: idioma }); avisado = true; } catch (e) { log.error('[area-cliente] aviso de acesso à equipe:', e.message); } }
+    await registrar(u, 'equipe_adicionou', email, { convite: !existe || !existe.tem_senha, avisado });
+    return json(res, 200, { ...r, convite: !existe || !existe.tem_senha, avisado });
   }
   async function timeRevogar(res, u, id) {
     if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode remover pessoas da equipe.');
@@ -505,6 +508,17 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
     await db.q('update sessoes set revogada_em=now() where usuario_id=$1 and revogada_em is null', [id]);   // sai do Admin na hora
     await registrar(u, 'equipe_removeu', m.email);
     return json(res, 200, { ok: true });
+  }
+  /** Reenvia o acesso: sem senha → novo convite; com senha → e-mail avisando do acesso ao Painel. */
+  async function timeAvisar(res, u, id) {
+    if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode reenviar o acesso.');
+    if (!UUID.test(id)) return erro(res, 404, 'nao_encontrado');
+    const m = (await db.q('select u.email, u.idioma, u.senha_hash is not null as tem_senha from equipe e join usuarios u on u.id=e.usuario_id where e.usuario_id=$1 and e.ativo', [id])).rows[0];
+    if (!m) return erro(res, 404, 'nao_encontrado');
+    if (!m.tem_senha) await adm.convidar(m.email, { lang: m.idioma });
+    else if (avisarAcessoEquipe) await avisarAcessoEquipe({ to: m.email, lang: m.idioma });
+    await registrar(u, 'equipe_reenviou_acesso', m.email);
+    return json(res, 200, { ok: true, convite: !m.tem_senha });
   }
   async function timeAprovador(req, res, u, id) {
     if (!(await ehGestor(u))) return erro(res, 403, 'sem_permissao', 'Somente a titular pode mudar quem aprova instrumentos.');
@@ -571,6 +585,7 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contr
       if (p.length === 1 && m === 'POST') return timeAdicionar(req, res, u);
       if (p.length === 3 && p[2] === 'revogar' && m === 'POST') return timeRevogar(res, u, p[1]);
       if (p.length === 3 && p[2] === 'aprovador' && m === 'POST') return timeAprovador(req, res, u, p[1]);
+      if (p.length === 3 && p[2] === 'avisar' && m === 'POST') return timeAvisar(res, u, p[1]);
     }
     return json(res, 404, { erro: 'rota' });
   };

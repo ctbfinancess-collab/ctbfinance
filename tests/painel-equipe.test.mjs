@@ -209,6 +209,9 @@ try {
   await E('POST', `/time/${idC2}/aprovador`, { json: { ativo: false } });
   const remT = await E('POST', `/time/${idC2}/revogar`);
   await t('PE44', 'Remover da equipe: acesso termina na hora (sessão encerrada), aparece como removido; não pode remover a si mesma', async () => remT.status === 200 && (await req('GET', '/api/cliente/equipe/resumo', { cookie: c2 })).status === 401 && (await E('GET', '/time')).dados.membros.find((m) => m.id === idC2).ativo === false && (await E('POST', `/time/${chefeId}/revogar`)).status === 409);
+  const nAv = emails.length;
+  const av = await E('POST', `/time/${novaT.id}/avisar`); await sleep(300);
+  await t('PE45', 'Reenviar acesso de quem ainda não criou senha → novo convite por e-mail', async () => av.status === 200 && av.dados.convite === true && emails.length > nAv);
   await adm.aprovadorInstrumentos('chefe@example.com', false);
   const reg = (await E('GET', '/registro')).dados.acoes.map((a) => a.acao);
   await t('PE34', `Registro guarda cada ação com quem fez (${[...new Set(reg)].join(', ')})`, async () => ['ver_ficha', 'convidar', 'equipe_adicionou', 'equipe_removeu', 'reenviar', 'bloquear', 'desbloquear', 'passaporte_conferir', 'passaporte_liberar', 'confirmar_agendamento', 'aprovar_documento', 'rejeitar_documento', 'baixar_documento', 'editar_dados'].every((a) => reg.includes(a)) && (await db.q(`select count(*)::int n from acoes_equipe where por_email <> 'chefe@example.com'`)).rows[0].n === 0);

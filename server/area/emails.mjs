@@ -88,3 +88,13 @@ export async function avisarEquipeInstrumento({ email, nome, referencia, instrum
   }, 'aviso-instrumento');
   if (!ok) throw new Error('falha ao enviar aviso de instrumento');
 }
+
+/** Aviso a quem JÁ tem conta (com senha) e acabou de ganhar acesso ao Painel da Equipe. */
+export async function avisarAcessoEquipe({ to, lang = 'pt' }) {
+  const en = lang === 'en';
+  const titulo = en ? 'Access to the Team Panel' : 'Acesso ao Painel da Equipe';
+  const par = en ? ['You now have access to the CTB Finances Team Panel.', 'Sign in with the same e-mail and password you already use.'] : ['Você agora tem acesso ao Painel da Equipe da CTB Finances.', 'Entre com o mesmo e-mail e a mesma senha que você já usa.'];
+  const link = `${SITE}/admin/`;
+  const ok = await sendEmail({ from: fromAddress(), to: [to], subject: `${titulo} · CTB Finances`, html: brandedHtml(lang, titulo, par, { href: link, label: en ? 'Open the Team Panel' : 'Abrir o Painel da Equipe' }), text: `${titulo}\n\n${par.join('\n\n')}\n\n${link}\n\nCTB Finance Broker L.L.C. · Dubai` }, 'acesso-equipe');
+  if (!ok) throw new Error('falha ao enviar aviso de acesso à equipe');
+}

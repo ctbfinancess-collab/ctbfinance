@@ -4,7 +4,7 @@
  */
 import { criarBanco, criarArquivos } from './nucleo.mjs';
 import { criarApi, limparRegistrosAntigos } from './api.mjs';
-import { enviarEmailAcesso, avisarEquipeAgendamento, enviarConfirmacaoAgendamento, avisarEquipeOperacao, avisarEquipeInstrumento } from './emails.mjs';
+import { enviarEmailAcesso, avisarEquipeAgendamento, enviarConfirmacaoAgendamento, avisarEquipeOperacao, avisarEquipeInstrumento, avisarAcessoEquipe } from './emails.mjs';
 import { criarAdmin } from './admin.mjs';
 import { criarPainel } from './painel.mjs';
 
@@ -21,6 +21,6 @@ export async function iniciarAreaCliente({ origens }) {
   console.log('[area-cliente] ativa');
   const api = criarApi({ db, arquivos, origens, enviarEmail: enviarEmailAcesso, avisarEquipe: avisarEquipeAgendamento, avisarOperacao: avisarEquipeOperacao, avisarInstrumento: avisarEquipeInstrumento });
   const adm = criarAdmin({ db, arquivos, api, avisarCliente: enviarConfirmacaoAgendamento });
-  api.ligarPainel(({ json, lerJson, instrumentos, contratos }) => criarPainel({ db, adm, json, lerJson, instrumentos, contratos }));
+  api.ligarPainel(({ json, lerJson, instrumentos, contratos }) => criarPainel({ db, adm, json, lerJson, instrumentos, contratos, avisarAcessoEquipe }));
   return api;
 }
