@@ -148,6 +148,10 @@ try {
   const gm = await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'mandato', solicitacaoId: s.id } });
   const fm = (await E('GET', `/contratos/${gm.dados?.id}`)).dados;
   await t('CT21', 'Mandato de intermediação: puxa instrumento, valor e beneficiário da solicitação; honorários ficam para a equipe preencher; texto diz que a CTB não emite nem custodia', async () => gm.status === 201 && /^CTB-MSA-\d{4}-\d{5}$/.test(fm.referencia) && fm.campos.instrumento.startsWith('SBLC') && fm.campos.valor === 'USD 1,000,000.00' && fm.campos.beneficiario === 'Beneficiário Exemplo' && /^CTB-SBLC-\d{4}-\d{5}$/.test(fm.campos.refSolicitacao) && fm.faltando.includes('honorarioEstruturacao') && fm.texto.includes('does not issue, guarantee, confirm or transmit financial instruments'));
+  const gcd = await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'cease_desist' } });
+  const fcd = (await E('GET', `/contratos/${gcd.dados?.id}`)).dados;
+  const pre = (await E('GET', `/contratos/${gcd.dados?.id}/preencher`)).dados;
+  await t('CT22', 'Cease & Desist: nº do documento = referência; datas do NDA/Account Opening e nº da conta puxados dos contratos do cliente; só a assinatura da CTB', async () => gcd.status === 201 && /^CTB-CD-\d{4}-\d{5}$/.test(fcd.referencia) && fcd.campos.documento === fcd.referencia && /^\d{2}\/\d{2}\/\d{4}$/.test(fcd.campos.ndaData) && /^\d{2}\/\d{2}\/\d{4}$/.test(fcd.campos.aoData) && /^CTB\d{12}$/.test(fcd.campos.conta) && fcd.texto.includes('CEASE & DESIST WITH IMMEDIATE EFFECT') && pre.campos.documento === fcd.referencia);
   console.log('--- Isolamento, auditoria, app');
   const gBia = await E('POST', '/contratos', { json: { usuarioId: bia, modelo: 'nda', solicitacaoId: s.id } });
   await t('CT21', 'Gerar para a Bia com a solicitação da Ana → 404; modelo inexistente → 400', async () => gBia.status === 404 && (await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'sblc' } })).status === 400);

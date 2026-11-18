@@ -383,7 +383,125 @@ IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date firs
   ],
 };
 
-export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO };
+/** Notificação de Cease & Desist (modelo da titular, sem dados de cliente). Carta da CTB ao cliente: não tem assinatura
+ *  do cliente. Os contratos referenciados (NDA, abertura de conta) são puxados do histórico do cliente. */
+const CEASE_DESIST = {
+  titulo: 'Cease & Desist Notice',
+  rotulo: 'CD',
+  campos: [
+    { k: 'documento', rotulo: 'Nº do documento', origem: 'referência gerada pelo sistema' },
+    { k: 'local', rotulo: 'Local', padrao: 'Dubai, United Arab Emirates' },
+    { k: 'data', rotulo: 'Data (DD/MM/AAAA)', origem: 'hoje (Dubai)' },
+    { k: 'empresa', rotulo: 'Destinatário — empresa (ou nome)', origem: 'Meu perfil: empresa · senão nome do cliente' },
+    { k: 'representante', rotulo: 'ATTN — representante legal / CEO', origem: 'Meu perfil: nome' },
+    { k: 'endereco', rotulo: 'Endereço do destinatário', origem: 'Meu perfil' },
+    { k: 'registro', rotulo: 'Nº de registro do destinatário', origem: 'Meu perfil' },
+    { k: 'ndaData', rotulo: 'NDA — data', origem: 'contratos do cliente' },
+    { k: 'aoData', rotulo: 'Account Opening — data', origem: 'contratos do cliente' },
+    { k: 'conta', rotulo: 'Nº da conta (encerrada)', origem: 'gerado pelo sistema (fixo por cliente)' },
+    { k: 'outrosDocs', rotulo: 'Outros contratos referenciados (nº e data)', padrao: 'N/A' },
+    { k: 'prazoCustodia', rotulo: 'Prazo de transferência de custódia', padrao: 'Immediately upon the issuance of the instrument, which was not met by the Recipient.' },
+    { k: 'faturas', rotulo: 'Faturas emitidas (nº e data)', padrao: 'N/A' },
+    { k: 'motivos', rotulo: 'Motivos', padrao: 'lack of performance, breach of confidentiality agreement, falsification of bank documentation, non-presentation of escrow, default, and non-true confirmations and information' },
+    { k: 'ctbNome', rotulo: 'CTB — nome de quem assina', origem: 'Configuração de assinatura' },
+    { k: 'ctbCargo', rotulo: 'CTB — cargo', padrao: 'EXECUTIVE DIRECTOR' },
+  ],
+  texto: (c) => `# CEASE & DESIST WITH IMMEDIATE EFFECT
+
+DOCUMENT NO.: ${c.documento}
+
+PLACE: ${c.local}
+
+DATE: ${c.data}
+
+## FROM:
+
+${CTB.razao}
+
+Company Registration No.: ${CTB.registro} · Commercial License No.: ${CTB.licenca}
+
+Based in: ${CTB.endereco}
+
+Contact: +971 58 882 1694 | contact@ctbfinances.ae | ctbfinances.ae
+
+## TO:
+
+${c.empresa}
+
+ATTN: ${c.representante}
+
+Address: ${c.endereco}
+
+Company Registration No.: ${c.registro}
+
+AND: TO WHOM IT MAY CONCERN.
+
+## 1. REFERENCED DOCUMENTS AND CONTRACTS
+
+Regarding ${c.empresa}:
+
+• Non-Disclosure Agreement (N.D.A.): Date: ${c.ndaData}
+• Account Opening Agreement: Date: ${c.aoData} | Account No.: ${c.conta} (Closed)
+• Other agreements: ${c.outrosDocs}
+• Custody Transfer Deadline/Date: ${c.prazoCustodia}
+• Issued Invoices: ${c.faturas}
+
+## 2. NOTICE OF RESCISSION AND IMMEDIATE CESSATION
+
+You are duly warned of the penalty of being in violation of business ethics and improper conduct, as indicated below:
+
+Due to ${c.motivos} received by us and originating from the above entity, or/and its agents and brokers, all contracts signed shall be considered null and void, with immediate effect.
+
+We require that you immediately cease and desist all communication related to commercial activities with our customers, suppliers, partners, bankers, and all parties associated with our companies, as well as their subsidiaries and affiliates of ${CTB.razao}.
+
+We also require that all documentation sent to you be canceled as it is our private and business information, including but not limited to past, current, and pending contracts and supplier lists. Cancellation of documents must occur immediately from the date of this notification. Upon cancellation of documents, you will not be in possession of any documents containing privileged information as specified herein.
+
+The association of your names with any entities owned by ${CTB.razao} will be permanently removed, and you will not be recognized as an authorized party to communicate, conduct, and negotiate any commercial activities.
+
+## 3. LEGAL AND REGULATORY ACTIONS
+
+You are hereby notified that if you do not comply with this request, we will immediately file a complaint with the appropriate authorities through our legal department and inform the following agencies:
+
+• ICC Commercial Crime Services;
+• ICC FraudNet;
+• Proper and respective regional financial and law authorities.
+
+Civil and criminal claims will be pursued under applicable jurisdictions of the parties and operations involved.
+
+## 4. ANTI-FRAUD POLICY AND ETHICAL CONDUCT
+
+All the parties listed within this C&D letter value their reputation for financial profitability and reliability. We recognize that over and above any financial damage suffered, fraud may also reflect adversely on our image and reputation. Our aim therefore is to limit our exposure—as official mandates, key business introducers, consultants, and intermediaries—from exposure to fraud or non-performers by:
+
+• Instituting and maintaining cost-effective measures and procedures to deter fraud;
+• Taking firm and vigorous action against any individual or group perpetrating fraud against ourselves and any of our colleagues, their companies/subsidiaries, affiliates, and trading partners;
+• Encouraging all to be vigilant and to report any suspicion of fraud, providing suitable channels of communication, and ensuring sensitive information is treated appropriately;
+• Rigorously investigating instances of alleged fraud and pursuing perpetrators to seek restitution of any asset fraudulently obtained together with the recovery of costs;
+• Assisting all government agencies and all other appropriate authorities in the investigation and prosecution of those suspected of fraud.
+
+The detection, prevention, and reporting of fraud is the responsibility of all members and employees involved in any transaction, be it the sales and purchase of a commodity, investment, or otherwise. We expect the following of all members and employees:
+
+• To act with integrity at all times;
+• To adhere to an appropriate ethical code of conduct;
+• To comply with standing orders and financial regulations;
+• To raise concerns as soon as any impropriety is suspected.
+
+## 5. DATA PROTECTION AND FRAUD PREVENTION
+
+In combating the global problem of fraud and asset recovery, we also actively check any personal information provided against verified blacklists supplied by the police and all other appropriate authorities in the investigation and prosecution of those suspected of fraud.
+
+In accessing our website or communication through email, phone, fax, or any other means of communication with us directly or under the use of any of our trade names directly, we understand that we and any of our partners/colleagues or affiliates and/or subsidiaries may use any personal information provided for administration and anti-fraud prevention, including internal network transfers to keep records accurate and up to date.
+
+## 6. ELECTRONIC DOCUMENT TRANSMISSIONS (EDT)
+
+• Validity: EDT shall be deemed valid and enforceable in respect of any provisions of this contract, incorporating applicable public laws and international model laws on electronic signatures and commerce (such as UNCITRAL Model Law and UN/CEFACT standards).
+• Signature: Electronic signature is valid and accepted as a hand signature.
+• Hard Copies: Either party may request a hard copy of any document that has been previously transmitted by electronic means; provided, however, that any such request shall in no manner delay the parties from performing their respective obligations and duties under EDT instruments.`,
+  assinaturas: (c) => [
+    [`${c.ctbNome || '______________________'} – ${c.ctbCargo}`, CTB.razao, `Company Registration No.: ${CTB.registro}`, '+971 58 882 1694 | contact@ctbfinances.ae | ctbfinances.ae', CTB.endereco],
+  ],
+};
+
+export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO, cease_desist: CEASE_DESIST };
 
 /** Quais modelos o sistema cria SOZINHO (como rascunho, para a equipe revisar e liberar) em cada evento. */
 export const AUTOMATICOS = {

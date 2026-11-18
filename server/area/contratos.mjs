@@ -47,6 +47,13 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
   const corpo = async (req, max = 60000) => { const b = await lerJson(req, max); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
   const responder = (res, e) => { if (e.status) return json(res, e.status, { erro: e.message, ...e.extra }); throw e; };
 
+  /** Data (DD/MM/AAAA, Dubai) do NDA e da abertura de conta mais recentes não cancelados do cliente. */
+  async function datasContratos(usuarioId) {
+    const r = await db.q(`select distinct on (modelo) modelo, coalesce(liberado_em, criado_em) as em from contratos
+                           where usuario_id=$1 and modelo in ('nda','abertura_conta') and status <> 'cancelado' order by modelo, criado_em desc`, [usuarioId]);
+    const dt = (m) => { const x = r.rows.find((y) => y.modelo === m); if (!x) return ''; const d = new Date(new Date(x.em).getTime() + 4 * 3600e3); return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`; };
+    return { ndaData: dt('nda'), aoData: dt('abertura_conta') };
+  }
   /** Preenchimento automático: cadastro do cliente + solicitação (se houver) + quem assina pela CTB. */
   async function preencher(usuarioId, modelo, solicitacaoId = null) {
     const p = (await db.q('select dados from perfis where usuario_id=$1', [usuarioId])).rows[0]?.dados || {};
@@ -74,6 +81,8 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
       valor: s?.valor ? `${s.moeda} ${(BigInt(s.valor) / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${(BigInt(s.valor) % 100n).toString().padStart(2, '0')}` : '',
       beneficiario: s_(s?.beneficiario?.nome),
       refSolicitacao: s_(s?.referencia),
+      // contratos anteriores do cliente (para cartas como a de Cease & Desist)
+      ...(await datasContratos(usuarioId)),
     };
     const out = {};
     for (const { k, padrao } of MODELOS[modelo].campos) out[k] = txt(auto[k] || padrao || '', 300);
@@ -86,6 +95,7 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
     const ano = new Date(Date.now() + 4 * 3600e3).getUTCFullYear();
     const n = (await q(`select nextval('contratos_ref_seq')::int as n`)).rows[0].n;
     const ref = `CTB-${MODELOS[modelo].rotulo}-${ano}-${String(n).padStart(5, '0')}`;
+    if (MODELOS[modelo].campos.some((f) => f.k === 'documento') && !c.documento) c.documento = ref;   // nº do documento = referência
     const r = (await q(`insert into contratos(usuario_id, solicitacao_id, referencia, modelo, campos, gerado_por, automatico, atualizado_por)
                         values ($1,$2,$3,$4,$5::jsonb,$6,$7,$6) on conflict do nothing returning id, referencia`,
       [usuarioId, solicitacaoId, ref, modelo, JSON.stringify(c), por, automatico])).rows[0];
@@ -216,7 +226,9 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
       }
       if (p.length === 3 && p[2] === 'preencher' && m === 'GET') {
         const c = await doContrato(db.q, id);
-        return json(res, 200, { campos: await preencher(c.usuario_id, c.modelo, c.solicitacao_id) });
+        const novos = await preencher(c.usuario_id, c.modelo, c.solicitacao_id);
+        if ('documento' in novos && !novos.documento) novos.documento = c.campos?.documento || c.referencia;   // nº do documento não se perde
+        return json(res, 200, { campos: novos });
       }
       if (p.length === 2 && m === 'PUT') {
         const b = await corpo(req);
