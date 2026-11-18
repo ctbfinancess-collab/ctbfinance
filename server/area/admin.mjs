@@ -110,7 +110,8 @@ export function criarAdmin({ db, arquivos, api }) {
     /** Confere volume x banco: apaga temporários e arquivos sem registro com mais de 1 h; relata registros sem arquivo. */
     async reconciliarArquivos({ aplicar = false, idadeMinMs = 60 * 60 * 1000 } = {}) {
       const out = { temporariosApagados: [], orfaosApagados: [], registrosSemArquivo: [] };
-      const velho = async (p) => Date.now() - (await fsp.stat(p)).mtimeMs > idadeMinMs;
+      // idadeMinMs <= 0: todos (a data do arquivo pode vir frações de ms à frente do relógio do Node)
+      const velho = async (p) => idadeMinMs <= 0 || Date.now() - (await fsp.stat(p)).mtimeMs >= idadeMinMs;
       for (const t of await arquivos.listarTemporarios()) if (await velho(t)) { out.temporariosApagados.push(path.basename(t)); if (aplicar) await arquivos.apagar(t); }
       const chaves = new Set((await db.q('select chave_arquivo from documentos where chave_arquivo is not null')).rows.map((r) => r.chave_arquivo));
       for (const c of await arquivos.listar()) if (!chaves.has(c) && await velho(arquivos.caminho(c))) { out.orfaosApagados.push(c); if (aplicar) await arquivos.apagar(arquivos.caminho(c)); }

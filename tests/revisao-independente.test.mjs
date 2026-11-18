@@ -90,6 +90,9 @@ try {
   await db.q('delete from tentativas_login');
   const distribuido = []; for (let i = 0; i < 35; i++) distribuido.push((await req('POST', '/api/cliente/entrar', { json: { email: 'v3@example.com', senha: 'dist' + i + 'q9' }, headers: { 'X-Real-IP': `192.0.2.${i + 1}` } })).status);
   await t('V4-2', `Ataque distribuído (35 IPs, mesma conta) → teto por conta ainda limita (429=${distribuido.filter((s) => s === 429).length})`, async () => distribuido.filter((s) => s === 429).length >= 5);
+  const doIpConhecido = await req('POST', '/api/cliente/entrar', { json: { email: 'v3@example.com', senha: 'SenhaSegura2026' }, headers: { 'X-Real-IP': '198.51.100.7' } });
+  const deIpNovo = await req('POST', '/api/cliente/entrar', { json: { email: 'v3@example.com', senha: 'SenhaSegura2026' }, headers: { 'X-Real-IP': '198.51.100.250' } });
+  await t('V3-4', `Sob ataque distribuído (teto geral atingido): o cliente ENTRA do IP onde já entrou antes (${doIpConhecido.status}); de um IP novo continua limitado (${deIpNovo.status})`, async () => doIpConhecido.status === 200 && deIpNovo.status === 429);
   await t('V4-3', 'Limpeza: tentativas e sessões antigas são apagadas', async () => {
     await db.q(`insert into tentativas_login(chave, em) values ('antiga', now() - interval '3 days')`);
     const { limparRegistrosAntigos } = await import('../server/area/api.mjs');
@@ -121,6 +124,13 @@ try {
   const st = []; for (let i = 0; i < 31; i++) st.push((await req('POST', '/api/cliente/documentos', { corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': `d${i}.pdf` }, cookie: c7 })).status);
   await t('V7-1', `31 envios no dia: os 30 primeiros aceitos e o 31º recusado (último=${st[30]})`, async () => st.slice(0, 30).every((s) => s === 201) && st[30] === 429);
   await t('V7-2', 'Outro cliente não é afetado pela cota alheia', async () => (await req('POST', '/api/cliente/documentos', { corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'x.pdf' }, cookie: c6 })).status === 201);
+  const c7b = await contaComSenha('v7b@example.com', 'SenhaSegura2026');
+  for (let i = 0; i < 30; i++) await req('POST', '/api/cliente/documentos', { corpo: Buffer.from('ABC'), headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': `ruim${i}.pdf` }, cookie: c7b });
+  await t('V7-3', '30 arquivos RECUSADOS não consomem a cota de disco: um PDF válido ainda é aceito', async () => (await req('POST', '/api/cliente/documentos', { corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'bom.pdf' }, cookie: c7b })).status === 201);
+  const c7c = await contaComSenha('v7c@example.com', 'SenhaSegura2026');
+  const grande = Buffer.concat([Buffer.from('%PDF-1.7\n'), Buffer.alloc(9 * 1024 * 1024, 0x20), Buffer.from('\n%%EOF\n')]);
+  const par = await Promise.all(Array.from({ length: 8 }, (_, i) => req('POST', '/api/cliente/documentos', { corpo: grande, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': `g${i}.pdf` }, cookie: c7c }).then((r) => r.status).catch(() => 'erro')));
+  await t('V7-4', `8 envios grandes SIMULTÂNEOS: parte recusada por excesso de envios em andamento (${par.join(',')}); nada sobra no temporário`, async () => par.filter((x) => x === 429).length >= 1 && par.filter((x) => x === 201).length >= 3 && fs.readdirSync(path.join(ARQ, 'tmp')).length === 0);
 
   console.log('--- V8 Perfil: nomes herdados do JavaScript');
   const r8 = await req('PUT', '/api/cliente/perfil', { json: { toString: 'A'.repeat(15000) }, cookie: c6 });
@@ -133,6 +143,8 @@ try {
   await t('V9-2', 'CSP com frame-ancestors, base-uri e object-src', async () => /frame-ancestors 'self'/.test(h9.get('content-security-policy') || '') && /base-uri 'self'/.test(h9.get('content-security-policy') || '') && /object-src 'none'/.test(h9.get('content-security-policy') || ''));
   await t('V9-3', 'Permissions-Policy presente', async () => /camera=\(\)/.test(h9.get('permissions-policy') || ''));
   await t('V9-4', 'Respostas da API também com HSTS e CSP restritiva', async () => { const h = (await fetch(BASE + '/api/cliente/status')).headers; return /max-age/.test(h.get('strict-transport-security') || '') && /default-src 'none'/.test(h.get('content-security-policy') || ''); });
+  await t('V9-5', 'Download também com HSTS e CSP restritiva', async () => { const h = (await req('GET', `/api/cliente/documentos/${d6.id}/arquivo`, { cookie: c6 })).h; return /max-age/.test(h.get('strict-transport-security') || '') && /default-src 'none'/.test(h.get('content-security-policy') || '') && /no-store/.test(h.get('cache-control') || ''); });
+  await t('V4-4', 'Diagnóstico de IP DESLIGADO por padrão (status não revela cabeçalhos)', async () => JSON.stringify((await req('GET', '/api/cliente/status')).dados) === '{"ativo":true}');
 
   console.log('--- V10/V11 Limites de tamanho: resposta chega e a conexão não fica aberta');
   let r10; try { r10 = await req('POST', '/api/cliente/entrar', { corpo: JSON.stringify({ email: 'x@example.com', senha: 'x'.repeat(30000) }), headers: { 'Content-Type': 'application/json' } }); } catch (e) { r10 = { status: 'conexão cortada: ' + e.message }; }

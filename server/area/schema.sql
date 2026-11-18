@@ -102,3 +102,12 @@ create table if not exists agendamentos (
   criado_em timestamptz not null default now()
 );
 create index if not exists agendamentos_usuario on agendamentos(usuario_id);
+
+-- IPs de onde o cliente já entrou com sucesso: isentos do teto geral por conta (o cliente não é bloqueado
+-- por um ataque distribuído quando entra de um lugar conhecido; o limite por conta+IP continua valendo).
+create table if not exists ips_confiaveis (
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  ip text not null,
+  ultimo_login_em timestamptz not null default now(),
+  primary key (usuario_id, ip)
+);
