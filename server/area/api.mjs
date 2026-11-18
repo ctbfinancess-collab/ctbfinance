@@ -385,6 +385,17 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
                             from agendamentos where usuario_id=$1 order by coalesce(horario_confirmado, data_solicitada::timestamptz) desc nulls last`, [u.id]);
     return json(res, 200, { agendamentos: r.rows.map((a) => ({ id: a.id, tipo: a.tipo, descricao: a.descricao, formato: a.formato, periodo: a.periodo, dataSolicitada: a.data_solicitada, horarioConfirmado: a.horario_confirmado })) });
   }
+  /** Financeiro do PRÓPRIO cliente (somente leitura): contas, últimas movimentações, posições e cartão. */
+  async function financeiro(res, u) {
+    const contas = (await db.q(`select id, tipo, moeda, saldo_centavos::text as saldo, atualizado_em from contas_cliente where usuario_id=$1 order by tipo, moeda`, [u.id])).rows;
+    const movimentos = (await db.q(`select m.id, to_char(m.data,'YYYY-MM-DD') as data, m.descricao, m.valor_centavos::text as valor, c.tipo as conta_tipo, c.moeda
+                                      from movimentos_cliente m join contas_cliente c on c.id=m.conta_id
+                                     where m.usuario_id=$1 order by m.data desc, m.criado_em desc limit 100`, [u.id])).rows;
+    const posicoes = (await db.q(`select id, classe, descricao, moeda, valor_centavos::text as valor, atualizado_em from posicoes_cliente where usuario_id=$1 order by classe, descricao`, [u.id])).rows;
+    const cartao = (await db.q(`select final, bandeira, situacao, moeda, limite_centavos::text as limite, fatura_centavos::text as fatura, to_char(vencimento,'YYYY-MM-DD') as vencimento, atualizado_em from cartoes_cliente where usuario_id=$1`, [u.id])).rows[0] || null;
+    const datas = [...contas, ...posicoes, ...(cartao ? [cartao] : [])].map((x) => new Date(x.atualizado_em).getTime());
+    return json(res, 200, { contas, movimentos, posicoes, cartao, atualizadoEm: datas.length ? new Date(Math.max(...datas)).toISOString() : null });
+  }
   /** Pedido de agendamento feito pelo cliente: assunto da lista fixa, data civil futura, observação curta. */
   async function solicitarAgendamento(req, res, u) {
     const b = await lerJson(req, 4000);
@@ -450,6 +461,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       const dl = rota.match(/^\/api\/cliente\/documentos\/([^/]+)\/arquivo$/);
       if (dl && m === 'GET') return await baixarDocumento(res, u, dl[1]);
       if (rota === '/api/cliente/agendamentos' && m === 'GET') return await agendamentos(res, u);
+      if (rota === '/api/cliente/financeiro' && m === 'GET') return await financeiro(res, u);
       if (rota === '/api/cliente/agendamentos' && m === 'POST') return await solicitarAgendamento(req, res, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {

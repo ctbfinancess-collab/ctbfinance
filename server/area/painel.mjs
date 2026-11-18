@@ -8,6 +8,22 @@ import { EDITAVEIS, CAMPOS_PASSAPORTE, validarPassaporte } from './api.mjs';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const STATUS_DOC = ['disponivel_analise', 'aprovado', 'rejeitado'];
 const STATUS_INT = ['novo', 'respondido', 'convidado', 'arquivado'];
+const MOEDAS = ['AED', 'USD', 'EUR', 'GBP', 'BRL'];
+const TIPOS_CONTA = ['digital', 'global', 'investimentos'];
+const CLASSES = ['renda_fixa', 'renda_variavel', 'fundos', 'alternativos', 'exterior'];
+const SITUACOES_CARTAO = ['ativo', 'bloqueado', 'em_emissao'];
+/** "1.234,56" / "1234.56" / "-50" → centavos (BigInt) ou null. Até 13 dígitos inteiros. */
+function centavos(v, { negativo = false } = {}) {
+  let s = String(v ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, '');
+  const m = /^(-)?(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s);
+  if (!m || (m[1] && !negativo)) return null;
+  const c = BigInt(m[2]) * 100n + BigInt((m[3] || '').padEnd(2, '0') || '0');
+  return m[1] ? -c : c;
+}
+const dataValida = (s) => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); if (!m) return false; const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])); return d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]; };
+const texto = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : '');
 
 export function criarPainel({ db, adm, json, lerJson, log = console }) {
   const registrar = (u, acao, alvo, detalhes = {}) =>
@@ -150,6 +166,98 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     return json(res, 200, { alterados: mudou });
   }
 
+  // ---- financeiro do cliente (lançado pela equipe; o cliente só consulta)
+  async function lerFinanceiro(res, u, id) {
+    const c = await usuarioPorId(id); if (!c) return erro(res, 404, 'nao_encontrado');
+    const contas = (await db.q(`select id, tipo, moeda, saldo_centavos::text as saldo, atualizado_em, atualizado_por from contas_cliente where usuario_id=$1 order by tipo, moeda`, [c.id])).rows;
+    const movimentos = (await db.q(`select m.id, m.conta_id, to_char(m.data,'YYYY-MM-DD') as data, m.descricao, m.valor_centavos::text as valor, m.criado_por, m.criado_em, c.tipo as conta_tipo, c.moeda
+                                      from movimentos_cliente m join contas_cliente c on c.id=m.conta_id where m.usuario_id=$1 order by m.data desc, m.criado_em desc limit 200`, [c.id])).rows;
+    const posicoes = (await db.q(`select id, classe, descricao, moeda, valor_centavos::text as valor, atualizado_em, atualizado_por from posicoes_cliente where usuario_id=$1 order by classe, descricao`, [c.id])).rows;
+    const cartao = (await db.q(`select final, bandeira, situacao, moeda, limite_centavos::text as limite, fatura_centavos::text as fatura, to_char(vencimento,'YYYY-MM-DD') as vencimento, atualizado_em, atualizado_por from cartoes_cliente where usuario_id=$1`, [c.id])).rows[0] || null;
+    return json(res, 200, { contas, movimentos, posicoes, cartao });
+  }
+  async function salvarConta(req, res, u, id) {
+    const c = await usuarioPorId(id); if (!c) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 2000);
+    const saldo = centavos(b.saldo, { negativo: true });
+    if (!TIPOS_CONTA.includes(b.tipo) || !MOEDAS.includes(b.moeda) || saldo === null) return erro(res, 400, 'valor_invalido', 'Confira o tipo de conta, a moeda e o saldo.');
+    const r = await db.q(`insert into contas_cliente(usuario_id, tipo, moeda, saldo_centavos, atualizado_por) values ($1,$2,$3,$4,$5)
+                          on conflict (usuario_id, tipo, moeda) do update set saldo_centavos=excluded.saldo_centavos, atualizado_em=now(), atualizado_por=excluded.atualizado_por returning id`,
+      [c.id, b.tipo, b.moeda, saldo.toString(), u.email]);
+    await registrar(u, 'financeiro_conta', c.email, { tipo: b.tipo, moeda: b.moeda });
+    return json(res, 200, { id: r.rows[0].id });
+  }
+  async function excluirConta(req, res, u, id, contaId) {
+    const c = await usuarioPorId(id); if (!c || !UUID.test(contaId)) return erro(res, 404, 'nao_encontrado');
+    const r = await db.q('delete from contas_cliente where id=$1 and usuario_id=$2 returning tipo, moeda', [contaId, c.id]);
+    if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
+    await registrar(u, 'financeiro_conta_excluida', c.email, r.rows[0]);
+    return json(res, 200, { ok: true });
+  }
+  async function lancarMovimento(req, res, u, id) {
+    const c = await usuarioPorId(id); if (!c) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 4000);
+    const valor = centavos(b.valor, { negativo: true });
+    const descricao = texto(b.descricao, 140);
+    if (!UUID.test(String(b.contaId || '')) || !dataValida(b.data) || !descricao || valor === null || valor === 0n) return erro(res, 400, 'valor_invalido', 'Confira a conta, a data, a descrição e o valor.');
+    const conta = (await db.q('select id from contas_cliente where id=$1 and usuario_id=$2', [b.contaId, c.id])).rows[0];
+    if (!conta) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
+    const r = await db.q('insert into movimentos_cliente(usuario_id, conta_id, data, descricao, valor_centavos, criado_por) values ($1,$2,$3,$4,$5,$6) returning id', [c.id, conta.id, b.data, descricao, valor.toString(), u.email]);
+    await registrar(u, 'financeiro_movimento', c.email, { data: b.data });
+    return json(res, 201, { id: r.rows[0].id });
+  }
+  async function excluirMovimento(req, res, u, id, movId) {
+    const c = await usuarioPorId(id); if (!c || !UUID.test(movId)) return erro(res, 404, 'nao_encontrado');
+    const r = await db.q('delete from movimentos_cliente where id=$1 and usuario_id=$2 returning data', [movId, c.id]);
+    if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
+    await registrar(u, 'financeiro_movimento_excluido', c.email);
+    return json(res, 200, { ok: true });
+  }
+  async function salvarPosicao(req, res, u, id) {
+    const c = await usuarioPorId(id); if (!c) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 3000);
+    const valor = centavos(b.valor);
+    const descricao = texto(b.descricao, 120);
+    if (!CLASSES.includes(b.classe) || !MOEDAS.includes(b.moeda) || !descricao || valor === null) return erro(res, 400, 'valor_invalido', 'Confira a classe, a descrição, a moeda e o valor.');
+    let r;
+    if (b.id) {
+      if (!UUID.test(String(b.id))) return erro(res, 404, 'nao_encontrado');
+      r = await db.q('update posicoes_cliente set classe=$3, descricao=$4, moeda=$5, valor_centavos=$6, atualizado_em=now(), atualizado_por=$7 where id=$1 and usuario_id=$2 returning id', [b.id, c.id, b.classe, descricao, b.moeda, valor.toString(), u.email]);
+      if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
+    } else {
+      r = await db.q('insert into posicoes_cliente(usuario_id, classe, descricao, moeda, valor_centavos, atualizado_por) values ($1,$2,$3,$4,$5,$6) returning id', [c.id, b.classe, descricao, b.moeda, valor.toString(), u.email]);
+    }
+    await registrar(u, 'financeiro_posicao', c.email, { classe: b.classe });
+    return json(res, 200, { id: r.rows[0].id });
+  }
+  async function excluirPosicao(req, res, u, id, posId) {
+    const c = await usuarioPorId(id); if (!c || !UUID.test(posId)) return erro(res, 404, 'nao_encontrado');
+    const r = await db.q('delete from posicoes_cliente where id=$1 and usuario_id=$2 returning classe', [posId, c.id]);
+    if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
+    await registrar(u, 'financeiro_posicao_excluida', c.email);
+    return json(res, 200, { ok: true });
+  }
+  async function salvarCartao(req, res, u, id) {
+    const c = await usuarioPorId(id); if (!c) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 2000);
+    if (b.remover === true) {
+      await db.q('delete from cartoes_cliente where usuario_id=$1', [c.id]);
+      await registrar(u, 'financeiro_cartao_removido', c.email);
+      return json(res, 200, { ok: true });
+    }
+    const limite = b.limite === '' || b.limite == null ? null : centavos(b.limite);
+    const fatura = b.fatura === '' || b.fatura == null ? null : centavos(b.fatura);
+    if (!/^\d{4}$/.test(String(b.final || '')) || !SITUACOES_CARTAO.includes(b.situacao) || !MOEDAS.includes(b.moeda) || (b.limite && limite === null) || (b.fatura && fatura === null) || (b.vencimento && !dataValida(b.vencimento)))
+      return erro(res, 400, 'valor_invalido', 'Confira os 4 últimos dígitos, a situação, a moeda, os valores e o vencimento.');
+    await db.q(`insert into cartoes_cliente(usuario_id, final, bandeira, situacao, moeda, limite_centavos, fatura_centavos, vencimento, atualizado_por)
+                values ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                on conflict (usuario_id) do update set final=excluded.final, bandeira=excluded.bandeira, situacao=excluded.situacao, moeda=excluded.moeda,
+                  limite_centavos=excluded.limite_centavos, fatura_centavos=excluded.fatura_centavos, vencimento=excluded.vencimento, atualizado_em=now(), atualizado_por=excluded.atualizado_por`,
+      [c.id, b.final, texto(b.bandeira, 30) || null, b.situacao, b.moeda, limite === null ? null : limite.toString(), fatura === null ? null : fatura.toString(), b.vencimento || null, u.email]);
+    await registrar(u, 'financeiro_cartao', c.email);
+    return json(res, 200, { ok: true });
+  }
+
   // ---- interessados (formulários do site)
   async function listarInteressados(res, url) {
     const st = url.searchParams.get('status');
@@ -249,6 +357,14 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (p.length === 1 && m === 'POST') return convidar(req, res, u);
       if (p.length === 2 && m === 'GET') return fichaCliente(res, u, p[1]);
       if (p.length === 3 && p[2] === 'dados' && m === 'PUT') return editarDados(req, res, u, p[1]);
+      if (p[2] === 'financeiro' && p.length === 3 && m === 'GET') return lerFinanceiro(res, u, p[1]);
+      if (p[2] === 'contas' && p.length === 3 && m === 'PUT') return salvarConta(req, res, u, p[1]);
+      if (p[2] === 'contas' && p.length === 4 && m === 'DELETE') return excluirConta(req, res, u, p[1], p[3]);
+      if (p[2] === 'movimentos' && p.length === 3 && m === 'POST') return lancarMovimento(req, res, u, p[1]);
+      if (p[2] === 'movimentos' && p.length === 4 && m === 'DELETE') return excluirMovimento(req, res, u, p[1], p[3]);
+      if (p[2] === 'posicoes' && p.length === 3 && m === 'PUT') return salvarPosicao(req, res, u, p[1]);
+      if (p[2] === 'posicoes' && p.length === 4 && m === 'DELETE') return excluirPosicao(req, res, u, p[1], p[3]);
+      if (p[2] === 'cartao' && p.length === 3 && m === 'PUT') return salvarCartao(req, res, u, p[1]);
       if (p.length === 3 && m === 'POST') return acaoCliente(req, res, u, p[1], p[2]);
     }
     if (p[0] === 'agendamentos') {

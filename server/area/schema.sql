@@ -88,6 +88,52 @@ create table if not exists interessados (
 );
 create index if not exists interessados_status on interessados(status, recebido_em desc);
 
+-- Financeiro (CONSULTA): dados lançados pela equipe no Admin; o cliente só lê os dele. Valores em centavos (bigint).
+create table if not exists contas_cliente (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  tipo text not null check (tipo in ('digital', 'global', 'investimentos')),
+  moeda text not null check (moeda in ('AED', 'USD', 'EUR', 'GBP', 'BRL')),
+  saldo_centavos bigint not null default 0,
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text,
+  unique (usuario_id, tipo, moeda)
+);
+create table if not exists movimentos_cliente (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  conta_id uuid not null references contas_cliente(id) on delete cascade,
+  data date not null,
+  descricao text not null,
+  valor_centavos bigint not null,              -- positivo = crédito · negativo = débito
+  criado_em timestamptz not null default now(),
+  criado_por text
+);
+create index if not exists movimentos_cliente_usuario on movimentos_cliente(usuario_id, data desc, criado_em desc);
+create table if not exists posicoes_cliente (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  classe text not null check (classe in ('renda_fixa', 'renda_variavel', 'fundos', 'alternativos', 'exterior')),
+  descricao text not null,
+  moeda text not null check (moeda in ('AED', 'USD', 'EUR', 'GBP', 'BRL')),
+  valor_centavos bigint not null check (valor_centavos >= 0),
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text
+);
+create index if not exists posicoes_cliente_usuario on posicoes_cliente(usuario_id);
+create table if not exists cartoes_cliente (
+  usuario_id uuid primary key references usuarios(id) on delete cascade,
+  final text not null check (final ~ '^[0-9]{4}$'),
+  bandeira text,
+  situacao text not null default 'ativo' check (situacao in ('ativo', 'bloqueado', 'em_emissao')),
+  moeda text not null default 'AED' check (moeda in ('AED', 'USD', 'EUR', 'GBP', 'BRL')),
+  limite_centavos bigint check (limite_centavos >= 0),
+  fatura_centavos bigint check (fatura_centavos >= 0),
+  vencimento date,
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text
+);
+
 -- Registro das ações feitas pelo painel da equipe (quem, o quê, sobre quem, quando). Só inserções.
 create table if not exists acoes_equipe (
   id bigserial primary key,
