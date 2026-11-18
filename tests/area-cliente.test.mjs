@@ -160,3 +160,5 @@ try {
   fs.rmSync(TMP, { recursive: true, force: true });
   if (falhas) { console.log('--- log do servidor ---\n' + logSrv.slice(-3000)); process.exitCode = 1; }
 }
+// encerra explicitamente: a biblioteca do Postgres de teste (async-exit-hook) sobrescreveria o código de saída
+process.exit(falhas ? 1 : 0);

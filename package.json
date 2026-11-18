@@ -10,7 +10,8 @@
     "astro": "astro",
     "start": "node server.mjs",
     "test:area": "node tests/area-cliente.test.mjs",
-    "test:navegador": "npm run build && node tests/navegador-area.mjs"
+    "test:navegador": "npm run build && node tests/navegador-area.mjs",
+    "test:correcoes": "node tests/correcoes-railway.test.mjs"
   },
   "dependencies": {
     "astro": "^7.4.12",

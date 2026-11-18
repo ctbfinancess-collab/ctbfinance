@@ -171,3 +171,5 @@ try {
   if (!process.env.TELAS_DIR) fs.rmSync(TMP, { recursive: true, force: true });
   if (fail) { console.log(logSrv.slice(-2000)); process.exitCode = 1; }
 }
+// encerra explicitamente: a biblioteca do Postgres de teste (async-exit-hook) sobrescreveria o código de saída
+process.exit(fail ? 1 : 0);

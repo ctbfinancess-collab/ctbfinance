@@ -92,7 +92,12 @@ export function criarAdmin({ db, arquivos, api }) {
     async confirmarAgendamento(id, dataHoraDubai, por) {
       const m = String(dataHoraDubai).match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})$/);
       if (!m) throw new Error('use AAAA-MM-DDTHH:MM (horário de Dubai)');
-      const utc = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4] - 4, +m[5]));
+      const [ano, mes, dia, hora, min] = m.slice(1).map(Number);
+      // confere o calendário e as faixas ANTES de converter (Date.UTC "corrigiria" 31/02 para 03/03 etc.)
+      const civil = new Date(Date.UTC(ano, mes - 1, dia));
+      if (mes < 1 || mes > 12 || dia < 1 || civil.getUTCFullYear() !== ano || civil.getUTCMonth() !== mes - 1 || civil.getUTCDate() !== dia) throw new Error(`data inexistente: ${dataHoraDubai}`);
+      if (hora > 23 || min > 59) throw new Error(`hora inválida: ${dataHoraDubai}`);
+      const utc = new Date(Date.UTC(ano, mes - 1, dia, hora - 4, min)); // Dubai = UTC+4, sem horário de verão
       const r = await db.q('update agendamentos set horario_confirmado=$2, confirmado_por=$3 where id=$1 returning id', [id, utc, por || null]);
       if (!r.rowCount) throw new Error('agendamento não encontrado');
       return { id, horarioConfirmado: utc.toISOString() };

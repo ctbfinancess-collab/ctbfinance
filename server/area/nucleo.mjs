@@ -90,7 +90,7 @@ export function criarArquivos(dir = process.env.ARQUIVOS_DIR) {
     caminho: seguro,
     temporario: () => path.join(tmp, crypto.randomUUID()),
     async efetivar(tmpPath) { const chave = crypto.randomUUID(); await fsp.rename(tmpPath, seguro(chave)); return chave; },
-    ler: (chave) => fs.createReadStream(seguro(chave)),
+    abrir: (chave) => fsp.open(seguro(chave), 'r'),
     async existe(chave) { try { await fsp.access(seguro(chave)); return true; } catch { return false; } },
     async apagar(p) { await fsp.rm(p, { force: true }); },
     async listar() { return (await fsp.readdir(docs)).filter((n) => /^[0-9a-f-]{36}$/.test(n)); },

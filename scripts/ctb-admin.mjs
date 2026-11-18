@@ -1,8 +1,13 @@
 #!/usr/bin/env node
 /**
- * Comandos da equipe CTB — Área do Cliente (Railway). Precisa de DATABASE_URL e ARQUIVOS_DIR
- * (no Railway: `railway run node scripts/ctb-admin.mjs ...` ou pelo shell do serviço).
- * E-mails (convite/redefinição) usam RESEND_API_KEY e CONTACT_EMAIL_FROM.
+ * Comandos da equipe CTB — Área do Cliente (Railway).
+ * ONDE RODAR (ver AREA-DO-CLIENTE-RAILWAY.md):
+ *  - Comandos que mexem nos ARQUIVOS (docs:baixar, arquivos:reconciliar) precisam do volume: rodar DENTRO do
+ *    container do serviço do site, com `railway ssh` (o volume só existe lá, montado em /data).
+ *  - Comandos só de BANCO podem rodar no container (`railway ssh`) ou localmente com `railway run`
+ *    (executa no SEU computador com as variáveis do Railway; exige acesso de rede ao Postgres). `railway run`
+ *    NÃO traz o volume para o seu computador.
+ * Variáveis: DATABASE_URL (todos), ARQUIVOS_DIR (só comandos de arquivos), RESEND_API_KEY/CONTACT_EMAIL_FROM (convites).
  *
  *   usuarios:convidar <email> ["Nome"] [pt|en]
  *   usuarios:bloquear <email>        usuarios:desbloquear <email>
@@ -15,12 +20,22 @@
  *   arquivos:reconciliar [--aplicar]           (padrão: simulação)
  */
 import { criarBanco, criarArquivos } from '../server/area/nucleo.mjs';
+const COMANDOS_DE_ARQUIVOS = new Set(['docs:baixar', 'arquivos:reconciliar']);
 import { criarApi } from '../server/area/api.mjs';
 import { criarAdmin } from '../server/area/admin.mjs';
 import { enviarEmailAcesso } from '../server/area/emails.mjs';
 
 const [cmd, ...a] = process.argv.slice(2);
-const db = criarBanco(); const arquivos = criarArquivos();
+const db = criarBanco();
+// o volume só é aberto pelos comandos que mexem em arquivos (os demais funcionam sem ARQUIVOS_DIR)
+if (COMANDOS_DE_ARQUIVOS.has(cmd) && !process.env.ARQUIVOS_DIR) {
+  console.error(`Erro: "${cmd}" precisa do volume (ARQUIVOS_DIR). No Railway, rode dentro do container com \`railway ssh\`.`);
+  await db.fechar(); process.exit(1);
+}
+const arquivos = COMANDOS_DE_ARQUIVOS.has(cmd) ? criarArquivos() : null;
+if (COMANDOS_DE_ARQUIVOS.has(cmd) && !process.env.RAILWAY_VOLUME_MOUNT_PATH && !process.env.CTB_ADMIN_VOLUME_LOCAL) {
+  console.error('Aviso: este comando precisa do volume do serviço. No Railway, rode com `railway ssh` dentro do container.');
+}
 await db.migrar();
 const api = criarApi({ db, arquivos, origens: new Set(), enviarEmail: enviarEmailAcesso });
 const adm = criarAdmin({ db, arquivos, api });

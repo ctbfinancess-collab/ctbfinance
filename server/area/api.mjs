@@ -12,6 +12,7 @@
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import {
   conferirSenha, gerarHashSenha, politicaSenha, novoToken, hashToken, cookieSessao, cookieApagar, lerCookie,
   SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES,
@@ -38,12 +39,22 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     req.on('error', erro);
   });
 
-  // ---- limite de tentativas (persistente no banco)
-  async function excedeu(chave, max, janelaMin) {
-    const r = await db.q(`select count(*)::int n from tentativas_login where chave=$1 and em > now() - ($2 || ' minutes')::interval`, [chave, String(janelaMin)]);
-    return r.rows[0].n >= max;
+  // ---- limite de tentativas (persistente no banco, ATÔMICO sob concorrência)
+  // Cada chave (ex.: email:x, ip:y) é travada com pg_advisory_xact_lock; contagem e reserva acontecem na mesma
+  // transação. Uma reserva conta como verificação; se o login der certo, as reservas dele são removidas.
+  async function reservarTentativa(chaves) {
+    return db.transacao(async (q) => {
+      for (const [chave] of [...chaves].sort((a, b) => a[0].localeCompare(b[0]))) await q('select pg_advisory_xact_lock(hashtextextended($1, 0))', [chave]);
+      for (const [chave, max, janelaMin] of chaves) {
+        const r = await q(`select count(*)::int n from tentativas_login where chave=$1 and em > now() - ($2 || ' minutes')::interval`, [chave, String(janelaMin)]);
+        if (r.rows[0].n >= max) return null;
+      }
+      const ids = [];
+      for (const [chave] of chaves) ids.push((await q('insert into tentativas_login(chave) values ($1) returning id', [chave])).rows[0].id);
+      return ids;
+    });
   }
-  const registrarTentativa = (chave) => db.q('insert into tentativas_login(chave) values ($1)', [chave]);
+  const liberarReservas = (ids) => db.q('delete from tentativas_login where id = any($1::bigint[])', [ids]);
 
   // ---- sessão: conferida a cada requisição
   async function autenticar(req) {
@@ -71,7 +82,12 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
   async function enviarLinkSenha(usuario, finalidade, lang = 'pt') {
     const token = novoToken();
     const horas = finalidade === 'convite' ? 72 : 1;
-    await db.q('insert into tokens_senha(hash, usuario_id, finalidade, expira_em) values ($1,$2,$3, now() + ($4 || \' hours\')::interval)', [hashToken(token), usuario.id, finalidade, String(horas)]);
+    // reenvio: o link novo SUBSTITUI os anteriores ainda pendentes (só o mais recente vale)
+    await db.transacao(async (q) => {
+      await q('select id from usuarios where id=$1 for update', [usuario.id]);
+      await q('update tokens_senha set usado_em=now() where usuario_id=$1 and usado_em is null', [usuario.id]);
+      await q('insert into tokens_senha(hash, usuario_id, finalidade, expira_em) values ($1,$2,$3, now() + ($4 || \' hours\')::interval)', [hashToken(token), usuario.id, finalidade, String(horas)]);
+    });
     const pagina = lang === 'en' ? '/en/client-area/' : '/area-do-cliente/';
     const link = `${siteUrl}${pagina}?${finalidade === 'convite' ? 'convite' : 'redefinir'}=${token}`;
     await enviarEmail({ to: usuario.email, finalidade, lang, link, horas });
@@ -82,14 +98,14 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
   async function entrar(req, res) {
     const b = await lerJson(req);
     const email = String(b.email || '').trim().toLowerCase().slice(0, 160), senha = String(b.senha || '');
-    if (await excedeu(`ip:${ip(req)}`, 30, 15) || await excedeu(`email:${email}`, 5, 15)) return json(res, 429, { erro: 'muitas_tentativas' });
+    // limite: 5 verificações por conta e 30 por IP a cada 15 min (reserva atômica ANTES de verificar a senha)
+    const reservas = await reservarTentativa([[`email:${email}`, 5, 15], [`ip:${ip(req)}`, 30, 15]]);
+    if (!reservas) return json(res, 429, { erro: 'muitas_tentativas' });
     const r = await db.q('select id, senha_hash, bloqueado from usuarios where email=$1', [email]);
     const u = r.rows[0];
     const ok = await conferirSenha(senha, u && u.senha_hash);
-    if (!u || !ok || u.bloqueado) {
-      await registrarTentativa(`ip:${ip(req)}`); await registrarTentativa(`email:${email}`);
-      return json(res, 401, { erro: 'credenciais' });
-    }
+    if (!u || !ok || u.bloqueado) return json(res, 401, { erro: 'credenciais' }); // a reserva fica como falha registrada
+    await liberarReservas(reservas);                                                 // login legítimo não consome o limite
     await criarSessao(res, req, u.id);
     return json(res, 200, { ok: true });
   }
@@ -103,8 +119,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     const email = String(b.email || '').trim().toLowerCase().slice(0, 160);
     const lang = b.lang === 'en' ? 'en' : 'pt';
     // mesma resposta exista ou não a conta
-    if (EMAIL_RE.test(email) && !(await excedeu(`esqueci:${email}`, 3, 60)) && !(await excedeu(`esqueci-ip:${ip(req)}`, 10, 60))) {
-      await registrarTentativa(`esqueci:${email}`); await registrarTentativa(`esqueci-ip:${ip(req)}`);
+    if (EMAIL_RE.test(email) && (await reservarTentativa([[`esqueci:${email}`, 3, 60], [`esqueci-ip:${ip(req)}`, 10, 60]]))) {
       const u = (await db.q('select id, email, bloqueado, senha_hash from usuarios where email=$1', [email])).rows[0];
       if (u && !u.bloqueado) await enviarLinkSenha(u, u.senha_hash ? 'redefinir' : 'convite', lang).catch((e) => log.error('e-mail de senha', e.message));
     }
@@ -113,16 +128,18 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
   async function redefinir(req, res) {
     const b = await lerJson(req);
     const token = String(b.token || ''), senha = String(b.senha || '');
-    const r = await db.q(`select t.hash, t.usuario_id, u.email from tokens_senha t join usuarios u on u.id=t.usuario_id
-                           where t.hash=$1 and t.usado_em is null and t.expira_em > now() and not u.bloqueado`, [hashToken(token)]);
-    const t = r.rows[0];
+    const t = (await db.q(`select t.usuario_id, u.email from tokens_senha t join usuarios u on u.id=t.usuario_id
+                            where t.hash=$1 and t.usado_em is null and t.expira_em > now() and not u.bloqueado`, [hashToken(token)])).rows[0];
     if (!t) return json(res, 400, { erro: 'link_invalido' });
     const pol = politicaSenha(senha, t.email);
     if (pol) return json(res, 400, { erro: 'senha_' + pol });
     const hash = await gerarHashSenha(senha);
+    // trava a conta: links do mesmo usuário usados ao mesmo tempo são processados um de cada vez
     const ok = await db.transacao(async (q) => {
-      const usado = await q('update tokens_senha set usado_em=now() where hash=$1 and usado_em is null returning 1', [t.hash]);
-      if (!usado.rowCount) return false;
+      await q('select id from usuarios where id=$1 for update', [t.usuario_id]);
+      const valido = await q(`update tokens_senha set usado_em=now() where hash=$1 and usuario_id=$2 and usado_em is null and expira_em > now() returning 1`, [hashToken(token), t.usuario_id]);
+      if (!valido.rowCount) return false;
+      await q('update tokens_senha set usado_em=now() where usuario_id=$1 and usado_em is null', [t.usuario_id]); // invalida TODOS os outros links pendentes
       await q('update usuarios set senha_hash=$1, email_verificado_em=coalesce(email_verificado_em, now()) where id=$2', [hash, t.usuario_id]);
       await q('update sessoes set revogada_em=now() where usuario_id=$1 and revogada_em is null', [t.usuario_id]); // encerra sessões abertas
       return true;
@@ -209,13 +226,29 @@ export function criarApi({ db, arquivos, origens, enviarEmail, siteUrl = process
     // outro cliente recebe o mesmo 404 de "não existe" (não revela a existência)
     if (!d || (d.usuario_id !== u.id && !u.equipe)) return json(res, 404, { erro: 'nao_encontrado' });
     if (!docPublico(d).baixavel || !d.chave_arquivo) return json(res, 409, { erro: 'nao_liberado', status: d.status });
-    if (!(await arquivos.existe(d.chave_arquivo))) return json(res, 409, { erro: 'arquivo_ausente' });
-    await db.q('insert into acessos_documentos(documento_id, usuario_id, papel) values ($1,$2,$3)', [d.id, u.id, d.usuario_id === u.id ? 'dono' : 'equipe']);
-    res.writeHead(200, {
-      'Content-Type': d.tipo, 'Content-Length': d.tamanho, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
-      'Content-Disposition': `attachment; filename="${d.nome.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(d.nome)}`,
-    });
-    arquivos.ler(d.chave_arquivo).pipe(res);
+    // abre ANTES de enviar qualquer cabeçalho: ausência ou falha de abertura vira resposta controlada
+    let fh;
+    try { fh = await arquivos.abrir(d.chave_arquivo); }
+    catch (e) {
+      log.error('[area-cliente] arquivo indisponível', d.id, e.code || e.message);
+      return json(res, e.code === 'ENOENT' ? 409 : 500, { erro: e.code === 'ENOENT' ? 'arquivo_ausente' : 'arquivo_indisponivel' });
+    }
+    try {
+      const { size } = await fh.stat();
+      await db.q('insert into acessos_documentos(documento_id, usuario_id, papel) values ($1,$2,$3)', [d.id, u.id, d.usuario_id === u.id ? 'dono' : 'equipe']);
+      res.writeHead(200, {
+        'Content-Type': d.tipo, 'Content-Length': size, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff',
+        'Content-Disposition': `attachment; filename="${d.nome.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '')}"; filename*=UTF-8''${encodeURIComponent(d.nome)}`,
+      });
+      // aguarda a transferência; erro de leitura ou aborto do cliente encerra só esta resposta
+      await pipeline(fh.createReadStream(), res);
+    } catch (e) {
+      if (e.code !== 'ERR_STREAM_PREMATURE_CLOSE') log.error('[area-cliente] transferência interrompida', d.id, e.code || e.message);
+      if (!res.headersSent) return json(res, 500, { erro: 'arquivo_indisponivel' });
+      res.destroy();
+    } finally {
+      await fh.close().catch(() => {});
+    }
   }
   async function agendamentos(res, u) {
     const r = await db.q(`select id, tipo, descricao, to_char(data_solicitada, 'YYYY-MM-DD') as data_solicitada, horario_confirmado
