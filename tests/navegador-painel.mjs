@@ -129,6 +129,15 @@ try {
   check('Cadastrar cartão', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('•••• 3478')`));
   const finAna = await (await fetch(`${BASE}/api/cliente/financeiro`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json();
   check('A cliente recebe o que a equipe lançou; saldo já descontado (28.750 − 8.000 = 20.750)', finAna.contas[0]?.saldo === '2075000' && finAna.movimentos[0]?.valor === '-800000' && finAna.posicoes[0]?.valor === '30000000' && finAna.cartao?.final === '3478');
+  await ev(`(()=>{const b=[...document.querySelectorAll('[data-ficha] .fin-sec')][0].querySelector('.fin-linha button.link');b.click();return 1})()`);
+  check('Conta: "Corrigir" preenche o formulário (saldo atual) e muda o botão', await waitFor(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];return f.saldo.value==='20750,00' && f.querySelector('button[type=submit]').textContent==='Salvar correção' && f.classList.contains('corrigindo')})()`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.saldo.value='21.000';f.requestSubmit();return 1})()`);
+  check('Salvar correção da conta ("21.000" com ponto de milhar) → AED 21.000,00 e "✓ Conta corrigida."', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('AED 21.000,00') && document.querySelector('[data-msg-ficha]').textContent.includes('Conta corrigida')`));
+  await ev(`(()=>{const b=[...[...document.querySelectorAll('[data-ficha] .fin-sec')][1].querySelectorAll('.fin-linha button.link')].find(x=>x.textContent==='Corrigir');b.click();return 1})()`);
+  check('Movimentação: "Corrigir" traz descrição, valor e débito', await waitFor(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];return f.descricao.value==='Transferência SWIFT' && f.valor.value==='8000,00' && f.sentido.value==='debito'})()`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];f.valor.value='7.000';f.requestSubmit();return 1})()`);
+  check('Corrigir débito 8.000 → 7.000: extrato −7.000 e saldo sobe 1.000 (AED 22.000,00)', await waitFor(`(()=>{const t=document.querySelector('[data-ficha]').innerText;return t.includes('− AED 7.000,00') && t.includes('AED 22.000,00')})()`));
+  const cab = await fetch(`${BASE}/admin/`); check('Páginas do Admin/Área do Cliente com Cache-Control: no-cache', /no-cache/.test(cab.headers.get('cache-control') || '') && /no-cache/.test((await fetch(`${BASE}/area-do-cliente/`)).headers.get('cache-control') || ''));
   await shot('p3b-financeiro');
   await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][1].scrollIntoView({block:'start'}),1`); await shot('p3c-opcoes');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");

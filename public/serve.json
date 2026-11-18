@@ -32,6 +32,15 @@
       ]
     },
     {
+      "source": "{admin,area-do-cliente,en/client-area}{,/**}",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
+    },
+    {
       "source": "{_astro,brand,video,icons,group,people}/**",
       "headers": [
         {

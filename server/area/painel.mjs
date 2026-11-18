@@ -16,7 +16,9 @@ const SITUACOES_CARTAO = ['ativo', 'bloqueado', 'em_emissao'];
 function centavos(v, { negativo = false } = {}) {
   let s = String(v ?? '').trim().replace(/\s/g, '');
   if (!s) return null;
-  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.'); else s = s.replace(/,/g, '');
+  if (/,\d{1,2}$/.test(s)) s = s.replace(/\./g, '').replace(',', '.');           // 28.750,00 · 1.350,5
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');            // 50.000 · 12.689 · 1.250.000 (milhar)
+  else s = s.replace(/,/g, '');                                                       // 12480.5 · 28,750.00
   const m = /^(-)?(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s);
   if (!m || (m[1] && !negativo)) return null;
   const c = BigInt(m[2]) * 100n + BigInt((m[3] || '').padEnd(2, '0') || '0');
@@ -181,6 +183,15 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     const b = await corpo(req, 2000);
     const saldo = centavos(b.saldo, { negativo: true });
     if (!TIPOS_CONTA.includes(b.tipo) || !MOEDAS.includes(b.moeda) || saldo === null) return erro(res, 400, 'valor_invalido', 'Confira o tipo de conta, a moeda e o saldo.');
+    if (b.id !== undefined && b.id !== null && b.id !== '') {
+      if (!UUID.test(String(b.id))) return erro(res, 404, 'nao_encontrado');
+      try {
+        const up = await db.q('update contas_cliente set tipo=$3, moeda=$4, saldo_centavos=$5, atualizado_em=now(), atualizado_por=$6 where id=$1 and usuario_id=$2 returning id', [b.id, c.id, b.tipo, b.moeda, saldo.toString(), u.email]);
+        if (!up.rowCount) return erro(res, 404, 'nao_encontrado');
+      } catch (e) { if (e.code === '23505') return erro(res, 409, 'conta_duplicada', 'Este cliente já tem uma conta desse tipo nessa moeda.'); throw e; }
+      await registrar(u, 'financeiro_conta', c.email, { tipo: b.tipo, moeda: b.moeda, correcao: true });
+      return json(res, 200, { id: b.id });
+    }
     const r = await db.q(`insert into contas_cliente(usuario_id, tipo, moeda, saldo_centavos, atualizado_por) values ($1,$2,$3,$4,$5)
                           on conflict (usuario_id, tipo, moeda) do update set saldo_centavos=excluded.saldo_centavos, atualizado_em=now(), atualizado_por=excluded.atualizado_por returning id`,
       [c.id, b.tipo, b.moeda, saldo.toString(), u.email]);
@@ -225,6 +236,31 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
     });
     if (!r.rowCount) return erro(res, 404, 'nao_encontrado');
     await registrar(u, 'financeiro_movimento_excluido', c.email);
+    return json(res, 200, { ok: true });
+  }
+  async function corrigirMovimento(req, res, u, id, movId) {
+    const c = await usuarioPorId(id); if (!c || !UUID.test(movId)) return erro(res, 404, 'nao_encontrado');
+    const b = await corpo(req, 4000);
+    const valor = centavos(b.valor, { negativo: true });
+    const descricao = texto(b.descricao, 140);
+    if (!UUID.test(String(b.contaId || '')) || !dataValida(b.data) || !descricao || valor === null || valor === 0n) return erro(res, 400, 'valor_invalido', 'Confira a conta, a data, a descrição e o valor.');
+    const r = await db.transacao(async (q) => {
+      const m = (await q('select conta_id, valor_centavos::text as v, aplicado_no_saldo from movimentos_cliente where id=$1 and usuario_id=$2 for update', [movId, c.id])).rows[0];
+      if (!m) return 404;
+      // trava as contas envolvidas sempre na mesma ordem (evita impasse)
+      const ids = [...new Set([m.conta_id, b.contaId])].sort();
+      const contas = (await q('select id from contas_cliente where id = any($1::uuid[]) and usuario_id=$2 order by id for update', [ids, c.id])).rows;
+      if (!contas.some((k) => k.id === b.contaId)) return 400;
+      if (m.aplicado_no_saldo) {
+        await q('update contas_cliente set saldo_centavos = saldo_centavos - $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [m.conta_id, m.v, u.email]);
+        await q('update contas_cliente set saldo_centavos = saldo_centavos + $2::bigint, atualizado_em=now(), atualizado_por=$3 where id=$1', [b.contaId, valor.toString(), u.email]);
+      }
+      await q('update movimentos_cliente set conta_id=$2, data=$3, descricao=$4, valor_centavos=$5 where id=$1', [movId, b.contaId, b.data, descricao, valor.toString()]);
+      return 200;
+    });
+    if (r === 404) return erro(res, 404, 'nao_encontrado');
+    if (r === 400) return erro(res, 400, 'conta_invalida', 'Conta não encontrada para este cliente.');
+    await registrar(u, 'financeiro_movimento_corrigido', c.email, { data: b.data });
     return json(res, 200, { ok: true });
   }
   async function salvarPosicao(req, res, u, id) {
@@ -376,6 +412,7 @@ export function criarPainel({ db, adm, json, lerJson, log = console }) {
       if (p[2] === 'contas' && p.length === 4 && m === 'DELETE') return excluirConta(req, res, u, p[1], p[3]);
       if (p[2] === 'movimentos' && p.length === 3 && m === 'POST') return lancarMovimento(req, res, u, p[1]);
       if (p[2] === 'movimentos' && p.length === 4 && m === 'DELETE') return excluirMovimento(req, res, u, p[1], p[3]);
+      if (p[2] === 'movimentos' && p.length === 4 && m === 'PUT') return corrigirMovimento(req, res, u, p[1], p[3]);
       if (p[2] === 'posicoes' && p.length === 3 && m === 'PUT') return salvarPosicao(req, res, u, p[1]);
       if (p[2] === 'posicoes' && p.length === 4 && m === 'DELETE') return excluirPosicao(req, res, u, p[1], p[3]);
       if (p[2] === 'cartao' && p.length === 3 && m === 'PUT') return salvarCartao(req, res, u, p[1]);
