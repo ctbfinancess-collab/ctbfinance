@@ -145,6 +145,9 @@ try {
   const can = await E('POST', `/contratos/${fa.id}/cancelar`);
   await t('CT20', 'Cancelar → "cancelado"; não editável; cliente não vê', async () => can.status === 200 && can.dados.status === 'cancelado' && (await E('PUT', `/contratos/${fa.id}`, { json: { campos: fa.campos } })).status === 409 && !(await K(cAna, 'GET')).dados.contratos.some((x) => x.id === fa.id));
 
+  const gm = await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'mandato', solicitacaoId: s.id } });
+  const fm = (await E('GET', `/contratos/${gm.dados?.id}`)).dados;
+  await t('CT21', 'Mandato de intermediação: puxa instrumento, valor e beneficiário da solicitação; honorários ficam para a equipe preencher; texto diz que a CTB não emite nem custodia', async () => gm.status === 201 && /^CTB-MSA-\d{4}-\d{5}$/.test(fm.referencia) && fm.campos.instrumento.startsWith('SBLC') && fm.campos.valor === 'USD 1,000,000.00' && fm.campos.beneficiario === 'Beneficiário Exemplo' && /^CTB-SBLC-\d{4}-\d{5}$/.test(fm.campos.refSolicitacao) && fm.faltando.includes('honorarioEstruturacao') && fm.texto.includes('does not issue, guarantee, confirm or transmit financial instruments'));
   console.log('--- Isolamento, auditoria, app');
   const gBia = await E('POST', '/contratos', { json: { usuarioId: bia, modelo: 'nda', solicitacaoId: s.id } });
   await t('CT21', 'Gerar para a Bia com a solicitação da Ana → 404; modelo inexistente → 400', async () => gBia.status === 404 && (await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'sblc' } })).status === 400);

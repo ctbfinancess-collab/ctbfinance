@@ -38,6 +38,8 @@ const assinaturasDe = (modelo, campos) => {
 const PAISES_EN = { 'emirados árabes unidos': 'United Arab Emirates', 'emirados arabes unidos': 'United Arab Emirates', 'emirados': 'United Arab Emirates', 'eau': 'United Arab Emirates', 'estados unidos': 'United States of America', 'eua': 'United States of America', 'reino unido': 'United Kingdom', 'inglaterra': 'United Kingdom', 'alemanha': 'Germany', 'frança': 'France', 'franca': 'France', 'espanha': 'Spain', 'itália': 'Italy', 'italia': 'Italy', 'suíça': 'Switzerland', 'suica': 'Switzerland', 'holanda': 'Netherlands', 'países baixos': 'Netherlands', 'arábia saudita': 'Saudi Arabia', 'arabia saudita': 'Saudi Arabia', 'catar': 'Qatar', 'singapura': 'Singapore', 'japão': 'Japan', 'japao': 'Japan', 'méxico': 'Mexico', 'mexico': 'Mexico', 'canadá': 'Canada', 'argentina': 'Argentina', 'portugal': 'Portugal', 'china': 'China', 'índia': 'India', 'india': 'India', 'turquia': 'Turkey', 'egito': 'Egypt', 'paraguai': 'Paraguay', 'uruguai': 'Uruguay', 'chile': 'Chile', 'colômbia': 'Colombia', 'colombia': 'Colombia', 'peru': 'Peru', 'angola': 'Angola', 'moçambique': 'Mozambique' };
 export const paisEn = (v) => PAISES_EN[String(v || '').trim().toLowerCase()] || String(v || '').trim();
 
+const NOMES_INSTRUMENTO = { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee', RWA: 'Ready, Willing and Able', BCL: 'Bank Comfort Letter', POF: 'Proof of Funds' };
+
 /** Número da conta do cliente nos contratos: fixo por cliente (derivado do id), 12 dígitos com prefixo CTB. */
 export const numeroConta = (usuarioId) => { const h = String(usuarioId).replace(/[^0-9a-f]/gi, '').slice(0, 12); return 'CTB' + (BigInt('0x' + (h || '0')) % 1000000000000n).toString().padStart(12, '0'); };
 
@@ -48,7 +50,7 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
   /** Preenchimento automático: cadastro do cliente + solicitação (se houver) + quem assina pela CTB. */
   async function preencher(usuarioId, modelo, solicitacaoId = null) {
     const p = (await db.q('select dados from perfis where usuario_id=$1', [usuarioId])).rows[0]?.dados || {};
-    const s = solicitacaoId ? (await db.q('select ordenante, beneficiario from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [solicitacaoId, usuarioId])).rows[0] : null;
+    const s = solicitacaoId ? (await db.q('select ordenante, beneficiario, instrumento, moeda, valor_centavos::text as valor, referencia from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [solicitacaoId, usuarioId])).rows[0] : null;
     const cfg = (await db.q(`select valor from configuracoes where chave='assinatura_ctb'`)).rows[0]?.valor || {};
     const s_ = (v) => (typeof v === 'string' ? v.trim() : '');
     const pais = paisEn(s_(p.companycountry));   // contratos são em inglês
@@ -67,6 +69,11 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
       ctbNome: s_(cfg.nome), ctbCargo: s_(cfg.cargo), ctbPin: s_(cfg.pin),
       nacionalidade: s_(p.nationality), telefone: s_(p.phone_number),
       conta: numeroConta(usuarioId),
+      // dados da solicitação (mandato de intermediação)
+      instrumento: s?.instrumento ? `${s.instrumento}${NOMES_INSTRUMENTO[s.instrumento] ? ' (' + NOMES_INSTRUMENTO[s.instrumento] + ')' : ''}` : '',
+      valor: s?.valor ? `${s.moeda} ${(BigInt(s.valor) / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${(BigInt(s.valor) % 100n).toString().padStart(2, '0')}` : '',
+      beneficiario: s_(s?.beneficiario?.nome),
+      refSolicitacao: s_(s?.referencia),
     };
     const out = {};
     for (const { k, padrao } of MODELOS[modelo].campos) out[k] = txt(auto[k] || padrao || '', 300);

@@ -255,7 +255,135 @@ In witness whereof, and with equitable and declared intentions, the parties sign
   ],
 };
 
-export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA };
+/** Mandato de intermediação: a CTB estrutura e apresenta o pedido a instituição LICENCIADA; não emite, não custodia,
+ *  não recebe valores da instituição. Honorário de êxito só após a emissão efetiva pela instituição. (Proposta 18/11/2026,
+ *  para revisão do advogado da titular.) */
+const MANDATO = {
+  titulo: 'Mandate and Service Agreement (Intermediation)',
+  rotulo: 'MSA',
+  campos: [
+    { k: 'data', rotulo: 'Data (DD/MM/AAAA)', origem: 'hoje (Dubai)' },
+    { k: 'local', rotulo: 'Local', padrao: 'Dubai - United Arab Emirates (UAE)' },
+    { k: 'refSolicitacao', rotulo: 'Referência da solicitação', origem: 'solicitação de instrumento' },
+    { k: 'empresa', rotulo: 'Cliente — empresa (ou nome)', origem: 'Meu perfil: empresa · senão nome do cliente' },
+    { k: 'jurisdicao', rotulo: 'Constituída sob as leis de', padrao: 'the Federative Republic of Brazil', origem: 'Meu perfil: país da empresa' },
+    { k: 'registro', rotulo: 'Nº de registro da empresa', origem: 'Meu perfil' },
+    { k: 'endereco', rotulo: 'Endereço da empresa', origem: 'Meu perfil' },
+    { k: 'representante', rotulo: 'Representante legal', origem: 'Meu perfil: nome' },
+    { k: 'cargoRep', rotulo: 'Cargo do representante', padrao: 'CEO', origem: 'Meu perfil: cargo na empresa' },
+    { k: 'passaporte', rotulo: 'Passaporte do representante', origem: 'Meu perfil (número completo)' },
+    { k: 'instrumento', rotulo: 'Instrumento solicitado', origem: 'solicitação' },
+    { k: 'valor', rotulo: 'Valor do instrumento', origem: 'solicitação' },
+    { k: 'beneficiario', rotulo: 'Beneficiário do instrumento', origem: 'solicitação' },
+    { k: 'honorarioEstruturacao', rotulo: 'Honorário de estruturação (ex.: USD 5,000.00)' },
+    { k: 'honorarioExito', rotulo: 'Honorário de êxito (% do valor, ex.: 1.5%)' },
+    { k: 'prazo', rotulo: 'Vigência do mandato (meses)', padrao: 'six (6)' },
+    { k: 'ctbNome', rotulo: 'CTB — nome de quem assina', origem: 'Configuração de assinatura' },
+    { k: 'ctbCargo', rotulo: 'CTB — cargo', padrao: 'EXECUTIVE DIRECTOR' },
+    { k: 'ctbPin', rotulo: 'CTB — PIN', padrao: '120422' },
+  ],
+  texto: (c) => `# MANDATE AND SERVICE AGREEMENT
+# FINANCIAL INSTRUMENT INTERMEDIATION
+
+Place: ${c.local}.
+
+Date: ${c.data}
+
+Request reference: ${c.refSolicitacao}
+
+${CTB.razao}, a company duly incorporated and registered under No. ${CTB.registro}, holding Commercial License No. ${CTB.licenca}, in accordance with the laws of the United Arab Emirates, with its principal office located at ${CTB.endereco} (hereinafter referred to as "CTB FINANCES" or the "INTERMEDIARY").
+
+## AND
+
+${c.empresa}, a company duly incorporated and existing under the laws of ${c.jurisdicao}, registered under No. ${c.registro}, with its principal place of business located at ${c.endereco}, represented herein by its ${c.cargoRep}, ${c.representante}, Passport No. ${c.passaporte} (hereinafter referred to as the "CLIENT").
+
+## RECITALS
+
+WHEREAS, the CLIENT wishes to obtain the issuance of a financial instrument by a duly licensed financial institution; and
+
+WHEREAS, CTB FINANCES provides financial brokerage and consulting services and is willing to structure, present and follow up the CLIENT's request before duly licensed financial institutions, under the terms below.
+
+NOW, THEREFORE, the Parties agree as follows:
+
+## 1. Object
+
+1.1 The CLIENT hereby appoints CTB FINANCES, on a non-exclusive basis, to structure, prepare and present the CLIENT's request for the issuance of a ${c.instrumento} in the amount of ${c.valor}, in favour of ${c.beneficiario} (the "Transaction"), to one or more duly licensed financial institutions (the "Issuing Institution"), and to follow up the process until its conclusion.
+
+## 2. Nature of the Services
+
+2.1 CTB FINANCES acts exclusively as intermediary and consultant. CTB FINANCES does not issue, guarantee, confirm or transmit financial instruments, does not hold the CLIENT's funds or assets in custody, and does not perform banking activities.
+
+2.2 Any financial instrument shall be issued solely by the Issuing Institution, under its own credit approval, terms, conditions and communication channels. The Issuing Institution's decision is final and is not under the control of CTB FINANCES.
+
+2.3 CTB FINANCES does not guarantee the approval, timing, amount or terms of the Transaction, which depend on the Issuing Institution's credit, compliance and KYC/AML assessment.
+
+## 3. Services
+
+CTB FINANCES shall:
+
+• Analyse the CLIENT's documents and the commercial operation underlying the Transaction;
+• Prepare the application package and the proposed wording of the instrument for the Issuing Institution's review;
+• Select and present the Transaction to duly licensed financial institutions;
+• Support the CLIENT in the negotiation of terms with the Issuing Institution;
+• Follow up the process and report its progress to the CLIENT through the CTB FINANCES Client Area.
+
+## 4. Obligations of the CLIENT
+
+The CLIENT shall:
+
+• Provide complete, accurate and up-to-date information and the KYC (Know Your Customer) documents requested by CTB FINANCES or by the Issuing Institution;
+• Ensure that all funds, assets and collateral offered are of lawful origin and free of liens and encumbrances;
+• Pay any charges, fees, collateral or deposits required by the Issuing Institution directly to the Issuing Institution;
+• Inform CTB FINANCES immediately of any change in the information provided.
+
+## 5. Fees
+
+5.1 Structuring fee: ${c.honorarioEstruturacao}, payable upon signing of this Agreement, as consideration for the analysis and preparation work described in Clause 3.
+
+5.2 Success fee: ${c.honorarioExito} of the face value of the instrument, payable only after the instrument has been effectively issued by the Issuing Institution and its issuance has been confirmed by the Issuing Institution.
+
+5.3 No success fee shall be due if the instrument is not issued by an Issuing Institution during the term of this Agreement.
+
+5.4 CTB FINANCES shall never receive, on behalf of the Issuing Institution, any amount relating to issuance charges, collateral or deposits, which shall be paid by the CLIENT directly to the Issuing Institution.
+
+## 6. Term and Termination
+
+6.1 This Agreement shall remain in force for ${c.prazo} months from its signing and may be extended by written agreement of the Parties.
+
+6.2 Either Party may terminate this Agreement upon 15 (fifteen) days' written notice. Fees accrued up to the date of termination shall remain due.
+
+## 7. Compliance
+
+7.1 The Parties shall comply with the anti-money laundering and counter-terrorist financing legislation of the United Arab Emirates, including Federal Decree-Law No. 20 of 2018, and with applicable international sanctions.
+
+7.2 CTB FINANCES may suspend or terminate this Agreement and report to the competent authorities any transaction that may indicate money laundering, terrorist financing, sanctions evasion or other related crimes.
+
+## 8. Confidentiality and Personal Data
+
+8.1 Each Party shall keep confidential all information received from the other Party in connection with this Agreement.
+
+8.2 Personal data shall be processed in accordance with Federal Decree-Law No. 45 of 2021 on the Protection of Personal Data (PDPL).
+
+## 9. Non-Circumvention
+
+During the term of this Agreement and for a period of two (2) years thereafter, the CLIENT shall not, directly or indirectly, circumvent CTB FINANCES in relation to any Issuing Institution or business relationship introduced by CTB FINANCES under this Agreement.
+
+## 10. Limitation of Liability
+
+The liability of CTB FINANCES under this Agreement shall be limited to the amount of fees effectively received from the CLIENT. CTB FINANCES shall not be liable for decisions, delays or acts of the Issuing Institution or of any third party.
+
+## 11. Governing Law and Jurisdiction
+
+This Agreement shall be governed by the laws of the United Arab Emirates. Any dispute arising out of or in connection with this Agreement shall be subject to the exclusive jurisdiction of the courts of Dubai, United Arab Emirates. The English language shall govern the interpretation of this Agreement.
+
+IN WITNESS WHEREOF, the Parties have executed this Agreement as of the date first written above.`,
+  assinaturas: (c) => [
+    [`${c.ctbNome || '______________________'} - ${c.ctbCargo}`, `PIN - ${c.ctbPin}`, CTB.razao, `LICENSE No. ${CTB.licenca}`],
+    [c.empresa, `Registered No. ${c.registro}`, `${c.cargoRep}: ${c.representante}`, `Passport: ${c.passaporte}`],
+  ],
+};
+
+export const MODELOS = { nda: NDA, abertura_conta: ABERTURA_CONTA, mandato: MANDATO };
 
 /** Quais modelos o sistema cria SOZINHO (como rascunho, para a equipe revisar e liberar) em cada evento. */
 export const AUTOMATICOS = {
