@@ -118,6 +118,10 @@ try {
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][0];f.tipo.value='digital';f.moeda.value='AED';f.saldo.value='28.750,00';f.requestSubmit();return 1})()`);
   check('Lançar saldo AED 28.750,00 pela ficha → "✓ Saldo salvo." dentro da ficha', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('AED 28.750,00') && document.querySelector('[data-msg-ficha]').textContent.includes('Saldo salvo')`));
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];f.descricao.value='Transferência SWIFT';f.sentido.value='debito';f.valor.value='8.000,00';f.requestSubmit();return 1})()`);
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];[...f.querySelectorAll('.fin-chip')].find(b=>b.textContent==='Rendimento').click();return 1})()`);
+  check('Opção clicável "Rendimento" preenche a descrição e marca Crédito', await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][1];return f.descricao.value==='Rendimento' && f.sentido.value==='credito'})()`));
+  await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][2];f.classe.value='alternativos';f.classe.dispatchEvent(new Event('change'));[...f.querySelectorAll('.fin-chip')].find(b=>b.textContent==='Ouro').click();return 1})()`);
+  check('Investimentos: opções mudam conforme a classe ("Ouro" em Alternativos)', await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][2].descricao.value==='Ouro'`));
   check('Lançar débito no extrato', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('− AED 8.000,00')`));
   await ev(`(()=>{const f=[...document.querySelectorAll('[data-ficha] .fin-form')][2];f.classe.value='renda_fixa';f.descricao.value='Bond 2030';f.moeda.value='USD';f.valor.value='300.000,00';f.requestSubmit();return 1})()`);
   check('Lançar posição de investimento', await waitFor(`document.querySelector('[data-ficha]').innerText.includes('USD 300.000,00')`));
@@ -126,6 +130,7 @@ try {
   const finAna = await (await fetch(`${BASE}/api/cliente/financeiro`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json();
   check('A cliente recebe exatamente o que a equipe lançou', finAna.contas[0]?.saldo === '2875000' && finAna.movimentos[0]?.valor === '-800000' && finAna.posicoes[0]?.valor === '30000000' && finAna.cartao?.final === '3478');
   await shot('p3b-financeiro');
+  await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][1].scrollIntoView({block:'start'}),1`); await shot('p3c-opcoes');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
   check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));
   await ev(`(()=>{const f=document.querySelector('[data-ficha] form.edicao');f.display_name.value='Ana Corrigida';f.city.value='Sharjah';f.requestSubmit();return 1})()`);

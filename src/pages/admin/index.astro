@@ -408,6 +408,27 @@ import '../../styles/global.css';
       // ---- financeiro do cliente: contas, movimentações, investimentos e cartão (somente a equipe lança)
       const TIPOS_CONTA: Record<string, string> = { digital: 'Conta Digital', global: 'Conta Global', investimentos: 'Conta Investimentos' };
       const MOEDAS = ['AED', 'USD', 'EUR', 'GBP', 'BRL'];
+      // sugestões clicáveis para a descrição (a equipe ainda pode digitar livremente)
+      const SUGESTOES_MOV: [string, 'debito' | 'credito'][] = [
+        ['Depósito recebido', 'credito'], ['Transferência recebida', 'credito'], ['Rendimento', 'credito'], ['Resgate de investimento', 'credito'],
+        ['Transferência internacional (SWIFT)', 'debito'], ['Transferência local (UAE)', 'debito'], ['Câmbio AED → USD', 'debito'], ['Câmbio USD → AED', 'debito'],
+        ['Aplicação em investimento', 'debito'], ['Pagamento da fatura do cartão', 'debito'], ['Tarifa', 'debito'],
+      ];
+      const SUGESTOES_POS: Record<string, string[]> = {
+        renda_fixa: ['Bond 2030', 'US Treasury', 'Sukuk', 'Depósito a prazo', 'CDB'],
+        renda_variavel: ['Ações globais', 'Ações dos EAU (ADX/DFM)', 'ETF S&P 500', 'Ações Brasil'],
+        fundos: ['Fundo Global', 'Fundo Multimercado', 'Fundo Imobiliário (REIT)', 'Fundo de Renda Fixa'],
+        alternativos: ['Ouro', 'Private equity', 'Imóvel em Dubai', 'Criptoativos'],
+        exterior: ['Conta de investimento no exterior', 'Ações internacionais', 'Bonds internacionais'],
+      };
+      const chips = (lista: string[], aoEscolher: (t: string) => void) => {
+        const box = el('div', { class: 'fin-chips', role: 'group', 'aria-label': 'Sugestões' });
+        for (const t of lista) box.append(el('button', { type: 'button', class: 'fin-chip', onclick: (ev: Event) => {
+          box.querySelectorAll('.fin-chip').forEach((b) => b.removeAttribute('aria-pressed'));
+          (ev.currentTarget as HTMLElement).setAttribute('aria-pressed', 'true'); aoEscolher(t);
+        } }, t));
+        return box;
+      };
       const CLASSES: Record<string, string> = { renda_fixa: 'Renda fixa', renda_variavel: 'Renda variável', fundos: 'Fundos', alternativos: 'Alternativos', exterior: 'Exterior' };
       const SIT_CARTAO: Record<string, string> = { ativo: 'Ativo', bloqueado: 'Bloqueado', em_emissao: 'Em emissão' };
       const dinheiro = (c: string, moeda: string) => { const n = BigInt(c); const neg = n < 0n; const a = neg ? -n : n; return `${neg ? '− ' : ''}${moeda} ${(a / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(a % 100n).toString().padStart(2, '0')}`; };
@@ -437,8 +458,9 @@ import '../../styles/global.css';
           const contaSel = opcoes(el('select', { name: 'contaId' }) as HTMLSelectElement, f.contas.map((k: any) => [k.id, `${TIPOS_CONTA[k.tipo]} · ${k.moeda}`]));
           const sentido = opcoes(el('select', { name: 'sentido' }) as HTMLSelectElement, [['debito', 'Débito (saída)'], ['credito', 'Crédito (entrada)']]);
           fm.append(el('label', {}, el('span', {}, 'Conta'), contaSel), el('label', {}, el('span', {}, 'Data'), el('input', { name: 'data', type: 'date', value: new Date(Date.now() + 4 * 3600e3).toISOString().slice(0, 10) })),
-            el('label', { class: 'largo' }, el('span', {}, 'Descrição'), el('input', { name: 'descricao', maxlength: 140, placeholder: 'Ex.: Transferência internacional (SWIFT)' })),
+            el('label', { class: 'largo' }, el('span', {}, 'Descrição'), el('input', { name: 'descricao', maxlength: 140, placeholder: 'clique numa opção abaixo ou digite' })),
             el('label', {}, el('span', {}, 'Tipo'), sentido), el('label', {}, el('span', {}, 'Valor'), el('input', { name: 'valor', inputmode: 'decimal', placeholder: 'ex.: 8.000,00' })), el('button', { type: 'submit', class: 'botao pequeno' }, 'Lançar'));
+          fm.append(chips(SUGESTOES_MOV.map(([t]) => t), (t) => { (fm.elements.namedItem('descricao') as HTMLInputElement).value = t; sentido.value = SUGESTOES_MOV.find(([x]) => x === t)![1]; (fm.elements.namedItem('valor') as HTMLInputElement).focus(); }));
           fm.addEventListener('submit', (e) => { e.preventDefault(); const d = new FormData(fm); if (!String(d.get('descricao') || '').trim() || !String(d.get('valor') || '').trim()) return aviso('Preencha a descrição e o valor.', 'erro'); const v = String(d.get('valor') || '').trim().replace(/^-/, ''); enviar('POST', 'movimentos', { contaId: d.get('contaId'), data: d.get('data'), descricao: d.get('descricao'), valor: (d.get('sentido') === 'debito' ? '-' : '') + v }, 'Movimentação lançada.'); });
           movs.append(fm);
         } else movs.append(el('p', { class: 'nota' }, 'Lance uma conta antes das movimentações.'));
@@ -452,10 +474,13 @@ import '../../styles/global.css';
         const idPos = el('input', { type: 'hidden', name: 'id' }) as HTMLInputElement;
         const classeSel = opcoes(el('select', { name: 'classe' }) as HTMLSelectElement, Object.entries(CLASSES));
         const moedaPos = opcoes(el('select', { name: 'moeda' }) as HTMLSelectElement, MOEDAS.map((m) => [m, m]));
-        const descPos = el('input', { name: 'descricao', maxlength: 120, placeholder: 'ex.: Bond 2030' }) as HTMLInputElement;
+        const descPos = el('input', { name: 'descricao', maxlength: 120, placeholder: 'clique numa opção abaixo ou digite' }) as HTMLInputElement;
         const valPos = el('input', { name: 'valor', inputmode: 'decimal', placeholder: 'ex.: 400.000,00' }) as HTMLInputElement;
         const btnPos = el('button', { type: 'submit', class: 'botao pequeno' }, 'Adicionar posição') as HTMLButtonElement;
         fp.append(idPos, el('label', {}, el('span', {}, 'Classe'), classeSel), el('label', { class: 'largo' }, el('span', {}, 'Descrição'), descPos), el('label', {}, el('span', {}, 'Moeda'), moedaPos), el('label', {}, el('span', {}, 'Valor'), valPos), btnPos);
+        let chipsPos = chips(SUGESTOES_POS[classeSel.value] || [], (t) => { descPos.value = t; valPos.focus(); });
+        fp.append(chipsPos);
+        classeSel.addEventListener('change', () => { const novo = chips(SUGESTOES_POS[classeSel.value] || [], (t) => { descPos.value = t; valPos.focus(); }); chipsPos.replaceWith(novo); chipsPos = novo; });
         fp.addEventListener('submit', (e) => { e.preventDefault(); if (!descPos.value.trim() || !valPos.value.trim()) return aviso('Preencha a descrição e o valor da posição.', 'erro'); enviar('PUT', 'posicoes', { id: idPos.value || undefined, classe: classeSel.value, descricao: descPos.value, moeda: moedaPos.value, valor: valPos.value }, idPos.value ? 'Posição atualizada.' : 'Posição adicionada.'); });
         for (const ps of f.posicoes) inv.append(el('div', { class: 'fin-linha' }, el('span', {}, `${CLASSES[ps.classe]} · ${ps.descricao}`), el('b', {}, dinheiro(ps.valor, ps.moeda)), el('small', {}, `por ${ps.atualizado_por || '—'} em ${dataHora(ps.atualizado_em)}`),
           el('span', {}, el('button', { type: 'button', class: 'link', onclick: () => { idPos.value = ps.id; classeSel.value = ps.classe; descPos.value = ps.descricao; moedaPos.value = ps.moeda; valPos.value = centavosTexto(ps.valor); btnPos.textContent = 'Salvar correção'; descPos.focus(); } }, 'Corrigir'),
@@ -826,6 +851,10 @@ import '../../styles/global.css';
       .fin-linha small { color: var(--texto-2); }
       .fin-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 0.5rem 0.7rem; align-items: end; margin: 0.6rem 0; padding: 0.8rem; border: 1px dashed rgba(201, 164, 106, 0.35); border-radius: 10px; }
       .fin-form .largo { grid-column: span 2; }
+      .fin-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.2rem; }
+      .fin-chip { font: inherit; font-size: 0.8rem; padding: 0.35rem 0.75rem; border-radius: 999px; cursor: pointer; background: rgba(201, 164, 106, 0.08); color: #e8d6b7; border: 1px solid rgba(201, 164, 106, 0.35); }
+      .fin-chip:hover { border-color: #d9ae6b; color: #f0d39c; }
+      .fin-chip[aria-pressed='true'] { background: linear-gradient(135deg, #c99550, #e2c08a); color: #2a140d; border-color: transparent; font-weight: 600; }
       .bloco.acoes { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
       .bloco.acoes h3 { width: 100%; }
       dialog form { display: grid; gap: 0.8rem; }
