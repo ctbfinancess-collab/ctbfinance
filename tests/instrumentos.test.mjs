@@ -87,7 +87,7 @@ try {
   const n0 = emails.length;
   const env1 = await C(cAna, 'POST', `/${id1}/enviar`);
   await t('IN6', 'Enviar → "enviada" com referência CTB-SBLC-AAAA-00001', async () => env1.status === 200 && env1.dados.status === 'enviada' && /^CTB-SBLC-\d{4}-00001$/.test(env1.dados.referencia));
-  await t('IN7', 'Depois de enviada, a cliente não edita nem reenvia (409)', async () => (await C(cAna, 'PUT', `/${id1}`, { valor: '1' })).status === 409 && (await C(cAna, 'POST', `/${id1}/enviar`)).status === 409);
+  await t('IN7', 'Enviada: a cliente pode corrigir só mantendo completa (valor inválido → 400; sem mudança de instrumento → 409)', async () => (await C(cAna, 'PUT', `/${id1}`, { valor: 'abc' })).status === 400 && (await C(cAna, 'PUT', `/${id1}`, { instrumento: 'LC' })).status === 409);
   await sleep(500);
   await t('IN8', 'Equipe recebe e-mail com referência (texto escapado)', async () => { const m = emails.slice(n0).find((x) => /Solicitação de instrumento/.test(x.subject)); return !!m && m.to.includes('equipe@exemplo.invalid') && m.subject.includes(env1.dados.referencia) && m.html.includes('Exemplo &lt;b&gt;Trading') && !m.html.includes('<b>Trading'); });
 
@@ -181,7 +181,7 @@ try {
   await t('IN48', 'Outra cliente não remove; a própria remove enquanto é rascunho', async () => (await C(cBia, 'DELETE', `/${idRef}/anexos/${docRef}`)).status === 404 && (await C(cAna, 'DELETE', `/${idRef}/anexos/${docRef}`)).status === 200 && (await L(cAna)).find((x) => x.id === idRef).anexos.length === 0);
   const up2 = await req('POST', `/api/cliente/instrumentos/${idPj}/anexos?tipo=contrato_referencia`, { cookie: cAna, corpo: PDF, headers: { 'Content-Type': 'application/pdf', 'X-Nome-Arquivo': 'contrato-navio.pdf' } });
   const fPj2 = (await req('GET', '/api/cliente/equipe/instrumentos/' + idPj, { cookie: cChefe })).dados;
-  await t('IN49', 'Equipe vê o contrato de referência identificado na ficha; depois de enviada, a cliente não remove (409)', async () => up2.status === 201 && fPj2.anexos.some((a) => a.tipo_anexo === 'contrato_referencia' && a.nome === 'contrato-navio.pdf') && (await C(cAna, 'DELETE', `/${idPj}/anexos/${fPj2.anexos[0].id}`)).status === 409);
+  await t('IN49', 'Equipe vê o contrato de referência identificado na ficha; depois que a análise começa, a cliente não remove (409)', async () => up2.status === 201 && fPj2.anexos.some((a) => a.tipo_anexo === 'contrato_referencia' && a.nome === 'contrato-navio.pdf') && (await E('POST', `/instrumentos/${idPj}/status`, { json: { status: 'analise_documental' } })).status === 200 && (await C(cAna, 'DELETE', `/${idPj}/anexos/${fPj2.anexos[0].id}`)).status === 409);
   const refs = (await L(cAna)).map((s) => s.referencia).filter(Boolean);
   await t('IN37', 'Referências únicas por instrumento (CTB-BG-…-00002)', async () => refs.some((r) => /^CTB-BG-\d{4}-00002$/.test(r)) && new Set(refs).size === refs.length);
   const extras = []; for (let i = 0; i < 9; i++) extras.push(await C(cAna, 'POST', '', {}));
@@ -189,6 +189,20 @@ try {
   const lApp = await fetch(BASE + '/api/cliente/app/entrar', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'ana@example.com', senha: 'SenhaSegura2026' }) }).then((r) => r.json());
   await t('IN39', 'Pelo app (token), a cliente lê as mesmas solicitações', async () => { const r = await fetch(BASE + '/api/cliente/instrumentos', { headers: { Authorization: `Bearer ${lApp.token}` } }).then((x) => x.json()); return r.solicitacoes.length === (await L(cAna)).length && r.solicitacoes.length >= 3; });
   await t('IN40b', 'Ficha do cliente: filtro ?usuario= traz só as solicitações dele', async () => { const l = (await E('GET', `/instrumentos?status=todas&usuario=${ana}`)).dados.solicitacoes; const z = (await E('GET', `/instrumentos?status=todas&usuario=00000000-0000-4000-8000-000000000000`)).dados.solicitacoes; return l.length > 0 && l.every((x) => x.usuario_id === ana) && z.length === 0; });
+  { // edição depois de enviada (antes da análise)
+    await db.q(`update instrumentos_solicitacoes set criado_em = criado_em - interval '2 days', status = case when status in ('rascunho','enviada') then 'cancelada' else status end where usuario_id=$1`, [ana]);   // libera os limites diários/abertas para este bloco
+    const e1 = (await C(cAna, 'POST', '', { instrumento: 'LC', moeda: 'USD', valor: '300.000', beneficiario: { nome: 'Fornecedor Exemplo', pais: 'Itália' }, finalidade: 'Importação', ordenante: { tipo: 'pf' } })).dados.solicitacao;
+    await C(cAna, 'POST', `/${e1.id}/enviar`);
+    const ed = await C(cAna, 'PUT', `/${e1.id}`, { valor: '350.000', finalidade: 'Importação de máquinas' });
+    const re = await C(cAna, 'POST', `/${e1.id}/enviar`);
+    const l1 = (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === e1.id);
+    await t('IN42', 'Enviada (antes da análise): cliente edita e salva; continua "enviada", histórico registra a alteração', async () => ed.status === 200 && re.status === 200 && l1.status === 'enviada' && l1.valor === '35000000' && l1.finalidade === 'Importação de máquinas' && (l1.eventos || []).some((x) => x.texto === 'Solicitação alterada pelo cliente.'));
+    const inc = await C(cAna, 'PUT', `/${e1.id}`, { finalidade: '' });
+    const l2 = (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === e1.id);
+    await t('IN43', 'Enviada: alteração que deixaria incompleta → 400 e nada muda', async () => inc.status === 400 && inc.dados.erro === 'campos_obrigatorios' && l2.finalidade === 'Importação de máquinas');
+    await E('POST', `/instrumentos/${e1.id}/status`, { json: { status: 'analise_documental' } });
+    await t('IN44', 'Depois que a equipe começa a análise → cliente não edita mais (409)', async () => (await C(cAna, 'PUT', `/${e1.id}`, { valor: '1' })).status === 409);
+  }
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);

@@ -76,14 +76,14 @@ export async function avisarEquipeOperacao({ email, nome, tipo, valor, moeda, mo
 }
 
 /** Aviso INTERNO à equipe: um cliente enviou (ou reenviou) uma solicitação de instrumento financeiro. Nada é emitido. */
-export async function avisarEquipeInstrumento({ email, nome, referencia, instrumento, valor, beneficiario, pais, finalidade, reenvio = false }) {
+export async function avisarEquipeInstrumento({ email, nome, referencia, instrumento, valor, beneficiario, pais, finalidade, reenvio = false, alterada = false }) {
   const para = teamList(); if (!para.length) return;
   const linhas = [['Referência', referencia], ['Cliente', nome || '—'], ['E-mail', email], ['Instrumento', instrumento], ['Valor', valor], ['Beneficiário', beneficiario], ['País', pais], ['Finalidade', finalidade]];
   const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 10px;font-family:Georgia,serif;font-size:15px;color:#35241D">${linhas.map(([k, v]) => `<tr><td style="padding:3px 14px 3px 0;color:#7a5a45;vertical-align:top;white-space:nowrap">${k}</td><td style="padding:3px 0">${esc(v)}</td></tr>`).join('')}</table>` };
-  const titulo = reenvio ? 'Instrumento: documentação reenviada' : 'Solicitação de instrumento financeiro';
+  const titulo = alterada ? 'Instrumento: solicitação alterada pelo cliente' : reenvio ? 'Instrumento: documentação reenviada' : 'Solicitação de instrumento financeiro';
   const ok = await sendEmail({
     from: fromAddress(), to: para, reply_to: email, subject: `${titulo} · ${referencia}`,
-    html: brandedHtml('pt', titulo, [reenvio ? 'O cliente reenviou a solicitação com a documentação complementar.' : 'Um cliente enviou uma solicitação pela Área do Cliente. Nada foi emitido — analise no Admin (aba Instrumentos):', tabela, `${SITE}/admin/#instrumentos`]),
+    html: brandedHtml('pt', titulo, [alterada ? 'O cliente alterou a solicitação antes do início da análise. Confira os dados atualizados:' : reenvio ? 'O cliente reenviou a solicitação com a documentação complementar.' : 'Um cliente enviou uma solicitação pela Área do Cliente. Nada foi emitido — analise no Admin (aba Instrumentos):', tabela, `${SITE}/admin/#instrumentos`]),
     text: `${titulo}\n\n${linhas.map(([k, v]) => `${k}: ${v}`).join('\n')}\n\nAnalise no Admin: ${SITE}/admin/#instrumentos`,
   }, 'aviso-instrumento');
   if (!ok) throw new Error('falha ao enviar aviso de instrumento');

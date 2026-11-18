@@ -34,6 +34,10 @@ const assinaturasDe = (modelo, campos) => {
   return MODELOS[modelo].assinaturas(c);
 };
 
+/** Países digitados em português no perfil → inglês (os contratos são em inglês). Outros ficam como vieram. */
+const PAISES_EN = { 'emirados árabes unidos': 'United Arab Emirates', 'emirados arabes unidos': 'United Arab Emirates', 'emirados': 'United Arab Emirates', 'eau': 'United Arab Emirates', 'estados unidos': 'United States of America', 'eua': 'United States of America', 'reino unido': 'United Kingdom', 'inglaterra': 'United Kingdom', 'alemanha': 'Germany', 'frança': 'France', 'franca': 'France', 'espanha': 'Spain', 'itália': 'Italy', 'italia': 'Italy', 'suíça': 'Switzerland', 'suica': 'Switzerland', 'holanda': 'Netherlands', 'países baixos': 'Netherlands', 'arábia saudita': 'Saudi Arabia', 'arabia saudita': 'Saudi Arabia', 'catar': 'Qatar', 'singapura': 'Singapore', 'japão': 'Japan', 'japao': 'Japan', 'méxico': 'Mexico', 'mexico': 'Mexico', 'canadá': 'Canada', 'argentina': 'Argentina', 'portugal': 'Portugal', 'china': 'China', 'índia': 'India', 'india': 'India', 'turquia': 'Turkey', 'egito': 'Egypt', 'paraguai': 'Paraguay', 'uruguai': 'Uruguay', 'chile': 'Chile', 'colômbia': 'Colombia', 'colombia': 'Colombia', 'peru': 'Peru', 'angola': 'Angola', 'moçambique': 'Mozambique' };
+export const paisEn = (v) => PAISES_EN[String(v || '').trim().toLowerCase()] || String(v || '').trim();
+
 /** Número da conta do cliente nos contratos: fixo por cliente (derivado do id), 12 dígitos com prefixo CTB. */
 export const numeroConta = (usuarioId) => { const h = String(usuarioId).replace(/[^0-9a-f]/gi, '').slice(0, 12); return 'CTB' + (BigInt('0x' + (h || '0')) % 1000000000000n).toString().padStart(12, '0'); };
 
@@ -47,14 +51,14 @@ export function criarContratos({ db, json, lerJson, receberArquivo, log = consol
     const s = solicitacaoId ? (await db.q('select ordenante, beneficiario from instrumentos_solicitacoes where id=$1 and usuario_id=$2', [solicitacaoId, usuarioId])).rows[0] : null;
     const cfg = (await db.q(`select valor from configuracoes where chave='assinatura_ctb'`)).rows[0]?.valor || {};
     const s_ = (v) => (typeof v === 'string' ? v.trim() : '');
-    const pais = s_(p.companycountry);
+    const pais = paisEn(s_(p.companycountry));   // contratos são em inglês
     const endereco = [[s_(p.companysadress), s_(p.companyaddressnumber)].filter(Boolean).join(', '), s_(p.companycity), s_(p.companyzipcode), pais].filter(Boolean).join(', ');
     const o = s?.ordenante || {};
     const representante = s_(p.display_name) || s_(o.tipo === 'pj' ? o.representante : o.nome);
     const auto = {
       data: hojeDubai(),
       empresa: s_(p.CompanyName) || s_(o.nome) || s_(p.display_name),
-      jurisdicao: !pais || /^(brasil|brazil)$/i.test(pais) ? 'the Federative Republic of Brazil' : pais,
+      jurisdicao: !pais || /^(brasil|brazil)$/i.test(pais) ? 'the Federative Republic of Brazil' : /^(United Arab Emirates|United States of America|United Kingdom|Netherlands)$/.test(pais) ? 'the ' + pais : pais,
       registro: s_(p.Companyregistrationnumber),
       endereco,
       representante,

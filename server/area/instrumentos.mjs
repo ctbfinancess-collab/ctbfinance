@@ -20,7 +20,8 @@ export const STATUS_PT = {
   aprovada: 'Aprovada pela instituição', recusada: 'Recusada', cancelada: 'Cancelada', concluida: 'Concluída',
 };
 const FINAIS = ['recusada', 'cancelada', 'concluida'];
-const EDITAVEL_CLIENTE = ['rascunho', 'documentacao_solicitada'];
+// 'enviada' = ainda não entrou em análise: a cliente pode corrigir e reenviar (sempre completa)
+const EDITAVEL_CLIENTE = ['rascunho', 'enviada', 'documentacao_solicitada'];
 // transições que a EQUIPE pode fazer (rascunho é da cliente: a equipe não vê nem mexe)
 const TRANSICOES = {
   enviada: ['analise_documental', 'documentacao_solicitada', 'analise_interna', 'recusada', 'cancelada'],
@@ -123,7 +124,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
       for (const s of sols) {
         s.eventos = ev.filter((x) => x.solicitacao_id === s.id).map(({ solicitacao_id, ...x }) => x);
         s.anexos = ax.filter((x) => x.solicitacao_id === s.id).map(({ solicitacao_id, ...x }) => x);
-        s.faltando = s.status === 'rascunho' || s.status === 'documentacao_solicitada' ? faltando(s, perfil) : [];
+        s.faltando = EDITAVEL_CLIENTE.includes(s.status) ? faltando(s, perfil) : [];
         s.ordenante = mascarar(s.ordenante);
       }
     }
@@ -177,6 +178,12 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
         if (out.instrumento) { vals.push(GARANTIAS[out.instrumento] ? 'garantia' : 'declaracao'); sets.push(`categoria=$${vals.length}`); }
         vals.push(u.email); sets.push(`atualizado_em=now(), atualizado_por=$${vals.length}`);
         await q(`update instrumentos_solicitacoes set ${sets.join(', ')} where id=$1`, vals);
+        // já enviada: a alteração não pode deixar a solicitação incompleta (desfaz tudo)
+        if (s.status === 'enviada') {
+          const nova = (await q(`select ${COLS} from instrumentos_solicitacoes s where s.id=$1`, [id])).rows[0];
+          const f = faltando(nova, await perfilDe(q, u.id));
+          if (f.length) throw erroHttp(400, 'campos_obrigatorios', { campos: f });
+        }
       });
     } catch (e) { return responder(res, e); }
     return json(res, 200, { ok: true });
@@ -196,15 +203,15 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
           s.ordenante = ordenanteDoPerfil(s.ordenante.tipo, perfil);
           await q('update instrumentos_solicitacoes set ordenante=$2::jsonb where id=$1', [id, JSON.stringify(s.ordenante)]);
         }
-        const para = s.status === 'rascunho' ? 'enviada' : 'analise_documental';
+        const para = s.status === 'documentacao_solicitada' ? 'analise_documental' : 'enviada';
         let ref = s.referencia;
         if (!ref) {
           const n = (await q(`select nextval('instrumentos_ref_seq')::int as n`)).rows[0].n;
           ref = `CTB-${s.instrumento}-${new Date().getUTCFullYear()}-${String(n).padStart(5, '0')}`;
         }
         await q(`update instrumentos_solicitacoes set status=$2, referencia=$3, enviado_em=coalesce(enviado_em, now()), atualizado_em=now(), atualizado_por=$4 where id=$1`, [id, para, ref, u.email]);
-        await evento(q, id, { tipo: 'status', de: s.status, para, visivel: true, por: u.email, equipe: false });
-        return { ...s, status: para, referencia: ref, primeiroEnvio: s.status === 'rascunho' };
+        await evento(q, id, { tipo: 'status', de: s.status, para, texto: s.status === 'enviada' ? 'Solicitação alterada pelo cliente.' : null, visivel: true, por: u.email, equipe: false });
+        return { ...s, status: para, referencia: ref, primeiroEnvio: s.status === 'rascunho', alterada: s.status === 'enviada' };
       });
     } catch (e) { return responder(res, e); }
     if (avisarEquipe) {
@@ -213,7 +220,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
           const n = (await db.q(`select dados->>'display_name' as nome from perfis where usuario_id=$1`, [u.id])).rows[0];
           const v = r.valor ? `${(BigInt(r.valor) / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')},${(BigInt(r.valor) % 100n).toString().padStart(2, '0')}` : '—';
           await avisarEquipe({ email: u.email, nome: (n && n.nome) || '', referencia: r.referencia, instrumento: `${r.instrumento} — ${GARANTIAS[r.instrumento] || DECLARACOES[r.instrumento]}`,
-            valor: `${r.moeda} ${v}`, beneficiario: r.beneficiario?.nome || '—', pais: r.beneficiario?.pais || '—', finalidade: r.finalidade || '—', reenvio: !r.primeiroEnvio });
+            valor: `${r.moeda} ${v}`, beneficiario: r.beneficiario?.nome || '—', pais: r.beneficiario?.pais || '—', finalidade: r.finalidade || '—', reenvio: !r.primeiroEnvio && !r.alterada, alterada: r.alterada });
         } catch (e) { log.error('[area-cliente] aviso de instrumento à equipe:', e.message); }
       });
     }

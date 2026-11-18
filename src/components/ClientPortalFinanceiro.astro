@@ -37,7 +37,7 @@ const T = en ? {
     nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
     instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
     ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', ordPf: 'Individual (me)', ordPj: 'My company', ordPjDica: 'To request on behalf of your company, add your company details in My profile.', ordPfDica: 'Fill in your full name in My profile.', ordLegado: 'Entered previously:', ordEscolha: 'Choose who is requesting. The details come from My profile.', ordRotulos: { nome: 'Name', passaporte: 'Passport', nacionalidade: 'Nationality', empresa: 'Company', registro: 'Registration no.', pais: 'Country of incorporation', representante: 'Legal representative' }, contratoDica: 'Recommended: attach the contract with your trader/supplier (e.g. the cargo or vessel purchase agreement).', contratoAnexar: 'Attach contract (PDF, JPG, PNG)', contratoEnviando: 'Uploading…', remover: 'Remove', removido: 'Attachment removed.', finalidade: 'Purpose', sugFinalidade: ['Monetization', 'Payment guarantee', 'Credit line / financing', 'Commodity purchase', 'Import / export', 'Contract performance guarantee', 'Project / investment'], operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
-    salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
+    salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', salvarAlteracoes: 'Save changes', alterado: 'Changes saved. Our team has been notified.', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
     faltam: 'To send, fill in:', minhas: 'My instrument requests', nenhuma: 'No instrument requests yet.', rascunho: 'Draft', anexar: 'Attach file (PDF, JPG, PNG)', anexado: 'File attached.', cancelar: 'Cancel request', cancelarConf: 'Cancel this request?', cancelada: 'Request cancelled.',
     historico: 'History', anexos: 'Attachments', mensagem: 'Message to our team', enviarMsg: 'Send message', msgOk: 'Message sent.', equipe: 'CTB team', voce: 'You', aDefinir: 'to be defined',
     campos: { instrumento: 'instrument', moeda: 'currency', valor: 'amount', beneficiarioNome: 'beneficiary name', beneficiarioPais: 'beneficiary country', finalidade: 'purpose', ordenanteNome: 'applicant name', ordenante: 'applicant (individual or company)', ordenantePerfil: 'your full name in My profile', ordenanteEmpresa: 'your company details in My profile' },
@@ -72,7 +72,7 @@ const T = en ? {
     nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
     instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
     ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', ordPf: 'Pessoa física (eu)', ordPj: 'Minha empresa (PJ)', ordPjDica: 'Para solicitar em nome da sua empresa, cadastre sua empresa em Meu perfil.', ordPfDica: 'Preencha seu nome completo em Meu perfil.', ordLegado: 'Informado anteriormente:', ordEscolha: 'Escolha quem está solicitando. Os dados vêm de Meu perfil.', ordRotulos: { nome: 'Nome', passaporte: 'Passaporte', nacionalidade: 'Nacionalidade', empresa: 'Empresa', registro: 'Nº de registro', pais: 'País de constituição', representante: 'Representante legal' }, contratoDica: 'Recomendado: anexe o contrato com o seu trader/fornecedor (ex.: compra da carga ou do navio).', contratoAnexar: 'Anexar contrato (PDF, JPG, PNG)', contratoEnviando: 'Enviando…', remover: 'Remover', removido: 'Anexo removido.', finalidade: 'Finalidade', sugFinalidade: ['Monetização', 'Garantia de pagamento', 'Linha de crédito / financiamento', 'Compra de commodities', 'Importação / exportação', 'Garantia de performance contratual', 'Projeto / investimento'], operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
-    salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
+    salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', salvarAlteracoes: 'Salvar alterações', alterado: 'Alterações salvas. Nossa equipe foi avisada.', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
     faltam: 'Para enviar, preencha:', minhas: 'Minhas solicitações de instrumentos', nenhuma: 'Nenhuma solicitação de instrumento ainda.', rascunho: 'Rascunho', anexar: 'Anexar arquivo (PDF, JPG, PNG)', anexado: 'Arquivo anexado.', cancelar: 'Cancelar solicitação', cancelarConf: 'Cancelar esta solicitação?', cancelada: 'Solicitação cancelada.',
     historico: 'Histórico', anexos: 'Anexos', mensagem: 'Mensagem para a nossa equipe', enviarMsg: 'Enviar mensagem', msgOk: 'Mensagem enviada.', equipe: 'Equipe CTB', voce: 'Você', aDefinir: 'a definir',
     campos: { instrumento: 'instrumento', moeda: 'moeda', valor: 'valor', beneficiarioNome: 'nome do beneficiário', beneficiarioPais: 'país do beneficiário', finalidade: 'finalidade', ordenanteNome: 'nome do ordenante', ordenante: 'ordenante (pessoa física ou empresa)', ordenantePerfil: 'seu nome completo em Meu perfil', ordenanteEmpresa: 'os dados da sua empresa em Meu perfil' },
@@ -425,7 +425,8 @@ const I = T.inst;
       campo('id').value = s ? s.id : '';
       $('[data-inst-form-titulo]').textContent = s ? `${I.editar}${s.referencia ? ' · ' + s.referencia : ''}` : I.nova;
       (campo('instrumento') as unknown as HTMLSelectElement).disabled = !!(s && s.status !== 'rascunho');
-      ($('[data-inst-enviar]') as HTMLButtonElement).textContent = s && s.status === 'documentacao_solicitada' ? I.reenviar : I.enviar;
+      ($('[data-inst-enviar]') as HTMLButtonElement).textContent = s && s.status === 'documentacao_solicitada' ? I.reenviar : s && s.status === 'enviada' ? I.salvarAlteracoes : I.enviar;
+      ($('[data-inst-salvar]') as HTMLButtonElement).hidden = !!(s && s.status === 'enviada');   // já enviada: só "Salvar alterações" (sempre completa)
       if (s) {
         campo('instrumento').value = s.instrumento; campo('moeda').value = s.moeda; campo('valor').value = textoValor(s.valor); campo('validade').value = s.validade || '';
         const b = s.beneficiario || {}; campo('bNome').value = b.nome || ''; campo('bPais').value = b.pais || ''; campo('bEndereco').value = b.endereco || ''; campo('bBanco').value = b.banco || '';
@@ -463,7 +464,7 @@ const I = T.inst;
     let solsI: any[] = [];
     function desenharRef(s: any | null) {
       const ul = $('[data-ref-lista]'); ul.replaceChildren();
-      const pode = !s || s.status === 'rascunho' || s.status === 'documentacao_solicitada';
+      const pode = !s || s.status === 'rascunho' || s.status === 'enviada' || s.status === 'documentacao_solicitada';
       for (const a of (s?.anexos || []).filter((x: any) => x.tipo_anexo === 'contrato_referencia')) {
         const li = el('li'); const link = document.createElement('a'); link.href = `/api/cliente/documentos/${a.id}/arquivo`; link.textContent = a.nome; li.append(link);
         if (pode) { const b = el('button', 'link', I.remover) as HTMLButtonElement; b.type = 'button'; b.dataset.refRemover = a.id;
@@ -512,11 +513,12 @@ const I = T.inst;
       e.preventDefault(); const g = geracaoI;
       const btn = $('[data-inst-enviar]') as HTMLButtonElement; btn.disabled = true;
       try {
+        const eraEnviada = solsI.find((x) => x.id === campo('id').value)?.status === 'enviada';
         const id = await salvarForm(); if (!id || g !== geracaoI) return;
         const r = await api('POST', `/${id}/enviar`);
         if (g !== geracaoI) return;
         if (r.status !== 200) { avisoI(msgI, erroI(r.d), 'erro'); carregarInst(g); return; }
-        fi.hidden = true; avisoI(msgL, r.d.status === 'enviada' ? `${I.enviado} ${r.d.referencia}` : I.reenviado, 'ok'); carregarInst(g);
+        fi.hidden = true; avisoI(msgL, eraEnviada ? I.alterado : r.d.status === 'enviada' ? `${I.enviado} ${r.d.referencia}` : I.reenviado, 'ok'); carregarInst(g);
       } catch { avisoI(msgI, I.erros.geral, 'erro'); }
       finally { btn.disabled = false; }
     });
@@ -533,7 +535,7 @@ const I = T.inst;
         const ultEq = [...(s.eventos || [])].reverse().find((e: any) => e.por_equipe && e.texto);
         if (ultEq && s.status !== 'concluida') li.append(el('span', 'op-motivo', `${I.equipe}: ${ultEq.texto}`));
         const acoes = el('div', 'inst-acoes');
-        if (s.status === 'rascunho' || s.status === 'documentacao_solicitada') { const b = el('button', 'link', I.editar) as HTMLButtonElement; b.type = 'button'; b.dataset.instEditar = s.id; b.onclick = () => abrirForm(s); acoes.append(b); }
+        if (s.status === 'rascunho' || s.status === 'enviada' || s.status === 'documentacao_solicitada') { const b = el('button', 'link', I.editar) as HTMLButtonElement; b.type = 'button'; b.dataset.instEditar = s.id; b.onclick = () => abrirForm(s); acoes.append(b); }
         if (!FINAIS_I.includes(s.status)) {
           const lab = el('label', 'link inst-anexar', I.anexar); const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,image/jpeg,image/png'; inp.hidden = true; inp.dataset.instAnexo = s.id;
           inp.onchange = async () => { const f = inp.files?.[0]; if (!f) return; const g = geracaoI;
