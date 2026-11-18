@@ -79,7 +79,7 @@ try {
   const g = await E('POST', '/contratos', { json: { usuarioId: ana, modelo: 'nda' } });
   const c1 = g.dados;
   await t('CT3', 'Gerar NDA: rascunho CTB-NDA-AAAA-00001 preenchido com o cadastro', async () => g.status === 201 && c1.status === 'rascunho' && /^CTB-NDA-\d{4}-00001$/.test(c1.referencia)
-    && c1.campos.empresa === 'Exemplo Comércio Ltda.' && c1.campos.registro === '12.345.678/0001-90' && c1.campos.endereco === 'Av. Exemplo, 1000, São Paulo, 01310-100, Brasil'
+    && c1.campos.empresa === 'Exemplo Comércio Ltda.' && c1.campos.registro === '12.345.678/0001-90' && c1.campos.endereco === 'Av. Exemplo, 1000, São Paulo, 01310-100, Brazil'
     && c1.campos.jurisdicao === 'the Federative Republic of Brazil' && c1.campos.representante === 'Ana Teste' && c1.campos.passaporte === 'FZ123456'
     && c1.campos.ctbNome === 'Diretor Fictício' && c1.campos.ctbPin === '120422' && /^\d{2}\/\d{2}\/\d{4}$/.test(c1.campos.data) && c1.campos.prazo === 'two (2)' && c1.faltando.length === 0 || c1);
   await t('CT4', 'Texto do contrato já vem com os dados (empresa, registro, endereço)', async () => c1.texto.includes('Exemplo Comércio Ltda., a company duly incorporated and existing under the laws of the Federative Republic of Brazil, registered under No. 12.345.678/0001-90') && c1.texto.includes('period of two (2) years'));
