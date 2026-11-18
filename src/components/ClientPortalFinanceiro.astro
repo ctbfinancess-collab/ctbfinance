@@ -37,7 +37,7 @@ const T = en ? {
     nova: 'New instrument request', editar: 'Edit request', garantias: 'Guarantees and letters of credit', declaracoes: 'Declarations and proofs (not bank guarantees)',
     instrumento: 'Instrument', moeda: 'Currency', valor: 'Amount', validade: 'Requested validity', benef: 'Beneficiary', nome: 'Name / company', pais: 'Country', endereco: 'Address', banco: 'Beneficiary bank',
     ordenante: 'Applicant (ordering party)', ordNome: 'Name / company', ordId: 'Identification (passport, registration no.)', ordPf: 'Individual (me)', ordPj: 'My company', ordPjDica: 'To request on behalf of your company, add your company details in My profile.', ordPfDica: 'Fill in your full name in My profile.', ordLegado: 'Entered previously:', ordEscolha: 'Choose who is requesting. The details come from My profile.', ordRotulos: { nome: 'Name', passaporte: 'Passport', nacionalidade: 'Nationality', empresa: 'Company', registro: 'Registration no.', pais: 'Country of incorporation', representante: 'Legal representative' }, contratoDica: 'Recommended: attach the contract with your trader/supplier (e.g. the cargo or vessel purchase agreement).', contratoAnexar: 'Attach contract (PDF, JPG, PNG)', contratoEnviando: 'Uploading…', remover: 'Remove', removido: 'Attachment removed.', finalidade: 'Purpose', sugFinalidade: ['Monetization', 'Payment guarantee', 'Credit line / financing', 'Commodity purchase', 'Import / export', 'Contract performance guarantee', 'Project / investment'], operacao: 'Underlying commercial transaction', emissor: 'Proposed issuing bank (if known)', avisador: 'Advising bank (if applicable)', contrato: 'Contract / reference document', obs: 'Additional notes',
-    salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', salvarAlteracoes: 'Save changes', alterado: 'Changes saved. Our team has been notified.', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
+    salvar: 'Save draft', enviar: 'Send request', reenviar: 'Resend for review', confirmar: 'Confirm request', aguardandoConf: 'Awaiting your confirmation', confirmado: 'Request confirmed. Reference:', salvarAlteracoes: 'Save changes', alterado: 'Changes saved. Our team has been notified.', fechar: 'Close', salvo: 'Draft saved.', enviado: 'Request sent. Reference:', reenviado: 'Sent back for review.',
     faltam: 'To send, fill in:', minhas: 'My instrument requests', nenhuma: 'No instrument requests yet.', rascunho: 'Draft', anexar: 'Attach file (PDF, JPG, PNG)', anexado: 'File attached.', cancelar: 'Cancel request', cancelarConf: 'Cancel this request?', cancelada: 'Request cancelled.',
     historico: 'History', anexos: 'Attachments', mensagem: 'Message to our team', enviarMsg: 'Send message', msgOk: 'Message sent.', equipe: 'CTB team', voce: 'You', aDefinir: 'to be defined',
     campos: { instrumento: 'instrument', moeda: 'currency', valor: 'amount', beneficiarioNome: 'beneficiary name', beneficiarioPais: 'beneficiary country', finalidade: 'purpose', ordenanteNome: 'applicant name', ordenante: 'applicant (individual or company)', ordenantePerfil: 'your full name in My profile', ordenanteEmpresa: 'your company details in My profile' },
@@ -72,7 +72,7 @@ const T = en ? {
     nova: 'Nova solicitação de instrumento', editar: 'Editar solicitação', garantias: 'Garantias e cartas de crédito', declaracoes: 'Declarações e comprovações (não são garantias bancárias)',
     instrumento: 'Instrumento', moeda: 'Moeda', valor: 'Valor', validade: 'Validade solicitada', benef: 'Beneficiário', nome: 'Nome / empresa', pais: 'País', endereco: 'Endereço', banco: 'Banco do beneficiário',
     ordenante: 'Ordenante (solicitante)', ordNome: 'Nome / empresa', ordId: 'Identificação (passaporte, registro)', ordPf: 'Pessoa física (eu)', ordPj: 'Minha empresa (PJ)', ordPjDica: 'Para solicitar em nome da sua empresa, cadastre sua empresa em Meu perfil.', ordPfDica: 'Preencha seu nome completo em Meu perfil.', ordLegado: 'Informado anteriormente:', ordEscolha: 'Escolha quem está solicitando. Os dados vêm de Meu perfil.', ordRotulos: { nome: 'Nome', passaporte: 'Passaporte', nacionalidade: 'Nacionalidade', empresa: 'Empresa', registro: 'Nº de registro', pais: 'País de constituição', representante: 'Representante legal' }, contratoDica: 'Recomendado: anexe o contrato com o seu trader/fornecedor (ex.: compra da carga ou do navio).', contratoAnexar: 'Anexar contrato (PDF, JPG, PNG)', contratoEnviando: 'Enviando…', remover: 'Remover', removido: 'Anexo removido.', finalidade: 'Finalidade', sugFinalidade: ['Monetização', 'Garantia de pagamento', 'Linha de crédito / financiamento', 'Compra de commodities', 'Importação / exportação', 'Garantia de performance contratual', 'Projeto / investimento'], operacao: 'Operação comercial subjacente', emissor: 'Banco emissor proposto (se conhecido)', avisador: 'Banco avisador (se aplicável)', contrato: 'Contrato / documento de referência', obs: 'Observações adicionais',
-    salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', salvarAlteracoes: 'Salvar alterações', alterado: 'Alterações salvas. Nossa equipe foi avisada.', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
+    salvar: 'Salvar rascunho', enviar: 'Enviar solicitação', reenviar: 'Reenviar para análise', confirmar: 'Confirmar solicitação', aguardandoConf: 'Aguardando sua confirmação', confirmado: 'Solicitação confirmada. Referência:', salvarAlteracoes: 'Salvar alterações', alterado: 'Alterações salvas. Nossa equipe foi avisada.', fechar: 'Fechar', salvo: 'Rascunho salvo.', enviado: 'Solicitação enviada. Referência:', reenviado: 'Reenviada para análise.',
     faltam: 'Para enviar, preencha:', minhas: 'Minhas solicitações de instrumentos', nenhuma: 'Nenhuma solicitação de instrumento ainda.', rascunho: 'Rascunho', anexar: 'Anexar arquivo (PDF, JPG, PNG)', anexado: 'Arquivo anexado.', cancelar: 'Cancelar solicitação', cancelarConf: 'Cancelar esta solicitação?', cancelada: 'Solicitação cancelada.',
     historico: 'Histórico', anexos: 'Anexos', mensagem: 'Mensagem para a nossa equipe', enviarMsg: 'Enviar mensagem', msgOk: 'Mensagem enviada.', equipe: 'Equipe CTB', voce: 'Você', aDefinir: 'a definir',
     campos: { instrumento: 'instrumento', moeda: 'moeda', valor: 'valor', beneficiarioNome: 'nome do beneficiário', beneficiarioPais: 'país do beneficiário', finalidade: 'finalidade', ordenanteNome: 'nome do ordenante', ordenante: 'ordenante (pessoa física ou empresa)', ordenantePerfil: 'seu nome completo em Meu perfil', ordenanteEmpresa: 'os dados da sua empresa em Meu perfil' },
@@ -425,7 +425,7 @@ const I = T.inst;
       campo('id').value = s ? s.id : '';
       $('[data-inst-form-titulo]').textContent = s ? `${I.editar}${s.referencia ? ' · ' + s.referencia : ''}` : I.nova;
       (campo('instrumento') as unknown as HTMLSelectElement).disabled = !!(s && s.status !== 'rascunho');
-      ($('[data-inst-enviar]') as HTMLButtonElement).textContent = s && s.status === 'documentacao_solicitada' ? I.reenviar : s && s.status === 'enviada' ? I.salvarAlteracoes : I.enviar;
+      ($('[data-inst-enviar]') as HTMLButtonElement).textContent = s && s.status === 'documentacao_solicitada' ? I.reenviar : s && s.status === 'enviada' ? I.salvarAlteracoes : s && s.preparada_por && s.status === 'rascunho' ? I.confirmar : I.enviar;
       ($('[data-inst-salvar]') as HTMLButtonElement).hidden = !!(s && s.status === 'enviada');   // já enviada: só "Salvar alterações" (sempre completa)
       if (s) {
         campo('instrumento').value = s.instrumento; campo('moeda').value = s.moeda; campo('valor').value = textoValor(s.valor); campo('validade').value = s.validade || '';
@@ -528,13 +528,23 @@ const I = T.inst;
       for (const s of sols) {
         const li = el('li'); li.dataset.instId = s.id;
         const topo = el('div', 'op-topo');
-        const st = el('span', 'op-status', I.status[s.status] || s.status); st.dataset.s = s.status;
+        const preparada = s.status === 'rascunho' && s.preparada_por;   // feita pela equipe: só falta a confirmação do cliente
+        const st = el('span', 'op-status', preparada ? I.aguardandoConf : (I.status[s.status] || s.status)); st.dataset.s = preparada ? 'documentacao_solicitada' : s.status;
         topo.append(el('strong', '', `${nomeInst(s.instrumento)}`), st);
         li.append(topo, el('span', 'op-det', [s.referencia || I.rascunho, s.valor ? valor(s.valor, s.moeda) : `${s.moeda} · ${I.aDefinir}`, s.beneficiario?.nome ? `${I.benef}: ${s.beneficiario.nome}${s.beneficiario.pais ? ' (' + s.beneficiario.pais + ')' : ''}` : ''].filter(Boolean).join(' · ')));
         // último pedido/mensagem da equipe em destaque
         const ultEq = [...(s.eventos || [])].reverse().find((e: any) => e.por_equipe && e.texto);
         if (ultEq && s.status !== 'concluida') li.append(el('span', 'op-motivo', `${I.equipe}: ${ultEq.texto}`));
         const acoes = el('div', 'inst-acoes');
+        if (preparada) {
+          const bc = el('button', 'btn-ouro inst-confirmar', I.confirmar) as HTMLButtonElement; bc.type = 'button'; bc.dataset.instConfirmar = s.id;
+          bc.onclick = async () => { const g = geracaoI; bc.disabled = true;
+            try { const r = await api('POST', `/${s.id}/enviar`); if (g !== geracaoI) return;
+              if (r.status === 200) { avisoI(msgL, `${I.confirmado} ${r.d.referencia}`, 'ok'); carregarInst(g); }
+              else { avisoI(msgL, erroI(r.d), 'erro'); if (r.d.erro === 'campos_obrigatorios') abrirForm(s); } }
+            catch { avisoI(msgL, I.erros.geral, 'erro'); } finally { bc.disabled = false; } };
+          acoes.append(bc);
+        }
         if (s.status === 'rascunho' || s.status === 'enviada' || s.status === 'documentacao_solicitada') { const b = el('button', 'link', I.editar) as HTMLButtonElement; b.type = 'button'; b.dataset.instEditar = s.id; b.onclick = () => abrirForm(s); acoes.append(b); }
         if (!FINAIS_I.includes(s.status)) {
           const lab = el('label', 'link inst-anexar', I.anexar); const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'application/pdf,image/jpeg,image/png'; inp.hidden = true; inp.dataset.instAnexo = s.id;
@@ -686,6 +696,7 @@ const I = T.inst;
   .inst-lista :global(.btn-linha) { font: inherit; font-size: 0.86rem; font-weight: 500; background: transparent; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.5rem 1.1rem; color: #f3e6d2; cursor: pointer; }
   [data-inst-msg-lista] { margin: 0.8rem 0 0; }
   .inst-lista :global(.inst-acoes) { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 0.2rem; font-size: 0.86rem; }
+  .inst-lista :global(.inst-confirmar) { font: inherit; font-size: 0.9rem; font-weight: 600; padding: 0.5rem 1.2rem; border-radius: 999px; border: 0; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550); }
   .inst-lista :global(.inst-anexar) { cursor: pointer; }
   .inst-lista :global(.inst-hist) { margin-top: 0.3rem; }
   .inst-lista :global(.inst-hist summary) { cursor: pointer; color: #d9ae6b; font-size: 0.86rem; }

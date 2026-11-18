@@ -263,6 +263,8 @@ create table if not exists instrumentos_solicitacoes (
   atualizado_em timestamptz not null default now(),
   atualizado_por text
 );
+-- solicitação preparada pela equipe para o cliente confirmar (ex.: instrumento incluído no pacote contratado)
+alter table instrumentos_solicitacoes add column if not exists preparada_por text;
 create index if not exists instrumentos_usuario on instrumentos_solicitacoes(usuario_id, criado_em desc);
 create index if not exists instrumentos_status on instrumentos_solicitacoes(status, atualizado_em desc);
 create table if not exists instrumentos_eventos (

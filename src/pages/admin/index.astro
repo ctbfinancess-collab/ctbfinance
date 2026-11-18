@@ -153,6 +153,7 @@ import '../../styles/global.css';
                 <option value="abertas">Em aberto</option>
                 <option value="finalizadas">Finalizadas</option>
                 <option value="todas">Todas</option>
+                <option value="aguardando_cliente">Aguardando confirmação do cliente</option>
                 <option value="enviada">Solicitação enviada</option>
                 <option value="analise_documental">Em análise documental</option>
                 <option value="documentacao_solicitada">Documentação solicitada</option>
@@ -483,7 +484,40 @@ import '../../styles/global.css';
         paineis.financeiro.append(fin);
         // Instrumentos e transferências deste cliente
         const instBox = el('div', {}, el('p', { class: 'nota' }, 'Carregando…'));
-        paineis.instrumentos.append(el('h3', {}, 'Solicitações de instrumentos'), instBox);
+        // equipe prepara uma solicitação para o cliente confirmar (ex.: instrumento incluído no pacote contratado)
+        const fPrep = el('form', { class: 'fin-form prep-inst', novalidate: true, hidden: '' }) as HTMLFormElement;
+        const inp = (name: string, attrs: any = {}) => el('input', { name, autocomplete: 'off', ...attrs }) as HTMLInputElement;
+        const selInst = el('select', { name: 'instrumento' }, ...Object.entries(INSTRUMENTOS).map(([k, v]) => el('option', { value: k }, `${k} — ${v}`))) as HTMLSelectElement;
+        const selMoeda = el('select', { name: 'moeda' }, ...['USD', 'EUR', 'AED', 'GBP'].map((m) => el('option', { value: m }, m))) as HTMLSelectElement;
+        const selOrd = el('select', { name: 'ordenante' }, el('option', { value: 'pf' }, 'Pessoa física (o próprio cliente)'), el('option', { value: 'pj' }, 'Empresa do cliente (PJ)')) as HTMLSelectElement;
+        if (d.CompanyName) selOrd.value = 'pj';
+        fPrep.append(
+          el('p', { class: 'nota' }, 'A solicitação fica "Aguardando confirmação do cliente". Ele recebe um e-mail, confere na Área do Cliente (pode corrigir) e confirma. Nada segue sem a confirmação dele.'),
+          el('label', {}, el('span', {}, 'Instrumento'), selInst), el('label', {}, el('span', {}, 'Moeda'), selMoeda),
+          el('label', {}, el('span', {}, 'Valor'), inp('valor', { inputmode: 'decimal', placeholder: 'ex.: 5.000.000,00' })),
+          el('label', {}, el('span', {}, 'Validade solicitada'), inp('validade', { type: 'date' })),
+          el('label', {}, el('span', {}, 'Ordenante'), selOrd),
+          el('label', { class: 'largo' }, el('span', {}, 'Beneficiário — nome / empresa'), inp('bNome', { maxlength: 160 })),
+          el('label', {}, el('span', {}, 'Beneficiário — país'), inp('bPais', { maxlength: 80 })),
+          el('label', { class: 'largo' }, el('span', {}, 'Beneficiário — endereço'), inp('bEndereco', { maxlength: 200 })),
+          el('label', {}, el('span', {}, 'Banco do beneficiário'), inp('bBanco', { maxlength: 160 })),
+          el('label', { class: 'largo' }, el('span', {}, 'Finalidade'), inp('finalidade', { maxlength: 1000, value: 'Incluído no pacote de serviços contratado' })),
+          el('label', {}, el('span', {}, 'Banco emissor proposto'), inp('bancoEmissor', { maxlength: 160 })),
+          el('label', { class: 'largo' }, el('span', {}, 'Observações'), inp('observacoes', { maxlength: 1000 })),
+          el('button', { type: 'submit', class: 'botao pequeno' }, 'Criar e enviar para o cliente confirmar'));
+        fPrep.addEventListener('submit', async (e) => {
+          e.preventDefault(); const g = (n: string) => (fPrep.elements.namedItem(n) as HTMLInputElement).value.trim();
+          if (!g('valor')) return aviso('Informe o valor do instrumento.', 'erro');
+          if (!confirm(`Criar ${selInst.value} de ${selMoeda.value} ${g('valor')} para ${d.display_name || c.email} e enviar e-mail pedindo a confirmação?`)) return;
+          try {
+            const r = await chamar('/equipe/instrumentos', { metodo: 'POST', corpo: { usuarioId: c.id, instrumento: selInst.value, moeda: selMoeda.value, valor: g('valor'), validade: g('validade') || null,
+              ordenante: { tipo: selOrd.value }, beneficiario: { nome: g('bNome'), pais: g('bPais'), endereco: g('bEndereco'), banco: g('bBanco') }, finalidade: g('finalidade'), bancoEmissor: g('bancoEmissor'), observacoes: g('observacoes') } });
+            aviso(r.avisado ? 'Solicitação criada. O cliente recebeu um e-mail para conferir e confirmar.' : 'Solicitação criada (o e-mail ao cliente não pôde ser enviado; avise-o).');
+            fPrep.reset(); fPrep.hidden = true; carregados.delete('instrumentos'); carregarAba('instrumentos');
+          } catch (er) { falhou(er); }
+        });
+        const btnPrep = el('button', { type: 'button', class: 'botao pequeno claro', onclick: () => { fPrep.hidden = !fPrep.hidden; if (!fPrep.hidden) (fPrep.elements.namedItem('valor') as HTMLInputElement).focus(); } }, '+ Criar solicitação para o cliente');
+        paineis.instrumentos.append(el('h3', {}, 'Solicitações de instrumentos'), btnPrep, fPrep, instBox);
         const opBox = el('div', {}, el('p', { class: 'nota' }, 'Carregando…'));
         paineis.transferencias.append(el('h3', {}, 'Transferências e câmbio'), opBox);
         // Contratos (NDA etc.) no papel timbrado
@@ -851,7 +885,7 @@ import '../../styles/global.css';
 
       // ---- instrumentos financeiros (só solicitação e acompanhamento; nada é emitido pelo sistema)
       const INSTRUMENTOS: Record<string, string> = { SBLC: 'Standby Letter of Credit', LC: 'Letter of Credit', DLC: 'Documentary Letter of Credit', BG: 'Bank Guarantee', PBG: 'Performance Bank Guarantee', APG: 'Advance Payment Guarantee', BB: 'Bid Bond', LG: 'Letter of Guarantee', FC: 'Financial Guarantee', RWA: 'Ready, Willing and Able (declaração)', BCL: 'Bank Comfort Letter (declaração)', POF: 'Proof of Funds (declaração)' };
-      const ST_INST: Record<string, [string, string]> = { rascunho: ['Rascunho', ''], enviada: ['Solicitação enviada', 'erro'], analise_documental: ['Em análise documental', 'aviso'], documentacao_solicitada: ['Documentação complementar solicitada', 'aviso'], analise_interna: ['Em análise interna', 'aviso'], encaminhada: ['Encaminhada à instituição financeira', 'aviso'], aguardando_instituicao: ['Aguardando resposta da instituição', 'aviso'], aprovada: ['Aprovada pela instituição', 'ok'], recusada: ['Recusada', ''], cancelada: ['Cancelada', ''], concluida: ['Concluída', 'ok'] };
+      const ST_INST: Record<string, [string, string]> = { rascunho: ['Aguardando confirmação do cliente', 'aviso'], enviada: ['Solicitação enviada', 'erro'], analise_documental: ['Em análise documental', 'aviso'], documentacao_solicitada: ['Documentação complementar solicitada', 'aviso'], analise_interna: ['Em análise interna', 'aviso'], encaminhada: ['Encaminhada à instituição financeira', 'aviso'], aguardando_instituicao: ['Aguardando resposta da instituição', 'aviso'], aprovada: ['Aprovada pela instituição', 'ok'], recusada: ['Recusada', ''], cancelada: ['Cancelada', ''], concluida: ['Concluída', 'ok'] };
       const FINAIS_INST = ['recusada', 'cancelada', 'concluida'];
       for (const [k, v] of Object.entries(INSTRUMENTOS)) $('[data-inst-tipo]').append(el('option', { value: k }, `${k} — ${v}`));
       const valorInst = (s: any) => (s.valor ? valorOp(s.valor, s.moeda) : `${s.moeda} · a definir`);

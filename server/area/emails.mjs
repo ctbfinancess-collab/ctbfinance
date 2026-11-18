@@ -98,3 +98,17 @@ export async function avisarAcessoEquipe({ to, lang = 'pt' }) {
   const ok = await sendEmail({ from: fromAddress(), to: [to], subject: `${titulo} · CTB Finances`, html: brandedHtml(lang, titulo, par, { href: link, label: en ? 'Open the Team Panel' : 'Abrir o Painel da Equipe' }), text: `${titulo}\n\n${par.join('\n\n')}\n\n${link}\n\nCTB Finance Broker L.L.C. · Dubai` }, 'acesso-equipe');
   if (!ok) throw new Error('falha ao enviar aviso de acesso à equipe');
 }
+
+/** Aviso ao CLIENTE: a equipe preparou uma solicitação de instrumento para ele conferir e confirmar. */
+export async function avisarClienteInstrumento({ to, lang = 'pt', instrumento, valor }) {
+  const en = lang === 'en';
+  const titulo = en ? 'Please confirm your request' : 'Confirme sua solicitação';
+  const linhas = [['Instrument', 'Instrumento'], ['Amount', 'Valor']];
+  const tabela = { html: `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 12px;font-family:Georgia,serif;font-size:15px;color:#35241D"><tr><td style="padding:3px 14px 3px 0;color:#7a5a45">${en ? linhas[0][0] : linhas[0][1]}</td><td>${esc(instrumento)}</td></tr><tr><td style="padding:3px 14px 3px 0;color:#7a5a45">${en ? linhas[1][0] : linhas[1][1]}</td><td>${esc(valor)}</td></tr></table>` };
+  const par = en
+    ? ['Our team has prepared a financial instrument request for you, as part of the services you contracted:', tabela, 'Please review the details in your Client Area and confirm. Nothing is sent to the financial institution before your confirmation, and you can correct any information first.']
+    : ['Nossa equipe preparou uma solicitação de instrumento financeiro para você, como parte dos serviços contratados:', tabela, 'Confira os dados na sua Área do Cliente e confirme. Nada é enviado à instituição financeira antes da sua confirmação, e você pode corrigir qualquer informação antes.'];
+  const link = `${SITE}${en ? '/en/client-area/' : '/area-do-cliente/'}`;
+  const ok = await sendEmail({ from: fromAddress(), to: [to], reply_to: replyToTeam(), subject: `${titulo} · CTB Finances`, html: brandedHtml(lang, titulo, par, { href: link, label: en ? 'Review and confirm' : 'Conferir e confirmar' }), text: `${titulo}\n\n${en ? 'Instrument' : 'Instrumento'}: ${instrumento}\n${en ? 'Amount' : 'Valor'}: ${valor}\n\n${link}\n\nCTB Finance Broker L.L.C. · Dubai` }, 'instrumento-preparado');
+  if (!ok) throw new Error('falha ao enviar aviso ao cliente');
+}

@@ -151,6 +151,14 @@ try {
   await ev(`document.querySelector('[data-inst-lista] details').open=true,1`);
   await ev(`document.querySelector('[data-inst]').scrollIntoView({block:'start'}),1`);
   await shot('2c-instrumentos');
+  console.log('--- Instrumento preparado pela equipe');
+  const idPrep = (await db.q(`insert into instrumentos_solicitacoes(usuario_id, instrumento, categoria, moeda, valor_centavos, beneficiario, ordenante, finalidade, preparada_por, atualizado_por)
+    values ($1,'RWA','declaracao','USD',500000000,'{"nome":"Beneficiário do Pacote","pais":"Singapura"}'::jsonb,'{"tipo":"pf"}'::jsonb,'Incluído no pacote','analista@example.com','analista@example.com') returning id`, [uAna])).rows[0].id;
+  await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  await ev(`document.querySelector('[data-tab=operacoes]').click(),1`);
+  check('Preparada pela equipe: aparece "Aguardando sua confirmação" com o botão Confirmar solicitação', await waitFor(`(()=>{const li=document.querySelector('[data-inst-id="${idPrep}"]');return !!li && li.innerText.includes('Aguardando sua confirmação') && !!li.querySelector('[data-inst-confirmar]')})()`));
+  await ev(`document.querySelector('[data-inst-confirmar="${idPrep}"]').click(),1`);
+  check('Confirmar → "Solicitação confirmada. Referência: CTB-RWA-…" e passa a "Solicitação enviada"', await waitFor(`document.querySelector('[data-inst-msg-lista]').textContent.includes('Solicitação confirmada. Referência: CTB-RWA-') && document.querySelector('[data-inst-id="${idPrep}"]').innerText.includes('Solicitação enviada')`));
   console.log('--- Contratos liberados');
   await db.q(`insert into contratos(usuario_id, referencia, modelo, campos, status, gerado_por, liberado_em) values ($1,'CTB-NDA-2026-00077','nda',$2::jsonb,'liberado','analista',now())`,
     [uAna, JSON.stringify({ data: '18/11/2026', local: 'Dubai - United Arab Emirates (UAE)', empresa: 'Empresa <b>Fictícia</b>', jurisdicao: 'the Federative Republic of Brazil', registro: '123', endereco: 'Rua Teste, 1', prazo: 'two (2)', representante: 'Ana Teste', passaporte: 'FZ123456', ctbNome: 'Diretor Fictício', ctbCargo: 'EXECUTIVE DIRECTOR', ctbPin: '120422' })]);

@@ -163,6 +163,10 @@ try {
   const pdfAdm = await ev(`fetch('/api/cliente/equipe/contratos/'+document.querySelector('[data-ficha] [data-contrato-id]').dataset.contratoId+'/pdf').then(async r=>r.status+' '+r.headers.get('content-type')+' '+(await r.text()).slice(0,5))`);
   check('Pré-visualização do PDF pela equipe (application/pdf)', pdfAdm === '200 application/pdf %PDF-');
   await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');e.querySelectorAll('details').forEach(d=>d.open=true);e.scrollIntoView({block:'start'});return 1})()`); await shot('p3g-contrato-texto');
+  await abaFicha('instrumentos');
+  await clicarTexto('+ Criar solicitação para o cliente', "document.querySelector('[data-ficha]')");
+  await ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.prep-inst');f.instrumento.value='RWA';f.valor.value='5.000.000';f.bNome.value='Beneficiário do Pacote';f.bPais.value='Singapura';f.requestSubmit();return 1})()`);
+  check('Ficha → Instrumentos: equipe cria RWA para a cliente; aparece "Aguardando confirmação do cliente" e a Ana recebe e-mail', await waitFor(`${msg}.includes('O cliente recebeu um e-mail') && document.querySelector('[data-ficha-painel=instrumentos]').innerText.includes('Aguardando confirmação do cliente')`) && emails.some((m) => (m.to || []).includes('ana@example.com') && /Confirme sua solicitação/.test(m.subject)));
   await abaFicha('dados');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
   check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));

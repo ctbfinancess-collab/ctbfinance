@@ -208,6 +208,21 @@ try {
   }
   { const b1 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('teste ANA'))).dados.solicitacoes; const b2 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('ánã'))).dados.solicitacoes; const b3 = (await E('GET', '/instrumentos?status=todas&q=' + encodeURIComponent('ana xyz123'))).dados.solicitacoes;
     await t('IN46', 'Busca da equipe: palavras em qualquer ordem, sem acento/maiúscula ("teste ANA", "ánã" acham Ana Teste; termo inexistente não)', async () => b1.length > 0 && b1.every((x) => x.email === 'ana@example.com') && b2.length > 0 && b3.length === 0); }
+  { // equipe prepara solicitação para o cliente confirmar
+    const nE = emails.length;
+    const prep = await E('POST', '/instrumentos', { json: { usuarioId: ana, instrumento: 'RWA', moeda: 'USD', valor: '5.000.000', beneficiario: { nome: 'Beneficiário do Pacote', pais: 'Singapura' }, finalidade: 'Incluído no pacote contratado', ordenante: { tipo: 'pf' } } }); await sleep(400);
+    const eCli = emails.slice(nE).find((m) => (m.to || []).includes('ana@example.com') && /Confirme sua solicitação/.test(m.subject));
+    await t('IN47', 'Equipe prepara RWA para a cliente: rascunho "preparada pela equipe" e e-mail para a cliente confirmar', async () => prep.status === 201 && prep.dados.avisado === true && !!eCli && eCli.html.includes('USD 5.000.000,00'));
+    const agu = (await E('GET', '/instrumentos?status=aguardando_cliente')).dados.solicitacoes;
+    await t('IN48b', 'Equipe vê a preparada em "aguardando cliente" (e nas abertas); rascunhos feitos pela própria cliente continuam invisíveis', async () => agu.some((x) => x.id === prep.dados.id && x.status === 'rascunho' && x.preparada_por === 'chefe@example.com') && (await E('GET', '/instrumentos?status=abertas')).dados.solicitacoes.some((x) => x.id === prep.dados.id) && agu.every((x) => x.preparada_por));
+    const minhaP = (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === prep.dados.id);
+    const conf = await C(cAna, 'POST', `/${prep.dados.id}/enviar`);
+    const depois = (await C(cAna, 'GET')).dados.solicitacoes.find((x) => x.id === prep.dados.id);
+    await t('IN49b', 'Cliente vê "preparada pela equipe", confirma → enviada com referência CTB-RWA; histórico "Confirmada pelo cliente."', async () => minhaP && minhaP.preparada_por && conf.status === 200 && /^CTB-RWA-\d{4}-\d{5}$/.test(conf.dados.referencia) && depois.status === 'enviada' && depois.eventos.some((x) => x.texto === 'Confirmada pelo cliente.'));
+    const prep2 = await E('POST', '/instrumentos', { json: { usuarioId: ana, instrumento: 'SBLC', moeda: 'USD', valor: '1.000.000', ordenante: { tipo: 'pf' } } });
+    const canc = await E('POST', `/instrumentos/${prep2.dados.id}/status`, { json: { status: 'cancelada', texto: 'Preparada por engano.' } });
+    await t('IN50', 'Equipe cancela uma preparada ainda não confirmada; cliente inexistente → 404; sem valor → 400', async () => canc.status === 200 && (await E('POST', '/instrumentos', { json: { usuarioId: '00000000-0000-4000-8000-000000000000', instrumento: 'RWA', valor: '1' } })).status === 404 && (await E('POST', '/instrumentos', { json: { usuarioId: ana, instrumento: 'RWA' } })).status === 400);
+  }
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);

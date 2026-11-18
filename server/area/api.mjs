@@ -79,7 +79,7 @@ export async function limparRegistrosAntigos(db) {
 const LIBERADOS = ['disponivel_analise', 'aprovado'];
 const EMAIL_RE = /^[^\s@<>()[\]\\,;:"]+@[^\s@<>()[\]\\,;:"]+\.[a-z]{2,}$/i;
 
-export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, avisarOperacao = null, avisarInstrumento = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
+export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = null, avisarOperacao = null, avisarInstrumento = null, avisarClienteInstrumento = null, siteUrl = process.env.AREA_SITE_URL || 'https://ctbfinances.ae', log = console }) {
   const json = (res, status, body, extra = {}) => {
     res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...SEG, ...extra });
     res.end(JSON.stringify(body));
@@ -552,7 +552,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
     }
   }
   const contratos = criarContratos({ db, json, lerJson, receberArquivo: enviarDocumento, log });
-  const instrumentos = criarInstrumentos({ db, json, lerJson, receberArquivo: enviarDocumento, avisarEquipe: avisarInstrumento, log,
+  const instrumentos = criarInstrumentos({ db, json, lerJson, receberArquivo: enviarDocumento, avisarEquipe: avisarInstrumento, avisarCliente: avisarClienteInstrumento, log,
     aoStatus: (para, s, u) => contratos.aoEvento('instrumento_' + para, { usuarioId: s.usuario_id, solicitacaoId: s.id, por: u.email }) });
   let painel = null;
   /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson, instrumentos). */

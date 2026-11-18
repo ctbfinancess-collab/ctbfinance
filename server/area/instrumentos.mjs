@@ -33,7 +33,8 @@ const TRANSICOES = {
   encaminhada: ['aguardando_instituicao', 'aprovada', 'recusada', 'cancelada'],
   aguardando_instituicao: ['documentacao_solicitada', 'aprovada', 'recusada', 'cancelada'],
   aprovada: ['concluida', 'cancelada'],
-  rascunho: [], recusada: [], cancelada: [], concluida: [],
+  rascunho: ['cancelada'],   // só vale para a preparada pela equipe (é a única que a equipe enxerga em rascunho)
+  recusada: [], cancelada: [], concluida: [],
 };
 const ABERTAS_MAX = 10;        // solicitações não finalizadas (inclui rascunhos) por cliente
 const CRIADAS_DIA_MAX = 10;    // novas solicitações por cliente em 24 h
@@ -103,9 +104,9 @@ function faltando(s, perfil) {
 }
 const COLS = `s.id, s.referencia, s.instrumento, s.categoria, s.moeda, s.valor_centavos::text as valor, s.beneficiario, s.ordenante, s.finalidade,
   s.banco_emissor, s.banco_avisador, to_char(s.validade,'YYYY-MM-DD') as validade, s.operacao_subjacente, s.contrato_ref, s.observacoes, s.status,
-  s.criado_em, s.enviado_em, s.atualizado_em`;
+  s.criado_em, s.enviado_em, s.atualizado_em, s.preparada_por`;
 
-export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEquipe = null, aoStatus = null, log = console }) {
+export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEquipe = null, avisarCliente = null, aoStatus = null, log = console }) {
   const corpo = async (req, max = 12000) => { const b = await lerJson(req, max); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
   const evento = (q, sid, e) => q(`insert into instrumentos_eventos(solicitacao_id, tipo, status_de, status_para, texto, visivel_cliente, documento_id, por_email, por_equipe)
                                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [sid, e.tipo, e.de || null, e.para || null, e.texto || null, e.visivel, e.documento || null, e.por, e.equipe]);
@@ -212,7 +213,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
           ref = `CTB-${s.instrumento}-${new Date().getUTCFullYear()}-${String(n).padStart(5, '0')}`;
         }
         await q(`update instrumentos_solicitacoes set status=$2, referencia=$3, enviado_em=coalesce(enviado_em, now()), atualizado_em=now(), atualizado_por=$4 where id=$1`, [id, para, ref, u.email]);
-        await evento(q, id, { tipo: 'status', de: s.status, para, texto: s.status === 'enviada' ? 'Solicitação alterada pelo cliente.' : null, visivel: true, por: u.email, equipe: false });
+        await evento(q, id, { tipo: 'status', de: s.status, para, texto: s.status === 'enviada' ? 'Solicitação alterada pelo cliente.' : (s.status === 'rascunho' && s.preparada_por ? 'Confirmada pelo cliente.' : null), visivel: true, por: u.email, equipe: false });
         return { ...s, status: para, referencia: ref, primeiroEnvio: s.status === 'rascunho', alterada: s.status === 'enviada' };
       });
     } catch (e) { return responder(res, e); }
@@ -308,9 +309,11 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
 
   // ============================================================== EQUIPE
   const FILTROS = {
-    abertas: `s.status not in ('rascunho','recusada','cancelada','concluida')`,
+    // rascunho só aparece para a equipe quando foi ELA que preparou (aguardando confirmação do cliente)
+    abertas: `(s.status not in ('rascunho','recusada','cancelada','concluida') or (s.status='rascunho' and s.preparada_por is not null))`,
     finalizadas: `s.status in ('recusada','cancelada','concluida')`,
-    todas: `s.status <> 'rascunho'`,
+    todas: `(s.status <> 'rascunho' or s.preparada_por is not null)`,
+    aguardando_cliente: `s.status='rascunho' and s.preparada_por is not null`,
   };
   async function listarEquipe(res, url) {
     const st = url.searchParams.get('status') || 'abertas';
@@ -331,7 +334,7 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
   const daEquipe = async (q, id, travar = false) => {
     if (!UUID.test(id)) throw erroHttp(404, 'nao_encontrado');
     const s = (await q(`select ${COLS}, s.usuario_id, s.responsavel_email, s.instituicao, u.email from instrumentos_solicitacoes s join usuarios u on u.id=s.usuario_id
-                         where s.id=$1 and s.status <> 'rascunho' ${travar ? 'for update of s' : ''}`, [id])).rows[0];
+                         where s.id=$1 and (s.status <> 'rascunho' or s.preparada_por is not null) ${travar ? 'for update of s' : ''}`, [id])).rows[0];
     if (!s) throw erroHttp(404, 'nao_encontrado');
     return s;
   };
@@ -440,9 +443,42 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     if (res.statusCode === 201) await registrar(u, 'instrumento_evidencia', s.referencia || id, { para: de || null });
     return ok;
   }
+  /** Equipe prepara uma solicitação PARA o cliente (ex.: RWA/SBLC incluído no pacote). Fica em rascunho até o cliente
+   *  conferir e confirmar na Área do Cliente; o cliente recebe e-mail. Nada é enviado ao banco sem a confirmação dele. */
+  async function prepararEquipe(req, res, u, registrar) {
+    const b = await corpo(req);
+    if (!UUID.test(String(b.usuarioId || ''))) return json(res, 404, { erro: 'nao_encontrado' });
+    const cli = (await db.q('select u.id, u.email, u.idioma, u.bloqueado from usuarios u where u.id=$1', [b.usuarioId])).rows[0];
+    if (!cli) return json(res, 404, { erro: 'nao_encontrado' });
+    if (cli.bloqueado) return json(res, 409, { erro: 'cliente_bloqueado', mensagem: 'Este cliente está bloqueado.' });
+    const { out, invalidos } = lerCampos({ instrumento: 'SBLC', moeda: 'USD', ...b });
+    if (invalidos.length) return json(res, 400, { erro: 'campos_invalidos', campos: invalidos, mensagem: 'Confira os campos destacados.' });
+    if (!out.instrumento || out.valor_centavos == null) return json(res, 400, { erro: 'campos_invalidos', campos: ['instrumento', 'valor'], mensagem: 'Informe o instrumento e o valor.' });
+    const s = await db.transacao(async (q) => {
+      const r = (await q(`insert into instrumentos_solicitacoes(usuario_id, instrumento, categoria, moeda, valor_centavos, beneficiario, ordenante, finalidade,
+                            banco_emissor, banco_avisador, validade, operacao_subjacente, contrato_ref, observacoes, atualizado_por, preparada_por)
+                          values ($1,$2,$3,$4,$5,$6::jsonb,$7::jsonb,$8,$9,$10,$11,$12,$13,$14,$15,$15) returning id`,
+        [cli.id, out.instrumento, GARANTIAS[out.instrumento] ? 'garantia' : 'declaracao', out.moeda, out.valor_centavos, JSON.stringify(out.beneficiario || {}),
+          JSON.stringify(out.ordenante || { tipo: 'pf' }), out.finalidade ?? null, out.banco_emissor ?? null, out.banco_avisador ?? null, out.validade ?? null,
+          out.operacao_subjacente ?? null, out.contrato_ref ?? null, out.observacoes ?? null, u.email])).rows[0];
+      await evento(q, r.id, { tipo: 'status', para: 'rascunho', texto: 'Preparada pela equipe CTB Finances. Confira os dados e confirme.', visivel: true, por: u.email, equipe: true });
+      return r;
+    });
+    await registrar(u, 'instrumento_preparado', cli.email, { instrumento: out.instrumento });
+    let avisado = false;
+    if (avisarCliente) {
+      try {
+        const vc = BigInt(out.valor_centavos); const v = `${(vc / 100n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, cli.idioma === 'en' ? ',' : '.')}${cli.idioma === 'en' ? '.' : ','}${(vc % 100n).toString().padStart(2, '0')}`;
+        await avisarCliente({ to: cli.email, lang: cli.idioma, instrumento: `${out.instrumento} — ${GARANTIAS[out.instrumento] || DECLARACOES[out.instrumento]}`, valor: `${out.moeda} ${v}` });
+        avisado = true;
+      } catch (e) { log.error('[area-cliente] aviso ao cliente (instrumento preparado):', e.message); }
+    }
+    return json(res, 201, { id: s.id, avisado });
+  }
   async function equipe(req, res, url, u, p, registrar) {
     const m = req.method;
     if (p.length === 1 && m === 'GET') return listarEquipe(res, url);
+    if (p.length === 1 && m === 'POST') return prepararEquipe(req, res, u, registrar);
     if (p.length === 2 && m === 'GET') return fichaEquipe(res, u, p[1], registrar);
     if (p.length === 3 && m === 'POST') {
       if (p[2] === 'status') return statusEquipe(req, res, u, p[1], registrar);
