@@ -132,35 +132,6 @@ const I = T.inst;
 
   <!-- Operações -->
   <section data-panel="operacoes" hidden>
-    <h3>{T.opsTitulo}</h3>
-    <p class="real">{T.opsIntro}</p>
-    <p class="vazio" data-op-semconta hidden>{T.opsSemConta}</p>
-    <form class="op-form" data-op-form hidden novalidate>
-      <h4>{T.opsNova}</h4>
-      <div class="op-tipos" role="radiogroup" aria-label={T.opsTipo}>
-        {Object.entries(T.opsTipos).map(([k, v], i) => <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} data-op-tipo={k}>{v}</button>)}
-      </div>
-      <div class="op-grade">
-        <label><span>{T.opsConta}</span><select name="contaId" data-op-conta></select></label>
-        <label><span>{T.opsValor}</span><input name="valor" inputmode="decimal" autocomplete="off" placeholder={en ? 'e.g. 8,000.00' : 'ex.: 8.000,00'} /></label>
-        <label data-op-cambio hidden><span>{T.opsPara}</span><select name="moedaDestino">{['AED', 'USD', 'EUR', 'GBP', 'BRL'].map((m) => <option value={m}>{m}</option>)}</select></label>
-      </div>
-      <fieldset class="op-benef" data-op-benef>
-        <legend>{T.opsBenef}</legend>
-        <div class="op-grade">
-          <label class="largo"><span>{T.opsNome}</span><input name="nome" maxlength="120" autocomplete="off" /></label>
-          <label><span>{T.opsBanco}</span><input name="banco" maxlength="120" autocomplete="off" /></label>
-          <label class="largo"><span>{T.opsIban}</span><input name="iban" maxlength="50" autocomplete="off" /></label>
-          <label data-op-swift><span>{T.opsSwift}</span><input name="swift" maxlength="11" autocomplete="off" /></label>
-          <label><span>{T.opsPais}</span><input name="pais" maxlength="60" autocomplete="off" /></label>
-        </div>
-      </fieldset>
-      <label class="op-obs"><span>{T.opsObs}</span><textarea name="observacao" maxlength="500" rows="2"></textarea></label>
-      <button type="submit" class="btn-ouro" data-op-enviar>{T.opsEnviar}</button>
-      <p class="op-msg" data-op-msg role="status" aria-live="polite" hidden></p>
-    </form>
-    <h4 class="sub">{T.opsMinhas}</h4>
-    <ul class="op-lista" data-op-lista></ul>
     <!-- Instrumentos financeiros: só solicitação e acompanhamento (nada é emitido pelo sistema) -->
     <div class="inst" data-inst>
       <h3>{I.titulo}</h3>
@@ -215,6 +186,37 @@ const I = T.inst;
       <p class="op-msg" data-inst-msg-lista role="status" aria-live="polite" hidden></p>
       <h4 class="sub">{I.minhas}</h4>
       <ul class="op-lista inst-lista" data-inst-lista></ul>
+    </div>
+    <div class="transf" data-transf>
+      <h3>{T.opsTitulo}</h3>
+      <p class="real">{T.opsIntro}</p>
+      <p class="vazio" data-op-semconta hidden>{T.opsSemConta}</p>
+      <form class="op-form" data-op-form hidden novalidate>
+        <h4>{T.opsNova}</h4>
+        <div class="op-tipos" role="radiogroup" aria-label={T.opsTipo}>
+          {Object.entries(T.opsTipos).map(([k, v], i) => <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} data-op-tipo={k}>{v}</button>)}
+        </div>
+        <div class="op-grade">
+          <label><span>{T.opsConta}</span><select name="contaId" data-op-conta></select></label>
+          <label><span>{T.opsValor}</span><input name="valor" inputmode="decimal" autocomplete="off" placeholder={en ? 'e.g. 8,000.00' : 'ex.: 8.000,00'} /></label>
+          <label data-op-cambio hidden><span>{T.opsPara}</span><select name="moedaDestino">{['AED', 'USD', 'EUR', 'GBP', 'BRL'].map((m) => <option value={m}>{m}</option>)}</select></label>
+        </div>
+        <fieldset class="op-benef" data-op-benef>
+          <legend>{T.opsBenef}</legend>
+          <div class="op-grade">
+            <label class="largo"><span>{T.opsNome}</span><input name="nome" maxlength="120" autocomplete="off" /></label>
+            <label><span>{T.opsBanco}</span><input name="banco" maxlength="120" autocomplete="off" /></label>
+            <label class="largo"><span>{T.opsIban}</span><input name="iban" maxlength="50" autocomplete="off" /></label>
+            <label data-op-swift><span>{T.opsSwift}</span><input name="swift" maxlength="11" autocomplete="off" /></label>
+            <label><span>{T.opsPais}</span><input name="pais" maxlength="60" autocomplete="off" /></label>
+          </div>
+        </fieldset>
+        <label class="op-obs"><span>{T.opsObs}</span><textarea name="observacao" maxlength="500" rows="2"></textarea></label>
+        <button type="submit" class="btn-ouro" data-op-enviar>{T.opsEnviar}</button>
+        <p class="op-msg" data-op-msg role="status" aria-live="polite" hidden></p>
+      </form>
+      <h4 class="sub">{T.opsMinhas}</h4>
+      <ul class="op-lista" data-op-lista></ul>
     </div>
     <div class="ops-acoes">
       <button type="button" class="btn-ouro" data-ir-aba="appointments">{T.agendar}</button>
@@ -582,7 +584,7 @@ const I = T.inst;
   .op-lista :global(.op-status[data-s='recusada']) { background: rgba(98, 72, 58, 0.6); color: #e8d6b7; border-color: rgba(168, 116, 47, 0.7); }
   .btn-ouro { font: inherit; font-weight: 600; border: 1px solid #f0d39c; border-radius: 999px; padding: 0.7rem 1.4rem; cursor: pointer; color: #24120a; background: linear-gradient(180deg, #f0d39c, #c99550 60%, #a8742f); }
   .btn-linha { display: inline-flex; align-items: center; font-weight: 500; border: 1px solid rgba(201, 164, 106, 0.5); border-radius: 999px; padding: 0.7rem 1.4rem; color: #f3e6d2; text-decoration: none; }
-  .inst { margin-top: 2.2rem; padding-top: 0.4rem; border-top: 1px solid rgba(201, 164, 106, 0.28); }
+  .transf { margin-top: 2.2rem; padding-top: 0.4rem; border-top: 1px solid rgba(201, 164, 106, 0.28); }
   .inst[hidden] { display: none; }
   .inst-aviso { margin: 0.8rem 0; padding: 0.75rem 1rem; border-radius: 12px; border: 1px solid rgba(240, 211, 156, 0.6); background: rgba(181, 139, 77, 0.16); color: #f0d39c; font-size: 0.9rem; line-height: 1.45; }
   .inst-aviso.pequeno { font-size: 0.82rem; margin: 0; }
