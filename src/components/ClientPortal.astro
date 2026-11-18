@@ -18,7 +18,7 @@ const profileFields = ['display_name', 'phone_number', 'nationality', 'dateofbir
 const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadress', 'companyaddressnumber', 'companycity', 'companycountry', 'companyzipcode'] as const;
 ---
 <div class="portal" data-portal data-lang={lang}
-  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos, formatos: p.formatos, periodos: p.periodos, apptChoose: p.apptChoose })}>
+  data-msg={JSON.stringify({ loginError: p.loginError, tooMany: p.tooMany, genericError: p.genericError, resetSent: p.resetSent, signingIn: p.signingIn, submit: p.submit, saved: p.saved, saving: p.saving, save: p.save, nothingChanged: p.nothingChanged, verifySent: p.verifySent, uploaded: p.uploaded, uploading: p.uploading, upload: p.upload, badType: p.badType, tooBig: p.tooBig, docsEmpty: p.docsEmpty, apptEmpty: p.apptEmpty, download: p.download, tz: p.tz, st: p.docStatus, resendHint: p.resendHint, pendingHint: p.pendingHint, apptRequested: p.apptRequested, apptConfirmed: p.apptConfirmed, apptToConfirm: p.apptToConfirm, apptLegacy: p.apptLegacy, apptPending: p.apptPending, sessionEnded: p.sessionEnded, unavailable: p.unavailable, pwErr: p.pwErr, linkInvalid: p.linkInvalid, pwMismatch: p.pwMismatch, setPwInvite: p.setPwInvite, setPwReset: p.setPwReset, quota: p.quota, passportKeep: p.passportKeep, passportLocked: p.passportLocked, passportBad: p.passportBad, passportBadDate: p.passportBadDate, passportLockedErr: p.passportLockedErr, apptSend: p.apptSend, apptSending: p.apptSending, apptSent: p.apptSent, apptBadDate: p.apptBadDate, apptLimit: p.apptLimit, assuntos: p.assuntos, formatos: p.formatos, periodos: p.periodos, apptChoose: p.apptChoose, contratos: p.contratos })}>
 
   <!-- Login -->
   <div class="access-card" data-view="login">
@@ -138,6 +138,10 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       </label>
       <p class="msg" role="status" aria-live="polite" hidden data-docs-msg></p>
       <ul class="list" data-docs></ul>
+      <h3 class="contratos-titulo">{p.contratos.titulo}</h3>
+      <p class="note">{p.contratos.texto}</p>
+      <p class="msg" role="status" aria-live="polite" hidden data-contratos-msg></p>
+      <ul class="list" data-contratos></ul>
     </section>
 
     <section data-panel="appointments" hidden>
@@ -216,7 +220,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       $('[data-name]').textContent = ''; $('[data-email]').textContent = '';
       root.querySelectorAll<HTMLInputElement>('[data-profile] input').forEach((i) => (i.value = ''));
       $('[data-company]').hidden = true;
-      $('[data-docs]').innerHTML = ''; $('[data-appts]').innerHTML = '';
+      $('[data-docs]').innerHTML = ''; $('[data-appts]').innerHTML = ''; $('[data-contratos]').innerHTML = ''; limparMsg($('[data-contratos-msg]'));
       ['[data-profile-msg]', '[data-docs-msg]', '[data-appt-msg]'].forEach((k) => limparMsg($(k)));
       apptForm.reset(); apptForm.hidden = true; apptOpen.hidden = false;
       passNum.readOnly = false; passVal.readOnly = false; passNum.placeholder = ''; $('[data-pass-locked]').hidden = true;
@@ -397,6 +401,47 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
         ul.append(li);
       }
     }
+    // ---- Contratos liberados pela equipe (PDF no papel timbrado) + envio da via assinada
+    async function carregarContratos(s: number, email: string) {
+      const ul = $('[data-contratos]'); const cm = $('[data-contratos-msg]');
+      let lista: any[] = [];
+      try { const r = await api('/contratos'); if (!vigente(s, email)) return; if (r.status === 401) return sessaoCaiu(); if (!r.ok) throw new Error(); lista = (await r.json()).contratos; }
+      catch { if (vigente(s, email)) msg(cm, M.genericError, 'err'); return; }
+      if (!vigente(s, email)) return;
+      ul.innerHTML = '';
+      if (!lista.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = M.contratos.vazio; ul.append(li); return; }
+      for (const c of lista) {
+        const li = document.createElement('li'); li.dataset.contrato = c.id;
+        const name = document.createElement('span'); name.className = 'name'; name.textContent = `${c.titulo} · ${c.referencia}`;
+        const info = document.createElement('span'); info.className = 'info'; info.textContent = c.liberadoEm ? fmtDate(new Date(c.liberadoEm)) : '';
+        const badge = document.createElement('span'); badge.className = 'badge'; badge.dataset.status = c.status === 'assinado' ? 'aprovado' : 'disponivel_analise'; badge.textContent = M.contratos.st[c.status] || c.status;
+        const acoes = document.createElement('span'); acoes.className = 'acoes-contrato';
+        const pdf = document.createElement('a'); pdf.className = 'link'; pdf.href = `${API}/contratos/${encodeURIComponent(c.id)}/pdf`; pdf.textContent = M.contratos.baixar; pdf.setAttribute('download', `${c.referencia}.pdf`);
+        acoes.append(pdf);
+        if (c.status === 'liberado') {
+          const lab = document.createElement('label'); lab.className = 'link';
+          const sp = document.createElement('span'); sp.textContent = M.contratos.enviar;
+          const inp = document.createElement('input'); inp.type = 'file'; inp.accept = TYPES.join(','); inp.hidden = true; inp.dataset.contratoAssinado = c.id;
+          inp.addEventListener('change', async () => {
+            const f = inp.files?.[0]; inp.value = ''; if (!f) return;
+            if (!TYPES.includes(f.type)) return msg(cm, M.badType, 'err');
+            if (f.size > MAX) return msg(cm, M.tooBig, 'err');
+            sp.textContent = M.contratos.enviando;
+            try {
+              const r = await api(`/contratos/${encodeURIComponent(c.id)}/assinado`, { method: 'POST', headers: { 'Content-Type': f.type, 'X-Nome-Arquivo': encodeURIComponent(f.name) }, body: f });
+              if (!vigente(s, email)) return;
+              if (r.status === 401) return sessaoCaiu();
+              if (r.status === 201) { msg(cm, M.contratos.enviado); await carregarContratos(s, email); }
+              else msg(cm, r.status === 413 ? M.tooBig : r.status === 415 ? M.badType : r.status === 429 ? M.quota : M.genericError, 'err');
+            } catch { if (vigente(s, email)) msg(cm, M.genericError, 'err'); }
+            finally { sp.textContent = M.contratos.enviar; }
+          });
+          lab.append(sp, inp); acoes.append(lab);
+        }
+        li.append(name, info, badge, acoes);
+        ul.append(li);
+      }
+    }
     const lerDocs = async () => { const r = await api('/documentos'); if (r.status === 401) throw Object.assign(new Error(), { sessao: true }); if (!r.ok) throw new Error(); return (await r.json()).documentos; };
     upInput.addEventListener('change', async () => {
       const file = upInput.files?.[0]; const dm = $('[data-docs-msg]'); upInput.value = '';
@@ -499,6 +544,7 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
       if ([perfil, docs, agend].some((x) => x.status === 'rejected' && ((x as PromiseRejectedResult).reason === 401 || (x as any).reason?.sessao))) return sessaoCaiu();
       if (perfil.status === 'fulfilled') mostrarPerfil(perfil.value, email); else { $('[data-email]').textContent = email; msg($('[data-profile-msg]'), M.genericError, 'err'); }
       if (docs.status === 'fulfilled') renderDocs(docs.value, s, email); else msg($('[data-docs-msg]'), M.genericError, 'err');
+      carregarContratos(s, email);
       mostrarAgendamentos(agend.status === 'fulfilled' ? agend.value.agendamentos : []);
       window.dispatchEvent(new CustomEvent('ctb:financeiro', { detail: fin.status === 'fulfilled' ? fin.value : { contas: [], movimentos: [], posicoes: [], cartao: null } }));
       preencherInicio(docs.status === 'fulfilled' ? docs.value : [], agend.status === 'fulfilled' ? agend.value.agendamentos : []);
@@ -608,6 +654,9 @@ const companyFields = ['CompanyName', 'Companyregistrationnumber', 'companysadre
   .list :global(.badge[data-status='disponivel_analise']) { background: rgba(217, 174, 107, 0.22); color: #f0d39c; }
   .list :global(.badge[data-status='aprovado']) { background: #b9853f; color: #24120a; }
   .list :global(.badge[data-status='rejeitado']) { background: rgba(232, 214, 183, 0.10); color: #e8d6b7; box-shadow: inset 0 0 0 1px rgba(232, 214, 183, 0.5); }
+  .contratos-titulo { margin-top: 2rem; }
+  .list :global(.acoes-contrato) { display: flex; gap: 0.9rem; flex-wrap: wrap; justify-content: flex-end; }
+  .list :global(.acoes-contrato label) { cursor: pointer; }
   .list :global(.orient) { grid-column: 1 / -1; margin: 0; font-size: 0.85rem; color: #e8d6b7; }
   .list :global(.orient--info) { color: #c9b49a; }
   .list :global(.link) { background: none; border: 0; font: inherit; color: #d9ae6b; text-decoration: underline; cursor: pointer; }

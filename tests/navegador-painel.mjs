@@ -140,6 +140,24 @@ try {
   const cab = await fetch(`${BASE}/admin/`); check('Páginas do Admin/Área do Cliente com Cache-Control: no-cache', /no-cache/.test(cab.headers.get('cache-control') || '') && /no-cache/.test((await fetch(`${BASE}/area-do-cliente/`)).headers.get('cache-control') || ''));
   await shot('p3b-financeiro');
   await ev(`[...document.querySelectorAll('[data-ficha] .fin-form')][1].scrollIntoView({block:'start'}),1`); await shot('p3c-opcoes');
+  console.log('--- Contratos (papel timbrado)');
+  check('Ficha mostra o bloco Contratos vazio', await waitFor(`(()=>{const b=document.querySelector('[data-ficha] [data-contratos]');return !!b && b.innerText.includes('Nenhum contrato.')})()`));
+  await ev(`(()=>{document.querySelector('[data-ficha] [data-contrato-gerar]').click();return 1})()`);
+  check('Gerar contrato → editor com os campos preenchidos do cadastro (passaporte completo)', await waitFor(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');const v=(k)=>e?.querySelector('[data-contrato-campo='+k+']')?.value;return v('passaporte')==='FX1234567' && v('prazo')==='two (2)' && /^\\d{2}\\/\\d{2}\\/\\d{4}$/.test(v('data')||'')})()`));
+  check('Campo sem dado (assinatura CTB) destacado e listado em "Faltam campos"', await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');return e.innerText.includes('Faltam campos') && e.querySelector('[data-contrato-campo=ctbNome]').classList.contains('faltando')})()`));
+  await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');const i=(k)=>e.querySelector('[data-contrato-campo='+k+']');i('prazo').value='three (3)';i('prazo').dispatchEvent(new Event('input'));i('ctbNome').value='Diretor Fictício';i('ctbNome').dispatchEvent(new Event('input'));e.querySelector('[data-contrato-salvar]').click();return 1})()`);
+  check('Editar campos e salvar → versão 2 (histórico)', await waitFor(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');return !!e && e.innerText.includes('versão 2') && e.querySelector('[data-contrato-campo=prazo]').value==='three (3)'})()`));
+  await ev(`document.querySelector('[data-ficha] [data-contrato-editor]').scrollIntoView({block:'start'}),1`); await shot('p3f-contrato');
+  await ev(`(()=>{window.confirm=()=>true;document.querySelector('[data-ficha] [data-contrato-liberar]').click();return 1})()`);
+  check('Liberar com campos vazios (registro/endereço da empresa) → aviso na ficha e campos destacados', await waitFor(`(document.querySelector('[data-msg-ficha]').textContent||'').includes('Preencha todos os campos') && document.querySelector('[data-ficha] [data-contrato-campo=registro]').classList.contains('faltando')`));
+  await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');e.querySelectorAll('[data-contrato-campo]').forEach(i=>{if(!i.value){i.value='Dado de teste';i.dispatchEvent(new Event('input'));}});return 1})()`);
+  await ev(`(()=>{window.confirm=()=>true;document.querySelector('[data-ficha] [data-contrato-liberar]').click();return 1})()`);
+  check('Liberar ao cliente → "Liberado ao cliente"', await waitFor(`document.querySelector('[data-ficha] [data-contrato-editor]')?.innerText.includes('Liberado ao cliente')`));
+  const ctAna = (await (await fetch(`${BASE}/api/cliente/contratos`, { headers: { Cookie: await sessaoDe('ana@example.com', 'Cliente2026Xyz') } })).json()).contratos;
+  check('A cliente vê o contrato liberado (NDA)', ctAna.length === 1 && /^CTB-NDA-\d{4}-\d{5}$/.test(ctAna[0].referencia) && ctAna[0].status === 'liberado');
+  const pdfAdm = await ev(`fetch('/api/cliente/equipe/contratos/'+document.querySelector('[data-ficha] [data-contrato-id]').dataset.contratoId+'/pdf').then(async r=>r.status+' '+r.headers.get('content-type')+' '+(await r.text()).slice(0,5))`);
+  check('Pré-visualização do PDF pela equipe (application/pdf)', pdfAdm === '200 application/pdf %PDF-');
+  await ev(`(()=>{const e=document.querySelector('[data-ficha] [data-contrato-editor]');e.querySelectorAll('details').forEach(d=>d.open=true);e.scrollIntoView({block:'start'});return 1})()`); await shot('p3g-contrato-texto');
   await clicarTexto('✎ Editar dados', "document.querySelector('[data-ficha]')");
   check('Editar dados: formulário com os campos preenchidos (nome, telefone, passaporte completo)', await waitFor(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.edicao');return !!f && f.phone_number.value==='+971 50 000 0000' && f.passportnumber.value==='FX1234567' && f.passportexpirationdate.value==='2031-05-20'})()`));
   await ev(`(()=>{window.confirm=()=>true;const f=document.querySelector('[data-ficha] form.edicao');f.display_name.value='Ana Corrigida';f.city.value='Sharjah';f.requestSubmit();return 1})()`);
@@ -242,7 +260,7 @@ try {
 
   console.log('--- Registro, celular e saída');
   await clicar('[data-aba=registro]');
-  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Recusou operação','Concluiu operação','Lançou operação no extrato','Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
+  check('Registro mostra as ações com quem fez', await waitFor(`(()=>{const t=document.querySelector('[data-registro]').innerText;return ['Gerou contrato','Editou contrato','Liberou contrato ao cliente','Recusou operação','Concluiu operação','Lançou operação no extrato','Lançou saldo','Lançou movimentação','Lançou investimento','Atualizou cartão','Convidou','Conferiu passaporte','Bloqueou','Desbloqueou','Confirmou agendamento','Aprovou documento','Rejeitou documento','Abriu a ficha','Baixou documento'].every(x=>t.includes(x)) && t.includes('chefe@example.com')})()`));
   await shot('p6-registro');
   await clicar('[data-aba=clientes]');
   await waitFor(`document.querySelector('[data-clientes]').innerText.includes('ana@example.com')`);

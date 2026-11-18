@@ -66,7 +66,7 @@ const login = (e, s) => ev(`(()=>{const f=document.querySelector('[data-login]')
 const sair = () => ev(`document.querySelector('[data-signout]').click(),1`);
 const nav = async (u) => { await send('Page.navigate', { url: u }); await waitFor(`document.querySelector('[data-portal]')?.dataset.ready==='1' && !document.querySelector('[data-login-fs]').disabled || ${vis('[data-view="senha"]')}`, 20000); };
 const linha = (n) => `[...document.querySelectorAll('[data-docs] li')].find(l=>l.querySelector('.name')?.textContent==='${n}')`;
-const MARCAS_ANA = ['Exemplo Trading', 'CTB-SBLC', '28.750,00', 'Bond 2030', 'Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
+const MARCAS_ANA = ['CTB-NDA-2026-00077', 'Exemplo Trading', 'CTB-SBLC', '28.750,00', 'Bond 2030', 'Ana Teste', 'Ana Trading', '456', 'Brasileira', 'passaporte.pdf', 'comprovante.pdf', 'Reunião inicial Ana', 'Prefiro por vídeo', 'ana@example.com'];
 const temAna = `(()=>{const r=document.querySelector('[data-portal]');const txt=r.textContent+' '+[...r.querySelectorAll('input')].map(i=>i.value).join(' ');return ${JSON.stringify(MARCAS_ANA)}.filter(m=>txt.includes(m))})()`;
 async function vigiar(ms) { const v = new Set(); const t0 = Date.now(); while (Date.now() - t0 < ms) { (await ev(temAna) || []).forEach((m) => v.add(m)); await sleep(40); } return [...v]; }
 
@@ -136,6 +136,15 @@ try {
   await ev(`document.querySelector('[data-inst-lista] details').open=true,1`);
   await ev(`document.querySelector('[data-inst]').scrollIntoView({block:'start'}),1`);
   await shot('2c-instrumentos');
+  console.log('--- Contratos liberados');
+  await db.q(`insert into contratos(usuario_id, referencia, modelo, campos, status, gerado_por, liberado_em) values ($1,'CTB-NDA-2026-00077','nda',$2::jsonb,'liberado','analista',now())`,
+    [uAna, JSON.stringify({ data: '18/11/2026', local: 'Dubai - United Arab Emirates (UAE)', empresa: 'Empresa <b>Fictícia</b>', jurisdicao: 'the Federative Republic of Brazil', registro: '123', endereco: 'Rua Teste, 1', prazo: 'two (2)', representante: 'Ana Teste', passaporte: 'FZ123456', ctbNome: 'Diretor Fictício', ctbCargo: 'EXECUTIVE DIRECTOR', ctbPin: '120422' })]);
+  await db.q(`insert into contratos(usuario_id, referencia, modelo, campos, status, gerado_por) values ($1,'CTB-NDA-2026-00078','nda','{}'::jsonb,'rascunho','analista')`, [uAna]);
+  await nav(BASE + '/area-do-cliente/'); await waitFor(`document.querySelector('[data-name]')?.textContent==='Ana Teste'`);
+  await ev(`document.querySelector('[data-tab=documents]').click(),1`);
+  check('Documentos → "Meus contratos": só o liberado (rascunho invisível), com Baixar PDF e Enviar via assinada', await waitFor(`(()=>{const t=document.querySelector('[data-contratos]').innerText;return t.includes('CTB-NDA-2026-00077') && !t.includes('00078') && t.includes('Baixar PDF') && t.includes('Enviar via assinada') && t.includes('Aguardando sua assinatura')})()`));
+  check('PDF do contrato baixa pela sessão da cliente', await ev(`fetch(document.querySelector('[data-contratos] a.link').href).then(async r=>r.status===200 && (await r.text()).startsWith('%PDF-'))`));
+  await ev(`document.querySelector('[data-contratos]').scrollIntoView({block:'center'}),1`); await shot('2b-contratos');
   console.log('--- Documentos');
   await ev(`document.querySelector('[data-tab=documents]').click(),1`);
   const { root } = await send('DOM.getDocument', { depth: -1, pierce: true });

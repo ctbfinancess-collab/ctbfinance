@@ -21,6 +21,6 @@ export async function iniciarAreaCliente({ origens }) {
   console.log('[area-cliente] ativa');
   const api = criarApi({ db, arquivos, origens, enviarEmail: enviarEmailAcesso, avisarEquipe: avisarEquipeAgendamento, avisarOperacao: avisarEquipeOperacao, avisarInstrumento: avisarEquipeInstrumento });
   const adm = criarAdmin({ db, arquivos, api, avisarCliente: enviarConfirmacaoAgendamento });
-  api.ligarPainel(({ json, lerJson, instrumentos }) => criarPainel({ db, adm, json, lerJson, instrumentos }));
+  api.ligarPainel(({ json, lerJson, instrumentos, contratos }) => criarPainel({ db, adm, json, lerJson, instrumentos, contratos }));
   return api;
 }

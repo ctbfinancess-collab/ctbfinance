@@ -77,7 +77,7 @@ const COLS = `s.id, s.referencia, s.instrumento, s.categoria, s.moeda, s.valor_c
   s.banco_emissor, s.banco_avisador, to_char(s.validade,'YYYY-MM-DD') as validade, s.operacao_subjacente, s.contrato_ref, s.observacoes, s.status,
   s.criado_em, s.enviado_em, s.atualizado_em`;
 
-export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEquipe = null, log = console }) {
+export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEquipe = null, aoStatus = null, log = console }) {
   const corpo = async (req, max = 12000) => { const b = await lerJson(req, max); return b && typeof b === 'object' && !Array.isArray(b) ? b : {}; };
   const evento = (q, sid, e) => q(`insert into instrumentos_eventos(solicitacao_id, tipo, status_de, status_para, texto, visivel_cliente, documento_id, por_email, por_equipe)
                                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [sid, e.tipo, e.de || null, e.para || null, e.texto || null, e.visivel, e.documento || null, e.por, e.equipe]);
@@ -308,6 +308,8 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
       });
     } catch (e) { if (e.status) return json(res, e.status, { erro: e.message, ...e.extra }); throw e; }
     await registrar(u, 'instrumento_' + para, r.referencia || id);
+    // gatilhos (ex.: aprovada → contrato NDA em rascunho para a equipe revisar)
+    if (aoStatus) { try { await aoStatus(para, r, u); } catch (e) { log.error('[area-cliente] gatilho de status', para, e.message); } }
     return json(res, 200, { status: para });
   }
   async function mensagemEquipe(req, res, u, id, registrar) {

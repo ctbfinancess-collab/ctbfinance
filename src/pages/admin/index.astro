@@ -254,7 +254,7 @@ import '../../styles/global.css';
       const FORMATOS: Record<string, string> = { video: 'Vídeo', telefone: 'Telefone', presencial: 'Presencial' };
       const PERIODOS: Record<string, string> = { manha: 'Manhã (9h–12h)', tarde: 'Tarde (13h–18h)', qualquer: 'Qualquer horário' };
       const ST_DOC: Record<string, string> = { disponivel_analise: 'Em análise', aprovado: 'Aprovado', rejeitado: 'Rejeitado' };
-      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato', ver_instrumento: 'Abriu solicitação de instrumento', instrumento_mensagem: 'Enviou mensagem (instrumento)', instrumento_nota_interna: 'Registrou nota interna (instrumento)', instrumento_responsavel: 'Atribuiu responsável (instrumento)', instrumento_instituicao: 'Registrou instituição (instrumento)', instrumento_evidencia: 'Anexou comprovante (instrumento)', instrumento_analise_documental: 'Instrumento: análise documental', instrumento_documentacao_solicitada: 'Instrumento: pediu documentos', instrumento_analise_interna: 'Instrumento: análise interna', instrumento_encaminhada: 'Instrumento: encaminhou à instituição', instrumento_aguardando_instituicao: 'Instrumento: aguardando instituição', instrumento_aprovada: 'Instrumento: aprovada pela instituição', instrumento_recusada: 'Instrumento: recusou', instrumento_cancelada: 'Instrumento: cancelou', instrumento_concluida: 'Instrumento: concluiu' };
+      const ACOES: Record<string, string> = { convidar: 'Convidou', reenviar_acesso: 'Reenviou acesso', reenviar: 'Reenviou acesso', bloquear: 'Bloqueou', desbloquear: 'Desbloqueou', passaporte_conferir: 'Conferiu passaporte', passaporte_liberar: 'Destravou passaporte', confirmar_agendamento: 'Confirmou agendamento', aprovar_documento: 'Aprovou documento', rejeitar_documento: 'Rejeitou documento', ver_ficha: 'Abriu a ficha', baixar_documento: 'Baixou documento', editar_dados: 'Editou dados', financeiro_conta: 'Lançou saldo', financeiro_conta_excluida: 'Excluiu conta', financeiro_movimento: 'Lançou movimentação', financeiro_movimento_excluido: 'Excluiu movimentação', financeiro_movimento_corrigido: 'Corrigiu movimentação', financeiro_posicao: 'Lançou investimento', financeiro_posicao_excluida: 'Excluiu investimento', financeiro_cartao: 'Atualizou cartão', financeiro_cartao_removido: 'Removeu cartão', interessado_respondido: 'Marcou interessado como respondido', interessado_arquivado: 'Arquivou interessado', interessado_novo: 'Reabriu interessado', operacao_em_analise: 'Pôs operação em análise', operacao_concluida: 'Concluiu operação', operacao_recusada: 'Recusou operação', operacao_recebida: 'Reabriu operação', operacao_lancada: 'Lançou operação no extrato', ver_instrumento: 'Abriu solicitação de instrumento', instrumento_mensagem: 'Enviou mensagem (instrumento)', instrumento_nota_interna: 'Registrou nota interna (instrumento)', instrumento_responsavel: 'Atribuiu responsável (instrumento)', instrumento_instituicao: 'Registrou instituição (instrumento)', instrumento_evidencia: 'Anexou comprovante (instrumento)', instrumento_analise_documental: 'Instrumento: análise documental', instrumento_documentacao_solicitada: 'Instrumento: pediu documentos', instrumento_analise_interna: 'Instrumento: análise interna', instrumento_encaminhada: 'Instrumento: encaminhou à instituição', instrumento_aguardando_instituicao: 'Instrumento: aguardando instituição', instrumento_aprovada: 'Instrumento: aprovada pela instituição', instrumento_recusada: 'Instrumento: recusou', instrumento_cancelada: 'Instrumento: cancelou', instrumento_concluida: 'Instrumento: concluiu', contrato_gerado: 'Gerou contrato', contrato_editado: 'Editou contrato', contrato_liberado: 'Liberou contrato ao cliente', contrato_cancelado: 'Cancelou contrato', contrato_automatico: 'Contrato criado automaticamente', contrato_pdf: 'Abriu PDF do contrato', contratos_assinatura_ctb: 'Definiu quem assina pela CTB' };
       const dataHora = (s: string) => new Date(s).toLocaleString('pt-BR', { timeZone: 'Asia/Dubai', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
       const dataCivil = (s: string) => { const [a, m, d] = s.split('-'); return `${d}/${m}/${a}`; };
       const tamanho = (n: number) => (n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
@@ -439,6 +439,10 @@ import '../../styles/global.css';
         const fin = el('div', { class: 'bloco' }, el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Carregando…'));
         corpo.append(fin);
         blocoFinanceiro(c, fin);
+        // contratos (NDA etc.) no papel timbrado
+        const ctr = el('div', { class: 'bloco', 'data-contratos': '' }, el('h3', {}, 'Contratos'), el('p', { class: 'nota' }, 'Carregando…'));
+        corpo.append(ctr);
+        blocoContratos(ctr, { usuarioId: c.id });
         // documentos
         const docs = el('div', { class: 'bloco' }, el('h3', {}, `Documentos (${c.documentos.length})`));
         for (const x of c.documentos) docs.append(linhaDocumento({ ...x, arquivo: x.nome, email: c.email, nome: d.display_name, tem_arquivo: true }, () => abrirFicha(c.id, false)));
@@ -495,6 +499,95 @@ import '../../styles/global.css';
         const m = /^(-)?(\d{1,13})(?:\.(\d{1,2}))?$/.exec(s); if (!m) return null;
         const c = BigInt(m[2]) * 100n + BigInt((m[3] || '').padEnd(2, '0') || '0'); return m[1] ? -c : c;
       };
+      // ---- contratos automáticos (papel timbrado): preenchidos pelo cadastro, editáveis, liberados ao cliente pela equipe
+      const ST_CONTRATO: Record<string, string> = { rascunho: 'Rascunho — só a equipe vê', liberado: 'Liberado ao cliente', assinado: 'Assinado pelo cliente', cancelado: 'Cancelado' };
+      let modelosContrato: any[] | null = null;
+      async function blocoContratos(box: HTMLElement, alvo: { usuarioId: string; solicitacaoId?: string }, abrir?: string) {
+        const titulo = el('h3', {}, 'Contratos');
+        let lista: any, cfg: any;
+        try {
+          modelosContrato ||= (await chamar('/equipe/contratos/modelos')).modelos;
+          lista = (await chamar(`/equipe/contratos?${alvo.solicitacaoId ? 'solicitacao=' + alvo.solicitacaoId : 'usuario=' + alvo.usuarioId}`)).contratos;
+          cfg = (await chamar('/equipe/contratos/config')).assinatura || {};
+        } catch (e) { box.replaceChildren(titulo, el('p', { class: 'nota' }, 'Não foi possível carregar.')); return; }
+        const recarregar = (abrirId?: string) => blocoContratos(box, alvo, abrirId);
+        box.replaceChildren(titulo, el('p', { class: 'nota' }, 'Gerados no papel timbrado com os dados do cadastro' + (alvo.solicitacaoId ? ' e desta solicitação' : '') + '. Tudo é editável; o cliente só vê depois de "Liberar ao cliente".'));
+        if (!lista.length) box.append(el('p', { class: 'vazio' }, 'Nenhum contrato.'));
+        for (const k of lista) box.append(el('div', { class: 'mini-linha', 'data-contrato-linha': k.id },
+          el('span', { class: 'quando' }, dataHora(k.criado_em)),
+          el('span', {}, el('b', {}, k.referencia), ` · ${k.titulo} · v${k.versao}${k.automatico ? ' · criado automaticamente' : ''}`),
+          el('small', { class: k.status === 'rascunho' ? 'pend' : '' }, ST_CONTRATO[k.status] || k.status, ' · ', el('button', { type: 'button', class: 'link', 'data-contrato-abrir': k.id, onclick: () => editor(k.id) }, 'Abrir'))));
+        const selModelo = el('select', { 'aria-label': 'Modelo', 'data-contrato-modelo': '' }, ...modelosContrato!.map((m: any) => el('option', { value: m.id }, m.titulo))) as HTMLSelectElement;
+        box.append(el('div', { class: 'fin-form' }, el('label', { class: 'largo' }, el('span', {}, 'Novo contrato'), selModelo),
+          el('button', { type: 'button', class: 'botao pequeno', 'data-contrato-gerar': '', onclick: async () => {
+            try { const c = await chamar('/equipe/contratos', { metodo: 'POST', corpo: { usuarioId: alvo.usuarioId, modelo: selModelo.value, solicitacaoId: alvo.solicitacaoId } }); aviso(`Contrato ${c.referencia} gerado e preenchido. Confira os campos.`); await recarregar(c.id); }
+            catch (e) { falhou(e); }
+          } }, 'Gerar contrato')));
+        // quem assina pela CTB (vale para os próximos contratos gerados)
+        const cNome = el('input', { maxlength: 120, value: cfg.nome || '', 'data-cfg-nome': '' }) as HTMLInputElement;
+        const cCargo = el('input', { maxlength: 80, value: cfg.cargo || 'EXECUTIVE DIRECTOR' }) as HTMLInputElement;
+        const cPin = el('input', { maxlength: 40, value: cfg.pin || '' }) as HTMLInputElement;
+        box.append(el('details', { class: 'fin-det' }, el('summary', {}, 'Quem assina pela CTB' + (cfg.nome ? ` (${cfg.nome})` : ' — não definido')),
+          el('div', { class: 'fin-form' }, el('label', { class: 'largo' }, el('span', {}, 'Nome'), cNome), el('label', {}, el('span', {}, 'Cargo'), cCargo), el('label', {}, el('span', {}, 'PIN'), cPin),
+            el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => { try { await chamar('/equipe/contratos/config', { metodo: 'PUT', corpo: { nome: cNome.value, cargo: cCargo.value, pin: cPin.value } }); aviso('Assinatura salva. Vale para os próximos contratos.'); await recarregar(); } catch (e) { falhou(e); } } }, 'Salvar'))));
+        const area = el('div', { 'data-contrato-editor': '' });
+        box.append(area);
+        if (abrir) editor(abrir);
+
+        async function editor(id: string) {
+          let c: any;
+          try { c = await chamar(`/equipe/contratos/${id}`); } catch (e) { return falhou(e); }
+          const modelo = modelosContrato!.find((m: any) => m.id === c.modelo);
+          const editavel = c.status === 'rascunho' || c.status === 'liberado';
+          let sujo = false; const marcar = () => { sujo = true; };
+          const inputs: Record<string, HTMLInputElement> = {};
+          const grade = el('div', { class: 'fin-form contrato-campos' });
+          for (const f of modelo.campos) {
+            const i = el('input', { maxlength: 300, value: c.campos[f.k] || '', disabled: !editavel, 'data-contrato-campo': f.k, class: c.faltando.includes(f.k) ? 'faltando' : '', title: f.origem ? 'Preenchido de: ' + f.origem : '' }) as HTMLInputElement;
+            i.addEventListener('input', marcar); inputs[f.k] = i;
+            grade.append(el('label', { class: f.k === 'endereco' || f.k === 'empresa' ? 'largo' : '' }, el('span', {}, f.rotulo), i));
+          }
+          const texto = el('textarea', { rows: 14, disabled: !editavel, 'data-contrato-texto': '', spellcheck: 'false' }, c.texto) as HTMLTextAreaElement;
+          let textoMexido = false; texto.addEventListener('input', () => { textoMexido = true; marcar(); });
+          const campos = () => Object.fromEntries(Object.entries(inputs).map(([k, i]) => [k, i.value]));
+          const salvar = async (msg = 'Nova versão salva.') => {
+            const r = await chamar(`/equipe/contratos/${id}`, { metodo: 'PUT', corpo: { campos: campos(), texto: c.textoEditado || textoMexido ? texto.value : undefined } });
+            sujo = false; aviso(msg + (c.status === 'liberado' ? ' O contrato voltou a rascunho: libere de novo para o cliente ver.' : '')); return r;
+          };
+          const botoes = el('div', { class: 'acoes-contrato' });
+          if (editavel) botoes.append(
+            el('button', { type: 'button', class: 'botao pequeno', 'data-contrato-salvar': '', onclick: async () => { try { await salvar(); await recarregar(id); } catch (e) { falhou(e); } } }, 'Salvar (nova versão)'),
+            el('button', { type: 'button', class: 'botao pequeno claro', onclick: async () => {
+              try { const r = await chamar(`/equipe/contratos/${id}/preencher`); for (const [k, v] of Object.entries(r.campos)) if (inputs[k] && v) inputs[k].value = v as string; marcar(); aviso('Campos atualizados com o cadastro atual. Confira e salve.'); } catch (e) { falhou(e); }
+            } }, 'Atualizar com o cadastro'));
+          botoes.append(el('button', { type: 'button', class: 'botao pequeno claro', 'data-contrato-pdf': '', onclick: async () => {
+            const w = window.open('', '_blank');   // abre já (antes do await) para o navegador não bloquear
+            try { if (sujo && editavel) await salvar('Versão salva antes da pré-visualização.'); if (w) w.location.href = `${API}/equipe/contratos/${id}/pdf`; else location.href = `${API}/equipe/contratos/${id}/pdf?baixar=1`; }
+            catch (e) { w?.close(); falhou(e); }
+          } }, 'Pré-visualizar PDF'));
+          if (c.status === 'rascunho') botoes.append(el('button', { type: 'button', class: 'botao pequeno', 'data-contrato-liberar': '', onclick: async () => {
+            if (!confirm(`Liberar ${c.referencia} ao cliente? Ele poderá baixar o PDF na Área do Cliente.`)) return;
+            try { if (sujo) await salvar('Versão salva.'); await chamar(`/equipe/contratos/${id}/liberar`, { metodo: 'POST', corpo: {} }); aviso('Contrato liberado ao cliente.'); await recarregar(id); }
+            catch (e: any) { if (e?.d?.campos) e.d.campos.forEach((k: string) => inputs[k]?.classList.add('faltando')); falhou(e); }
+          } }, 'Liberar ao cliente'));
+          if (c.status !== 'cancelado') botoes.append(el('button', { type: 'button', class: 'link', onclick: async () => {
+            if (!confirm(`Cancelar ${c.referencia}? O cliente deixará de vê-lo.`)) return;
+            try { await chamar(`/equipe/contratos/${id}/cancelar`, { metodo: 'POST', corpo: {} }); aviso('Contrato cancelado.'); await recarregar(); } catch (e) { falhou(e); }
+          } }, 'Cancelar contrato'));
+          botoes.append(el('button', { type: 'button', class: 'link', onclick: () => area.replaceChildren() }, 'Fechar'));
+          area.replaceChildren(el('div', { class: 'contrato-editor', 'data-contrato-id': id },
+            el('h4', {}, `${c.referencia} · ${c.titulo}`),
+            el('p', { class: 'nota' }, `${ST_CONTRATO[c.status]} · versão ${c.versao}${c.automatico ? ' · criado automaticamente' : ''}${c.liberadoEm ? ' · liberado em ' + dataHora(c.liberadoEm) : ''}${c.assinadoEm ? ' · assinado em ' + dataHora(c.assinadoEm) : ''}`),
+            c.assinadoDocumentoId ? el('p', {}, el('a', { href: `${API}/documentos/${c.assinadoDocumentoId}/arquivo`, class: 'link-doc' }, 'Baixar a via assinada enviada pelo cliente')) : '',
+            c.faltando.length && editavel ? el('p', { class: 'nota pend' }, 'Faltam campos para liberar: ' + c.faltando.map((k: string) => modelo.campos.find((f: any) => f.k === k)?.rotulo || k).join(', ') + '.') : '',
+            grade,
+            el('details', { class: 'fin-det' }, el('summary', {}, c.textoEditado ? 'Texto completo — EDITADO À MÃO (os campos acima não mudam mais o corpo)' : 'Editar o texto completo (só em casos excepcionais)'),
+              el('p', { class: 'nota' }, 'Marcação: "# título", "## seção", "• item"; linha em branco separa parágrafos. Para voltar ao texto automático, apague tudo e salve.'), texto),
+            botoes,
+            el('details', { class: 'fin-det' }, el('summary', {}, `Histórico (${c.versoes.length} versões)`), ...c.versoes.map((v: any) => el('p', { class: 'nota' }, `v${v.versao} · ${v.por_email} · ${dataHora(v.em)}`)))));
+          area.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+      }
       async function blocoFinanceiro(c: any, box: HTMLElement) {
         let f: any;
         try { f = await chamar(`/equipe/clientes/${c.id}/financeiro`); } catch (e) { box.replaceChildren(el('h3', {}, 'Financeiro'), el('p', { class: 'nota' }, 'Não foi possível carregar.')); return; }
@@ -768,6 +861,10 @@ import '../../styles/global.css';
           ax.append(el('div', { class: 'fin-form' }, el('label', {}, el('span', {}, 'Tipo'), para), el('label', { class: 'largo' }, el('span', {}, 'Arquivo (PDF, JPG, PNG)'), arq), enviarEv));
         }
         corpo.append(ax);
+        // contratos ligados a esta solicitação (o NDA é criado sozinho, em rascunho, quando ela é aprovada)
+        const ctrI = el('div', { class: 'bloco', 'data-contratos': '' }, el('h3', {}, 'Contratos'), el('p', { class: 'nota' }, 'Carregando…'));
+        corpo.append(ctrI);
+        blocoContratos(ctrI, { usuarioId: s.usuario_id, solicitacaoId: s.id });
         // ações
         if (!FINAIS_INST.includes(s.status)) {
           const ac = el('div', { class: 'bloco' }, el('h3', {}, 'Andamento'));
@@ -1083,6 +1180,14 @@ import '../../styles/global.css';
       .dados dt { color: var(--texto-2); }
       .dados dd { margin: 0; overflow-wrap: anywhere; }
       .bloco { border-top: 1px solid var(--borda); padding-top: 0.8rem; margin-top: 0.8rem; }
+      .contrato-editor { margin-top: 0.8rem; padding: 0.9rem; border: 1px solid var(--borda); border-radius: 12px; background: rgba(14, 7, 4, 0.35); }
+      .contrato-editor h4 { margin: 0 0 0.2rem; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 1.15rem; color: #f0d39c; }
+      .contrato-editor textarea { width: 100%; font-family: ui-monospace, Menlo, monospace; font-size: 0.82rem; line-height: 1.45; }
+      .contrato-campos { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); }
+      .contrato-campos input.faltando { border-color: #d9ae6b; box-shadow: 0 0 0 2px rgba(217, 174, 107, 0.35); }
+      .acoes-contrato { display: flex; flex-wrap: wrap; gap: 0.5rem 0.8rem; align-items: center; margin: 0.6rem 0; }
+      .nota.pend { color: #e9b77a; }
+      .fin-det summary { cursor: pointer; color: #e8d6b7; font-size: 0.9rem; margin: 0.4rem 0; }
       .bloco h3 { font-size: 1.25rem; margin: 0 0 0.5rem; color: var(--ouro-claro); }
       .bloco .item { background: rgba(14, 7, 4, 0.4); }
       .fin-sec { margin: 0.8rem 0 1.1rem; }

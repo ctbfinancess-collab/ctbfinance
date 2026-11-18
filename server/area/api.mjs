@@ -18,6 +18,7 @@ import {
   SESSAO_OCIOSA_MS, SESSAO_MAX_MS, FORMATOS, conteudoConfere, ORIENTACOES, ipDoVisitante, chaveDeIp,
 } from './nucleo.mjs';
 import { criarInstrumentos } from './instrumentos.mjs';
+import { criarContratos } from './contratos.mjs';
 
 export const CAMPOS_PERFIL = { display_name: 120, phone_number: 40, nationality: 80, dateofbirth: 40, address: 200, residencenumber: 40, city: 80, country: 80, zipcode: 20 };
 export const CAMPOS_EMPRESA = { CompanyName: 160, Companyregistrationnumber: 60, companysadress: 200, companyaddressnumber: 40, companycity: 80, companycountry: 80, companyzipcode: 20 };
@@ -541,6 +542,7 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       if (rota === '/api/cliente/operacoes' && m === 'POST') return await solicitarOperacao(req, res, u);
       if (rota === '/api/cliente/agendamentos' && m === 'POST') return await solicitarAgendamento(req, res, u);
       if (rota === '/api/cliente/instrumentos' || rota.startsWith('/api/cliente/instrumentos/')) return await instrumentos.cliente(req, res, rota, u);
+      if (rota === '/api/cliente/contratos' || rota.startsWith('/api/cliente/contratos/')) return await contratos.cliente(req, res, rota, u);
       return json(res, 404, { erro: 'rota' });
     } catch (e) {
       if (e.status) return e.fechar ? recusar(req, res, e.status, { erro: e.message }, 0) : json(res, e.status, { erro: e.message });
@@ -549,10 +551,12 @@ export function criarApi({ db, arquivos, origens, enviarEmail, avisarEquipe = nu
       res.destroy();
     }
   }
-  const instrumentos = criarInstrumentos({ db, json, lerJson, receberArquivo: enviarDocumento, avisarEquipe: avisarInstrumento, log });
+  const contratos = criarContratos({ db, json, lerJson, receberArquivo: enviarDocumento, log });
+  const instrumentos = criarInstrumentos({ db, json, lerJson, receberArquivo: enviarDocumento, avisarEquipe: avisarInstrumento, log,
+    aoStatus: (para, s, u) => contratos.aoEvento('instrumento_' + para, { usuarioId: s.usuario_id, solicitacaoId: s.id, por: u.email }) });
   let painel = null;
   /** Liga o painel da equipe: recebe uma fábrica que ganha as ferramentas internas (json, lerJson, instrumentos). */
-  const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson, instrumentos }); };
+  const ligarPainel = (fabrica) => { painel = fabrica({ json, lerJson, instrumentos, contratos }); };
   /** Guarda um pedido dos formulários do site (já validado pelo servidor do site) para a equipe ver no Admin. */
   async function registrarInteressado(d) {
     const t = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : null);

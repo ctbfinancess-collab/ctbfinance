@@ -29,7 +29,7 @@ const fmtValor = (c, moeda) => { const n = BigInt(c); const a = n < 0n ? -n : n;
 const semSaldo = (saldo, moeda) => `Débito maior que o saldo disponível (${fmtValor(saldo, moeda)}). Confira o valor — o saldo não pode ficar negativo.`;
 const texto = (v, n) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, n) : '');
 
-export function criarPainel({ db, adm, json, lerJson, instrumentos = null, log = console }) {
+export function criarPainel({ db, adm, json, lerJson, instrumentos = null, contratos = null, log = console }) {
   const registrar = (u, acao, alvo, detalhes = {}) =>
     db.q('insert into acoes_equipe(por_usuario, por_email, acao, alvo, detalhes) values ($1,$2,$3,$4,$5::jsonb)', [u.id, u.email, acao, alvo || null, JSON.stringify(detalhes)]);
   const usuarioPorId = async (id) => {
@@ -511,6 +511,7 @@ export function criarPainel({ db, adm, json, lerJson, instrumentos = null, log =
       if (p.length === 3 && p[2] === 'lancar' && m === 'POST') return lancarOperacao(req, res, u, p[1]);
     }
     if (p[0] === 'instrumentos' && instrumentos) return instrumentos.equipe(req, res, url, u, p, registrar);
+    if (p[0] === 'contratos' && contratos) return contratos.equipe(req, res, url, u, p, registrar);
     if (p[0] === 'registro' && p.length === 1 && m === 'GET') return registro(res);
     return json(res, 404, { erro: 'rota' });
   };

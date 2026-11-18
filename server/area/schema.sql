@@ -287,3 +287,52 @@ create table if not exists instrumentos_anexos (
   em timestamptz not null default now(),
   primary key (solicitacao_id, documento_id)
 );
+
+-- Contratos gerados no papel timbrado (NDA etc.): preenchidos com o cadastro/solicitação, editáveis pela equipe,
+-- só aparecem para o cliente depois de "liberados". Cada gravação guarda uma versão (histórico).
+create sequence if not exists contratos_ref_seq;
+create table if not exists contratos (
+  id uuid primary key default gen_random_uuid(),
+  usuario_id uuid not null references usuarios(id) on delete cascade,
+  solicitacao_id uuid references instrumentos_solicitacoes(id) on delete set null,
+  referencia text unique not null,
+  modelo text not null,
+  campos jsonb not null default '{}'::jsonb,
+  texto_editado text,
+  status text not null default 'rascunho' check (status in ('rascunho','liberado','assinado','cancelado')),
+  versao integer not null default 1,
+  assinado_documento_id uuid references documentos(id) on delete set null,
+  gerado_por text not null,
+  automatico boolean not null default false,
+  liberado_em timestamptz,
+  liberado_por text,
+  assinado_em timestamptz,
+  criado_em timestamptz not null default now(),
+  atualizado_em timestamptz not null default now(),
+  atualizado_por text
+);
+create index if not exists contratos_usuario on contratos(usuario_id, criado_em desc);
+create unique index if not exists contratos_auto_unico on contratos(solicitacao_id, modelo) where automatico and status <> 'cancelado';
+create table if not exists contratos_versoes (
+  contrato_id uuid not null references contratos(id) on delete cascade,
+  versao integer not null,
+  campos jsonb not null,
+  texto_editado text,
+  por_email text not null,
+  em timestamptz not null default now(),
+  primary key (contrato_id, versao)
+);
+create table if not exists contratos_acessos (
+  id bigserial primary key,
+  contrato_id uuid not null,
+  usuario_id uuid not null,
+  papel text not null,
+  em timestamptz not null default now()
+);
+-- configurações da equipe (ex.: quem assina os contratos pela CTB)
+create table if not exists configuracoes (
+  chave text primary key,
+  valor jsonb not null,
+  atualizado_por text,
+  atualizado_em timestamptz not null default now()
+);
