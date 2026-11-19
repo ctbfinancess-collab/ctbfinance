@@ -223,6 +223,19 @@ try {
     const canc = await E('POST', `/instrumentos/${prep2.dados.id}/status`, { json: { status: 'cancelada', texto: 'Preparada por engano.' } });
     await t('IN50', 'Equipe cancela uma preparada ainda não confirmada; cliente inexistente → 404; sem valor → 400', async () => canc.status === 200 && (await E('POST', '/instrumentos', { json: { usuarioId: '00000000-0000-4000-8000-000000000000', instrumento: 'RWA', valor: '1' } })).status === 404 && (await E('POST', '/instrumentos', { json: { usuarioId: ana, instrumento: 'RWA' } })).status === 400);
   }
+  { // bloqueio de autoaprovação: membro da equipe que também é cliente não aprova a própria solicitação
+    const chefe = (await db.q(`select id from usuarios where email='chefe@example.com'`)).rows[0].id;
+    await req('PUT', '/api/cliente/perfil', { cookie: cChefe, json: { display_name: 'Chefe Teste', nationality: 'Brasileira', passportnumber: 'Y7654321' } });
+    const pr = await E('POST', '/instrumentos', { json: { usuarioId: chefe, instrumento: 'SBLC', moeda: 'USD', valor: '2.000.000', beneficiario: { nome: 'Beneficiário Fictício', pais: 'Singapura' }, finalidade: 'Teste de autoaprovação', ordenante: { tipo: 'pf' } } });
+    const env = await C(cChefe, 'POST', `/${pr.dados.id}/enviar`);
+    await req('POST', `/api/cliente/equipe/instrumentos/${pr.dados.id}/evidencias?para=aprovada`, { cookie: cChefe, corpo: PDF, headers: { 'Content-Type': 'application/pdf' } });
+    const ficha = (await E('GET', `/instrumentos/${pr.dados.id}`)).dados;
+    const auto = await E('POST', `/instrumentos/${pr.dados.id}/status`, { json: { status: 'aprovada' } });
+    await t('IN51', 'Aprovador não aprova a própria solicitação (403 autoaprovacao; ficha marca "própria" e sem permissão)', async () => env.status === 200 && ficha.propria === true && ficha.podeAprovar === false && auto.status === 403 && auto.dados.erro === 'autoaprovacao' || { env: env.status, p: ficha.propria, a: auto.status, e: auto.dados.erro });
+    await adm.aprovadorInstrumentos('aux@example.com', true);
+    const outro = await E('POST', `/instrumentos/${pr.dados.id}/status`, { json: { status: 'aprovada' }, cookie: cAux });
+    await t('IN52', 'Outro aprovador da equipe aprova normalmente', async () => outro.status === 200 || outro.dados);
+  }
   await t('IN40', 'Servidor continua de pé', async () => vivo());
 } catch (e) {
   falhas++; console.log('❌ erro inesperado:', e);

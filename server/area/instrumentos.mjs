@@ -347,7 +347,9 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
     s.anexos = (await db.q(`select d.id, d.nome, d.tipo, d.tamanho, a.por_equipe, a.evidencia_de, a.tipo as tipo_anexo, a.em from instrumentos_anexos a join documentos d on d.id=a.documento_id
                              where a.solicitacao_id=$1 order by a.em`, [id])).rows;
     s.transicoes = TRANSICOES[s.status] || [];
-    s.podeAprovar = await podeAprovar(u);
+    // ninguém aprova/conclui a própria solicitação (ex.: membro da equipe que também é cliente)
+    s.propria = s.usuario_id === u.id || String(s.email || '').toLowerCase() === String(u.email || '').toLowerCase();
+    s.podeAprovar = !s.propria && await podeAprovar(u);
     s.equipe = (await db.q('select u.email from equipe e join usuarios u on u.id=e.usuario_id where e.ativo order by u.email')).rows.map((x) => x.email);
     await registrar(u, 'ver_instrumento', s.referencia || id);
     return json(res, 200, s);
@@ -366,6 +368,8 @@ export function criarInstrumentos({ db, json, lerJson, receberArquivo, avisarEqu
         const s = await daEquipe(q, id, true);
         if (!(TRANSICOES[s.status] || []).includes(para)) throw erroHttp(409, 'transicao_invalida', { mensagem: `Não é possível passar de "${STATUS_PT[s.status]}" para "${STATUS_PT[para]}".` });
         if (['aprovada', 'concluida'].includes(para)) {
+          if (s.usuario_id === u.id || String(s.email || '').toLowerCase() === String(u.email || '').toLowerCase())
+            throw erroHttp(403, 'autoaprovacao', { mensagem: 'Você não pode aprovar ou concluir a sua própria solicitação. Peça a outro aprovador da equipe.' });
           const ev = (await q('select count(*)::int n from instrumentos_anexos where solicitacao_id=$1 and por_equipe and evidencia_de=$2', [id, para])).rows[0].n;
           if (!ev) throw erroHttp(409, 'sem_evidencia', { mensagem: `Anexe o comprovante da instituição (evidência de "${STATUS_PT[para]}") antes de mudar a situação.` });
         }

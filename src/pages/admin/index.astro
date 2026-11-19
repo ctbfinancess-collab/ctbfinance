@@ -971,7 +971,8 @@ import '../../styles/global.css';
             catch (e: any) { falhou(e); }
           } }, 'Atualizar situação');
           ac.append(el('div', { class: 'fin-form' }, el('label', { class: 'largo' }, el('span', {}, 'Nova situação'), sel), el('label', { class: 'largo' }, el('span', {}, 'Mensagem'), txt), mudar));
-          if (!s.podeAprovar) ac.append(el('p', { class: 'nota' }, '"Aprovada" e "Concluída" só podem ser marcadas por quem tem permissão de aprovador.'));
+          if (s.propria) ac.append(el('p', { class: 'nota' }, 'Esta solicitação é da sua própria conta de cliente: "Aprovada" e "Concluída" precisam ser marcadas por outro aprovador da equipe.'));
+          else if (!s.podeAprovar) ac.append(el('p', { class: 'nota' }, '"Aprovada" e "Concluída" só podem ser marcadas por quem tem permissão de aprovador.'));
           // mensagem / nota interna
           const msgT = el('textarea', { rows: 2, maxlength: 2000, placeholder: 'Escreva aqui', 'data-inst-msg-texto': '' }) as HTMLTextAreaElement;
           const interna = el('input', { type: 'checkbox', 'data-inst-interna': '' }) as HTMLInputElement;

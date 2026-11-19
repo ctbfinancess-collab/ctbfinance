@@ -3,6 +3,6 @@ import BaseLayout from '../../../layouts/BaseLayout.astro';
 import ClientAreaPage from '../../../components/ClientAreaPage.astro';
 import { clientArea } from '../../../i18n/clientArea';
 ---
-<BaseLayout overlayHeader title={clientArea.en.meta.title} description={clientArea.en.meta.description}>
+<BaseLayout overlayHeader noindex title={clientArea.en.meta.title} description={clientArea.en.meta.description}>
   <ClientAreaPage lang="en" />
 </BaseLayout>

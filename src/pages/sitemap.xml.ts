@@ -6,7 +6,8 @@ export const GET: APIRoute = ({ site }) => {
   const base = site ?? new URL('https://ctbfinances.ae');
   const abs = (p: string) => new URL(p, base).href;
   const today = new Date().toISOString().slice(0, 10);
-  const urls = Object.values(routes).flatMap((r) =>
+  // Área do Cliente fica acessível pelo site, mas fora do Google (noindex) e do sitemap
+  const urls = Object.entries(routes).filter(([k]) => k !== 'clientArea').map(([, r]) => r).flatMap((r) =>
     (['pt', 'en'] as const).map((lang) => `  <url>
     <loc>${abs(r[lang])}</loc>
     <lastmod>${today}</lastmod>
